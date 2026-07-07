@@ -42,14 +42,20 @@ export default function AnalyticsPage() {
   const mc = useMemo(()=>closed.length>5?runMonteCarlo(closed as Trade[],500):null,[closed]);
 
   const rDist = useMemo(()=>{
-    const vals=closed.filter(t=>t.rMultiple!==null).map(t=>t.rMultiple!);
+    // Use rMultiple if available, otherwise estimate from netPnl / avgLoss
+    const avgLoss = M.avgLoss > 0 ? M.avgLoss : Math.abs(M.avgWin) * 0.5;
+    const vals = closed
+      .map(t => t.rMultiple !== null && t.rMultiple !== undefined
+        ? t.rMultiple
+        : avgLoss > 0 && t.netPnl !== null ? t.netPnl / avgLoss : null)
+      .filter((v): v is number => v !== null && isFinite(v));
     if(!vals.length) return [];
     const mn=Math.floor(Math.min(...vals,-3)), mx=Math.ceil(Math.max(...vals,3));
     const bk: Record<string,number>={};
     for(let v=mn;v<=mx;v+=0.5) bk[v.toFixed(1)]=0;
     vals.forEach(v=>{const k=(Math.round(v*2)/2).toFixed(1);bk[k]=(bk[k]||0)+1;});
     return Object.entries(bk).map(([r,count])=>({r:+r,label:r+"R",count})).sort((a,b)=>a.r-b.r);
-  },[closed]);
+  },[closed, M]);
 
   const ddSeries = useMemo(()=>equity.map((_,i)=>({i,dd:-equity[i].drawdownPct})),[equity]);
 
