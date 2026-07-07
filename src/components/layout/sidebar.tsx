@@ -17,7 +17,6 @@ const NAV = [
   { id:"econ",       label:"Econ Calendar", icon:"⊡" },
   { id:"social",     label:"Community",  icon:"◎" },
   { id:"patterns",   label:"AI Patterns",icon:"✦" },
-  { id:"edge",       label:"Edge Stats", icon:"◉" },
   { id:"markets",    label:"Markets",    icon:"⟡" },
   { id:"import",     label:"Import",     icon:"⊕" },
   { id:"settings",   label:"Settings",   icon:"⊛" },

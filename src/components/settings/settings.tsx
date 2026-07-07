@@ -195,47 +195,39 @@ export default function SettingsPage() {
   };
 
   const handleClearAll = () => {
-    // Set a global flag so the beforeunload handler doesn't re-save
     (window as any).__TRADERHUB_CLEARING__ = true;
-
-    // Clear in-memory stores
     setTrades([]);
     setAccountTrades(activeAccountId, []);
 
-    // Keys to PRESERVE (auth / login / supabase session)
-    const preserve = (key: string) =>
-      key.includes("supabase") ||
-      key.includes("auth") ||
-      key.startsWith("sb-") ||
-      key.startsWith("th_user") ||        // local auth user record
-      key.startsWith("th_username_") ||   // keep username so no re-setup
-      key.startsWith("th_displayname_") ||
-      key === "th_users" ||
-      key === "th_registry";
+    // Save playbook before clearing so it survives
+    let savedUIStore: string | null = null;
+    try {
+      const uiStore = localStorage.getItem("tv-ui-store");
+      if (uiStore) {
+        const parsed = JSON.parse(uiStore);
+        // Keep only playbook, goals, tags — wipe trades
+        savedUIStore = JSON.stringify({
+          ...parsed,
+          state: { ...parsed.state, trades: [] }
+        });
+      }
+    } catch {}
 
-    // Clear only trade/data keys, not auth
     const keysToRemove: string[] = [];
     for (let i = 0; i < localStorage.length; i++) {
       const key = localStorage.key(i);
       if (!key) continue;
-      const isDataKey =
-        key.startsWith("traderhub") ||
-        key.startsWith("tv-") ||
-        (key.startsWith("th_") && !preserve(key));
-      if (isDataKey && !preserve(key)) keysToRemove.push(key);
+      if (key.startsWith("traderhub") || key.startsWith("tv-accounts-store") || key === "traderhub_trades_v1") {
+        keysToRemove.push(key);
+      }
     }
     keysToRemove.forEach(k => localStorage.removeItem(k));
 
-    showToast("✓ All trade data cleared — reloading...");
+    // Restore UI store with playbook intact
+    if (savedUIStore) localStorage.setItem("tv-ui-store", savedUIStore);
 
-    setTimeout(() => {
-      // Re-clear the core data keys right before reload
-      localStorage.removeItem("traderhub_trades_v1");
-      localStorage.removeItem("traderhub_reviews_v1");
-      localStorage.removeItem("tv-accounts-store");
-      localStorage.removeItem("tv-ui-store");
-      window.location.href = window.location.origin;
-    }, 700);
+    showToast("✓ All trade data cleared — reloading...");
+    setTimeout(() => { window.location.href = window.location.origin; }, 700);
   };
 
   return (

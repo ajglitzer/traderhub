@@ -23,7 +23,6 @@ import ChecklistPage from "@/components/checklist/checklist";
 import DailyRecapPage from "@/components/recap/daily-recap";
 import SimulatorPage from "@/components/simulator/simulator";
 import PatternPage from "@/components/patterns/patterns";
-import EdgePage from "@/components/edge/edge";
 import LifestylePage from "@/components/lifestyle/lifestyle";
 import EconomicCalendar from "@/components/calendar/economic-calendar";
 import GoalsPage from "@/components/ui/goals-page";
