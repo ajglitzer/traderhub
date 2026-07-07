@@ -179,9 +179,6 @@ export default function DailyRecapPage() {
         )}
       </div>
       <style>{`@keyframes spin{to{transform:rotate(360deg)}} @keyframes blink{0%,100%{opacity:1}50%{opacity:0}}`}</style>
-
-      {/* Journal Prompts */}
-      <JournalPrompts trades={todayTrades}/>
     </div>
   );
 }

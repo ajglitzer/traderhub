@@ -130,6 +130,56 @@ export default function JournalPage() {
           })}
         </div>
       )}
+
+      {/* Daily Prompts */}
+      <DailyPrompts/>
+    </div>
+  );
+}
+
+const PROMPTS = [
+  "What was your best trade today and why did you take it?",
+  "Did you follow your trading rules on every trade?",
+  "What emotion did you feel most strongly during trading today?",
+  "Was there a trade you hesitated on? What held you back?",
+  "If you could redo one trade today, which would it be and why?",
+  "Did you stick to your position sizing rules?",
+  "What market conditions affected your performance today?",
+  "Were you patient or did you force trades?",
+  "What's one thing you'll do differently tomorrow?",
+  "Rate your discipline today from 1-10 and explain why.",
+];
+
+function DailyPrompts() {
+  const [answers, setAnswers] = useState<Record<number,string>>({});
+  const [saved, setSaved] = useState(false);
+  const today = new Date().toISOString().slice(0,10);
+
+  useEffect(() => {
+    try { const s = localStorage.getItem(`th_journal_prompts_${today}`); if (s) setAnswers(JSON.parse(s)); } catch {}
+  }, [today]);
+
+  const save = () => {
+    localStorage.setItem(`th_journal_prompts_${today}`, JSON.stringify(answers));
+    setSaved(true); setTimeout(() => setSaved(false), 2000);
+  };
+
+  return (
+    <div style={{ background:"linear-gradient(160deg,#0f1520,#0b1017)", border:"1px solid rgba(255,171,0,0.15)", borderRadius:14, padding:18, marginTop:4 }}>
+      <div style={{ fontSize:10, fontWeight:700, textTransform:"uppercase" as const, letterSpacing:"0.08em", color:"#ffab00", marginBottom:14 }}>Journal Prompts</div>
+      <div style={{ display:"flex", flexDirection:"column", gap:12 }}>
+        {PROMPTS.map((p, i) => (
+          <div key={i}>
+            <div style={{ fontSize:12, color:"#c9d1d9", marginBottom:5, lineHeight:1.5 }}>{p}</div>
+            <textarea value={answers[i]||""} onChange={e=>setAnswers(a=>({...a,[i]:e.target.value}))}
+              placeholder="Write your reflection..." rows={2}
+              style={{ width:"100%", background:"rgba(255,255,255,0.04)", border:"1px solid rgba(255,255,255,0.08)", borderRadius:9, color:"#d1d5db", fontSize:12, padding:"8px 12px", outline:"none", fontFamily:"inherit", resize:"vertical" as const, boxSizing:"border-box" as const }}/>
+          </div>
+        ))}
+        <button onClick={save} style={{ height:34, borderRadius:9, border:`1px solid ${saved?"rgba(0,230,118,0.3)":"rgba(255,171,0,0.2)"}`, background:saved?"rgba(0,230,118,0.2)":"rgba(255,171,0,0.1)", color:saved?"#00e676":"#ffab00", fontSize:12, fontWeight:700, cursor:"pointer" }}>
+          {saved ? "✓ Saved" : "Save Reflections"}
+        </button>
+      </div>
     </div>
   );
 }
