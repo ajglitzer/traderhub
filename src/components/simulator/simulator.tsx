@@ -1,0 +1,437 @@
+"use client";
+import { upsertLeaderboardEntry, getGlobalLeaderboard } from "@/lib/social";
+import { useState, useEffect, useRef, useCallback } from "react";
+
+// ── Types ─────────────────────────────────────────────────────────────────────
+interface Candle { o:number; h:number; l:number; c:number; }
+interface SimTrade { side:"LONG"|"SHORT"; entry:number; exit:number; pnl:number; result:"TP"|"SL"|"MANUAL"; }
+interface SimAccount {
+  id: string;
+  name: string;
+  balance: number;
+  startBalance: number;
+  trades: SimTrade[];
+  createdAt: string;
+}
+
+const LS_KEY = "th_sim_accounts";
+const LB_KEY  = "th_sim_leaderboard";
+
+function loadAccounts(): SimAccount[] {
+  try { return JSON.parse(localStorage.getItem(LS_KEY) || "[]"); } catch { return []; }
+}
+function saveAccounts(accs: SimAccount[], userId?: string, username?: string) {
+  localStorage.setItem(LS_KEY, JSON.stringify(accs));
+  const lb = accs.map(a => ({ name:a.name, balance:a.balance, startBalance:a.startBalance, trades:a.trades.length, wins:a.trades.filter(t=>t.pnl>0).length }));
+  lb.sort((a,b) => b.balance - a.balance);
+  localStorage.setItem(LB_KEY, JSON.stringify(lb));
+  // Push to global Supabase leaderboard if user is logged in
+  if (userId && username) {
+    accs.forEach(a => {
+      upsertLeaderboardEntry(userId, username, a.name, a.balance, a.startBalance, a.trades.length, a.trades.filter(t=>t.pnl>0).length).catch(()=>{});
+    });
+  }
+}
+function newAccount(name: string): SimAccount {
+  return { id: Date.now().toString(), name, balance:10000, startBalance:10000, trades:[], createdAt: new Date().toISOString() };
+}
+
+// ── Chart canvas ──────────────────────────────────────────────────────────────
+function drawChart(canvas:HTMLCanvasElement, candles:Candle[], cur:number, inTrade:boolean, entry:number, side:"LONG"|"SHORT", tp:number, sl:number) {
+  const dpr=window.devicePixelRatio||1, W=canvas.offsetWidth, H=canvas.offsetHeight;
+  if(!W||!H) return;
+  canvas.width=W*dpr; canvas.height=H*dpr;
+  const ctx=canvas.getContext("2d")!; ctx.scale(dpr,dpr);
+  ctx.fillStyle="#060a0f"; ctx.fillRect(0,0,W,H);
+  const slice=candles.slice(Math.max(0,cur-80),cur);
+  if(!slice.length) return;
+  const prices=[...slice.map(c=>c.h),...slice.map(c=>c.l)];
+  if(inTrade){prices.push(entry,tp,sl);}
+  const lo=Math.min(...prices),hi=Math.max(...prices);
+  const pad=(hi-lo)*0.1||1;
+  const yMin=lo-pad,yMax=hi+pad,yR=yMax-yMin||1;
+  const bW=Math.max(2,Math.min(12,(W-24)/slice.length*0.7));
+  const toX=(i:number)=>12+(i/(slice.length-1||1))*(W-24);
+  const toY=(p:number)=>8+(H-16)-(p-yMin)/yR*(H-16);
+  // Grid
+  for(let i=0;i<=4;i++){
+    ctx.strokeStyle="rgba(255,255,255,0.04)"; ctx.lineWidth=1;
+    ctx.beginPath(); ctx.moveTo(0,8+i/4*(H-16)); ctx.lineTo(W,8+i/4*(H-16)); ctx.stroke();
+  }
+  // Candles
+  slice.forEach((c,i)=>{
+    const g=c.c>=c.o;
+    ctx.strokeStyle=g?"rgba(0,230,118,0.6)":"rgba(255,23,68,0.6)"; ctx.lineWidth=1;
+    ctx.beginPath(); ctx.moveTo(toX(i),toY(c.h)); ctx.lineTo(toX(i),toY(c.l)); ctx.stroke();
+    ctx.fillStyle=g?"#00e676":"#ff1744"; ctx.globalAlpha=0.88;
+    ctx.fillRect(toX(i)-bW/2,toY(Math.max(c.o,c.c)),bW,Math.max(1.5,toY(Math.min(c.o,c.c))-toY(Math.max(c.o,c.c))));
+    ctx.globalAlpha=1;
+  });
+  // Trade lines
+  if(inTrade&&entry){
+    [[entry,"#00e5ff","Entry",[]],[tp,"#00e676","TP",[8,5]],[sl,"#ff1744","SL",[8,5]]].forEach(([p,col,lbl,dash])=>{
+      const y=toY(p as number);
+      if(y<0||y>H) return;
+      ctx.strokeStyle=col as string; ctx.lineWidth=lbl==="Entry"?2:1.5;
+      ctx.setLineDash(dash as number[]);
+      ctx.beginPath(); ctx.moveTo(0,y); ctx.lineTo(W,y); ctx.stroke();
+      ctx.setLineDash([]);
+      ctx.fillStyle=col as string; ctx.font="bold 9px Inter"; ctx.textAlign="right";
+      ctx.fillText(lbl as string,W-4,y-3);
+    });
+  }
+  // Current price
+  if(slice.length){
+    const lp=slice[slice.length-1].c, y=toY(lp), g=lp>=slice[slice.length-1].o;
+    ctx.strokeStyle=g?"rgba(0,230,118,0.5)":"rgba(255,23,68,0.5)"; ctx.lineWidth=1; ctx.setLineDash([3,4]);
+    ctx.beginPath(); ctx.moveTo(0,y); ctx.lineTo(W,y); ctx.stroke(); ctx.setLineDash([]);
+  }
+}
+
+// ── Generate candles ──────────────────────────────────────────────────────────
+function genCandles(symbol:string, count=500): Candle[] {
+  const bases:Record<string,number>={NQ:20000,ES:5000,MGC:2500,GC:2500,CL:80,BTC:65000,ETH:3500};
+  let p=bases[symbol]||100; const v=(bases[symbol]||100)*0.002;
+  const out:Candle[]=[];
+  let trend=(Math.random()-0.5)*0.3;
+  for(let i=0;i<count;i++){
+    if(Math.random()<0.05) trend=(Math.random()-0.5)*0.3;
+    const move=(Math.random()-0.49+trend)*v;
+    const o=p,cl=+(p+move).toFixed(2);
+    out.push({o,h:+Math.max(o,cl,o+Math.random()*v*0.5).toFixed(2),l:+Math.min(o,cl,o-Math.random()*v*0.5).toFixed(2),c:cl});
+    p=cl;
+  }
+  return out;
+}
+
+const SYMS=["NQ","ES","MGC","GC","CL","BTC","ETH"];
+const fmt$=(n:number)=>(n>=0?"+":"")+`$${Math.abs(n).toLocaleString("en-US",{minimumFractionDigits:2,maximumFractionDigits:2})}`;
+
+// ── Main ──────────────────────────────────────────────────────────────────────
+export default function SimulatorPage() {
+  const canvasRef=useRef<HTMLCanvasElement>(null);
+  const tickRef=useRef<any>(null);
+
+  const [accounts, setAccounts]   = useState<SimAccount[]>([]);
+  const [activeId, setActiveId]   = useState<string>("");
+  const [newName,  setNewName]    = useState("");
+  const [showNew,  setShowNew]    = useState(false);
+  const [showLB,   setShowLB]     = useState(false);
+  const [leaderboard,setLB]       = useState<any[]>([]);
+
+  const [symbol,   setSymbol]     = useState("NQ");
+  const [candles,  setCandles]    = useState<Candle[]>([]);
+  const [cur,      setCur]        = useState(80);
+  const [playing,  setPlaying]    = useState(false);
+  const [speed,    setSpeed]      = useState(1);
+  const [inTrade,  setInTrade]    = useState(false);
+  const [side,     setSide]       = useState<"LONG"|"SHORT">("LONG");
+  const [entry,    setEntry]      = useState(0);
+  const [tp,       setTp]         = useState("20");
+  const [sl,       setSl]         = useState("10");
+
+  const activeAcc = accounts.find(a=>a.id===activeId);
+
+  // Load on mount
+  useEffect(()=>{
+    const accs=loadAccounts();
+    if(accs.length){
+      setAccounts(accs);
+      setActiveId(accs[0].id);
+    } else {
+      // Create default account
+      const def=newAccount("Main Account");
+      saveAccounts([def]);
+      setAccounts([def]);
+      setActiveId(def.id);
+    }
+    setLB(JSON.parse(localStorage.getItem(LB_KEY)||"[]"));
+  },[]);
+
+  // Reset chart when symbol changes
+  useEffect(()=>{
+    setCandles(genCandles(symbol));
+    setCur(80); setPlaying(false); setInTrade(false);
+  },[symbol]);
+
+  // Draw only
+  useEffect(()=>{
+    const cv=canvasRef.current; if(!cv||!candles.length) return;
+    drawChart(cv,candles,cur,inTrade,entry,side,entry+(+tp),entry-(+sl));
+  },[candles,cur,inTrade,entry,side,tp,sl]);
+
+  // TP/SL auto-close check — separate effect, guarded against double-fire
+  useEffect(()=>{
+    if(!inTrade||!candles[cur-1]) return;
+    const c=candles[cur-1];
+    const tpP=side==="LONG"?entry+(+tp):entry-(+tp);
+    const slP=side==="LONG"?entry-(+sl):entry+(+sl);
+    if((side==="LONG"&&c.h>=tpP)||(side==="SHORT"&&c.l<=tpP)){
+      closeTrade(tpP,"TP");
+    } else if((side==="LONG"&&c.l<=slP)||(side==="SHORT"&&c.h>=slP)){
+      closeTrade(slP,"SL");
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  },[cur,inTrade]);
+
+  // Timer
+  useEffect(()=>{
+    if(tickRef.current) clearInterval(tickRef.current);
+    if(!playing) return;
+    tickRef.current=setInterval(()=>{
+      setCur(v=>{
+        if(v>=candles.length-1){setPlaying(false);return candles.length-1;}
+        return v+1;
+      });
+    },Math.max(50,400/speed));
+    return()=>{if(tickRef.current)clearInterval(tickRef.current);};
+  },[playing,speed,candles.length]);
+
+  const closeTrade=(exitP:number,result:"TP"|"SL"|"MANUAL")=>{
+    if(!inTrade) return; // guard against double-close
+    // Point value per contract based on symbol
+    const sym=(symbol||"NQ").toUpperCase();
+    const ptVal=sym.includes("MNQ")?2:sym.includes("MES")?5:sym.includes("NQ")?20:sym.includes("ES")?50:sym.includes("MGC")?10:sym.includes("GC")?100:sym.includes("YM")?5:1;
+    // Realistic commission per round-trip contract (~$4 for micros, ~$4-5 for minis)
+    const commission=sym.includes("M")?1.24:4.00; // micros cheaper
+    // Slippage: SL fills slightly worse, TP fills slightly worse too (0.25-0.5 pts)
+    const slipPts=result==="SL"?0.5:result==="MANUAL"?0.25:0.25;
+    const rawPoints=side==="LONG"?exitP-entry:entry-exitP;
+    const netPoints=rawPoints-slipPts; // slippage always works against you
+    const gross=netPoints*ptVal;
+    const pnl=+(gross-commission).toFixed(2);
+    const trade:SimTrade={side,entry,exit:exitP,pnl,result};
+    setAccounts(prev=>{
+      const updated=prev.map(a=>{
+        if(a.id!==activeId) return a;
+        const newTrades=[...a.trades,trade];
+        return{...a,trades:newTrades,balance:+(a.balance+pnl).toFixed(2)};
+      });
+      saveAccounts(updated);
+      setLB(JSON.parse(localStorage.getItem(LB_KEY)||"[]"));
+      return updated;
+    });
+    setInTrade(false);
+  };
+
+  const enterTrade=(s:"LONG"|"SHORT")=>{
+    if(inTrade||!candles.length) return;
+    const p=candles[cur-1]?.c||candles[cur]?.c||0;
+    if(!p) return;
+    // Set all trade state together (batched by React)
+    setEntry(p);
+    setSide(s);
+    setInTrade(true);
+  };
+
+  const createAccount=()=>{
+    if(!newName.trim()) return;
+    const acc=newAccount(newName.trim());
+    const updated=[...accounts,acc];
+    setAccounts(updated); saveAccounts(updated);
+    setActiveId(acc.id); setShowNew(false); setNewName("");
+    setCandles(genCandles(symbol)); setCur(80); setPlaying(false); setInTrade(false);
+  };
+
+  const resetAccount=()=>{
+    if(!activeAcc||!window.confirm(`Reset "${activeAcc.name}" to $10,000?`)) return;
+    setAccounts(prev=>{
+      const updated=prev.map(a=>a.id===activeId?{...a,balance:10000,startBalance:10000,trades:[]}:a);
+      saveAccounts(updated); return updated;
+    });
+    setInTrade(false);
+  };
+
+  const deleteAccount=()=>{
+    if(!activeAcc||accounts.length<=1||!window.confirm(`Delete "${activeAcc.name}"?`)) return;
+    const updated=accounts.filter(a=>a.id!==activeId);
+    setAccounts(updated); saveAccounts(updated); setActiveId(updated[0].id);
+  };
+
+  const curPrice=candles[cur-1]?.c||0;
+  const simPtVal=(()=>{const s=(symbol||"NQ").toUpperCase();return s.includes("MNQ")?2:s.includes("MES")?5:s.includes("NQ")?20:s.includes("ES")?50:s.includes("MGC")?10:s.includes("GC")?100:s.includes("YM")?5:1;})();
+  const openPnl=inTrade?+((side==="LONG"?curPrice-entry:entry-curPrice)*simPtVal).toFixed(2):0;
+
+  return (
+    <div style={{display:"flex",flexDirection:"column",height:"100%",overflow:"hidden"}}>
+
+      {/* Account bar */}
+      <div style={{display:"flex",alignItems:"center",gap:6,padding:"8px 14px",borderBottom:"1px solid rgba(255,255,255,0.06)",background:"rgba(0,0,0,0.25)",flexShrink:0,overflowX:"auto"}}>
+        {accounts.map(a=>(
+          <button key={a.id} onClick={()=>{setActiveId(a.id);setInTrade(false);}} style={{
+            height:32,padding:"0 12px",borderRadius:9,border:"1px solid",flexShrink:0,
+            borderColor:a.id===activeId?"rgba(0,229,255,0.4)":"rgba(255,255,255,0.08)",
+            background:a.id===activeId?"rgba(0,229,255,0.1)":"rgba(255,255,255,0.03)",
+            color:a.id===activeId?"#00e5ff":"#6b7280",cursor:"pointer",
+          }}>
+            <span style={{fontSize:11,fontWeight:700}}>{a.name}</span>
+            <span style={{fontSize:10,marginLeft:6,fontFamily:"monospace",color:(a.balance-a.startBalance)>=0?"#00e676":"#ff1744"}}>
+              ${a.balance.toLocaleString("en-US",{minimumFractionDigits:0})}
+            </span>
+          </button>
+        ))}
+        <button onClick={()=>setShowNew(true)} style={{height:32,padding:"0 10px",borderRadius:9,border:"1px dashed rgba(255,255,255,0.15)",background:"transparent",color:"#4b5563",cursor:"pointer",fontSize:12,fontWeight:700,flexShrink:0}}>+ New</button>
+        <button onClick={resetAccount} title="Reset account" style={{height:32,padding:"0 10px",borderRadius:9,border:"1px solid rgba(255,171,0,0.2)",background:"rgba(255,171,0,0.06)",color:"#ffab00",cursor:"pointer",fontSize:11,flexShrink:0}}>Reset</button>
+        {accounts.length>1&&<button onClick={deleteAccount} style={{height:32,padding:"0 10px",borderRadius:9,border:"1px solid rgba(255,23,68,0.2)",background:"rgba(255,23,68,0.06)",color:"#f87171",cursor:"pointer",fontSize:11,flexShrink:0}}>Delete</button>}
+        <button onClick={async()=>{
+  setShowLB(l=>!l);
+  // Try global leaderboard first, fall back to local
+  try {
+    const global = await getGlobalLeaderboard();
+    if (global.length > 0) {
+      setLB(global.map((e:any) => ({ name: e.username + " / " + e.account_name, balance: e.balance, startBalance: e.start_balance, trades: e.total_trades, wins: e.wins })));
+    } else {
+      setLB(JSON.parse(localStorage.getItem(LB_KEY)||"[]"));
+    }
+  } catch {
+    setLB(JSON.parse(localStorage.getItem(LB_KEY)||"[]"));
+  }
+}} style={{height:32,padding:"0 12px",borderRadius:9,border:"1px solid rgba(213,0,249,0.25)",background:"rgba(213,0,249,0.08)",color:"#d500f9",cursor:"pointer",fontSize:11,fontWeight:700,marginLeft:"auto",flexShrink:0}}>🏆 Leaderboard</button>
+      </div>
+
+      {/* Controls bar */}
+      <div style={{display:"flex",alignItems:"center",gap:8,padding:"7px 14px",borderBottom:"1px solid rgba(255,255,255,0.05)",background:"rgba(0,0,0,0.15)",flexShrink:0,flexWrap:"wrap" as const}}>
+        <select value={symbol} onChange={e=>{setSymbol(e.target.value);}} style={{height:30,padding:"0 8px",background:"rgba(255,255,255,0.05)",border:"1px solid rgba(255,255,255,0.09)",borderRadius:7,color:"#f0f6fc",fontSize:12,fontWeight:700}}>
+          {SYMS.map(s=><option key={s} value={s}>{s}</option>)}
+        </select>
+        <button onClick={()=>{setCandles(genCandles(symbol));setCur(80);setPlaying(false);setInTrade(false);}} style={{height:30,padding:"0 10px",borderRadius:7,border:"1px solid rgba(255,255,255,0.09)",background:"rgba(255,255,255,0.04)",color:"#6b7280",cursor:"pointer",fontSize:12}}>New Chart</button>
+        <div style={{width:1,height:18,background:"rgba(255,255,255,0.08)"}}/>
+        <button onClick={()=>setPlaying(p=>!p)} style={{width:32,height:32,borderRadius:9,border:"1px solid rgba(0,229,255,0.3)",background:playing?"rgba(0,229,255,0.2)":"rgba(0,229,255,0.08)",color:"#00e5ff",cursor:"pointer",fontSize:16,display:"flex",alignItems:"center",justifyContent:"center"}}>
+          {playing?"⏸":"▶"}
+        </button>
+        {[1,2,4,8].map(s=>(
+          <button key={s} onClick={()=>setSpeed(s)} style={{height:26,padding:"0 8px",borderRadius:6,border:"1px solid",borderColor:speed===s?"rgba(0,229,255,0.4)":"rgba(255,255,255,0.07)",background:speed===s?"rgba(0,229,255,0.1)":"transparent",color:speed===s?"#00e5ff":"#4b5563",fontSize:11,fontWeight:700,cursor:"pointer"}}>{s}×</button>
+        ))}
+        <div style={{width:1,height:18,background:"rgba(255,255,255,0.08)"}}/>
+        <span style={{fontSize:10,color:"#3d4551"}}>TP</span>
+        <input value={tp} onChange={e=>setTp(e.target.value)} type="number" style={{width:52,height:28,padding:"0 6px",background:"rgba(0,230,118,0.06)",border:"1px solid rgba(0,230,118,0.2)",borderRadius:6,color:"#00e676",fontSize:12,textAlign:"center",outline:"none"}}/>
+        <span style={{fontSize:10,color:"#3d4551"}}>SL</span>
+        <input value={sl} onChange={e=>setSl(e.target.value)} type="number" style={{width:52,height:28,padding:"0 6px",background:"rgba(255,23,68,0.06)",border:"1px solid rgba(255,23,68,0.2)",borderRadius:6,color:"#ff1744",fontSize:12,textAlign:"center",outline:"none"}}/>
+        <div style={{width:1,height:18,background:"rgba(255,255,255,0.08)"}}/>
+        {!inTrade?(
+          <>
+            <button onClick={()=>enterTrade("LONG")} disabled={!candles.length} style={{height:30,padding:"0 14px",borderRadius:8,border:"none",background:candles.length?"#00e676":"rgba(0,230,118,0.2)",color:candles.length?"#000":"#374151",cursor:candles.length?"pointer":"default",fontSize:12,fontWeight:800}}>▲ LONG</button>
+            <button onClick={()=>enterTrade("SHORT")} disabled={!candles.length} style={{height:30,padding:"0 14px",borderRadius:8,border:"none",background:candles.length?"#ff1744":"rgba(255,23,68,0.2)",color:candles.length?"#fff":"#374151",cursor:candles.length?"pointer":"default",fontSize:12,fontWeight:800}}>▼ SHORT</button>
+          </>
+        ):(
+          <div style={{display:"flex",gap:8,alignItems:"center"}}>
+            <span style={{fontSize:12,fontFamily:"monospace",color:side==="LONG"?"#00e676":"#ff1744",fontWeight:700}}>{side} @ {entry.toFixed(2)}</span>
+            <span style={{fontSize:13,fontWeight:800,fontFamily:"monospace",color:openPnl>=0?"#00e676":"#ff1744"}}>{openPnl>=0?"+":""}{openPnl.toFixed(2)}</span>
+            <button onClick={()=>closeTrade(curPrice,"MANUAL")} style={{height:28,padding:"0 12px",borderRadius:8,border:"1px solid rgba(255,171,0,0.3)",background:"rgba(255,171,0,0.1)",color:"#ffab00",cursor:"pointer",fontSize:11,fontWeight:700}}>Close</button>
+          </div>
+        )}
+        <div style={{marginLeft:"auto",textAlign:"right" as const,flexShrink:0}}>
+          <div style={{fontSize:9,color:"#3d4551",textTransform:"uppercase" as const}}>Balance</div>
+          <div style={{fontSize:15,fontWeight:900,fontFamily:"monospace",color:(activeAcc?.balance||0)>=10000?"#00e676":"#ff1744"}}>
+            ${(activeAcc?.balance||10000).toLocaleString("en-US",{minimumFractionDigits:0})}
+          </div>
+        </div>
+      </div>
+
+      {/* Chart */}
+      <div style={{flex:1,position:"relative",minHeight:0,background:"#060a0f"}}>
+        <canvas ref={canvasRef} style={{width:"100%",height:"100%",display:"block"}}/>
+        <div style={{position:"absolute",top:8,left:12,fontSize:10,color:"#3d4551",fontFamily:"monospace"}}>{symbol} · {cur}/{candles.length}</div>
+      </div>
+
+      {/* Trade log */}
+      {activeAcc&&activeAcc.trades.length>0&&(
+        <div style={{borderTop:"1px solid rgba(255,255,255,0.06)",background:"rgba(0,0,0,0.2)",padding:"8px 14px",maxHeight:100,overflowY:"auto",flexShrink:0}}>
+          <div style={{fontSize:9,color:"#3d4551",textTransform:"uppercase" as const,letterSpacing:"0.07em",marginBottom:4}}>
+            Trade Log · {activeAcc.trades.length} trades · {activeAcc.trades.filter(t=>t.pnl>0).length}W {activeAcc.trades.filter(t=>t.pnl<=0).length}L
+          </div>
+          <div style={{display:"flex",gap:6,flexWrap:"wrap" as const}}>
+            {[...activeAcc.trades].reverse().slice(0,20).map((t,i)=>(
+              <div key={i} style={{padding:"2px 8px",borderRadius:6,fontSize:11,fontWeight:700,background:t.pnl>=0?"rgba(0,230,118,0.1)":"rgba(255,23,68,0.1)",color:t.pnl>=0?"#00e676":"#ff1744"}}>
+                {t.side[0]} {t.result} {t.pnl>=0?"+":""}{t.pnl.toFixed(1)}
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* Mini Analytics */}
+      {activeAcc&&activeAcc.trades.length>0&&(()=>{
+        const ts=activeAcc.trades;
+        const wins=ts.filter(t=>t.pnl>0);
+        const losses=ts.filter(t=>t.pnl<=0);
+        const wr=ts.length>0?wins.length/ts.length*100:0;
+        const avgW=wins.length>0?wins.reduce((s,t)=>s+t.pnl,0)/wins.length:0;
+        const avgL=losses.length>0?Math.abs(losses.reduce((s,t)=>s+t.pnl,0)/losses.length):0;
+        const expectancy=wr/100*avgW-(1-wr/100)*avgL;
+        const totalPnl=activeAcc.balance-activeAcc.startBalance;
+        const pf=avgL>0?avgW/avgL:0;
+        return (
+          <div style={{borderTop:"1px solid rgba(255,255,255,0.06)",background:"rgba(0,0,0,0.15)",padding:"10px 14px",flexShrink:0}}>
+            <div style={{fontSize:9,color:"#3d4551",textTransform:"uppercase" as const,letterSpacing:"0.07em",marginBottom:8}}>Session Analytics</div>
+            <div style={{display:"grid",gridTemplateColumns:"repeat(6,1fr)",gap:8}}>
+              {[
+                {l:"Net P&L",   v:`${totalPnl>=0?"+":""}$${totalPnl.toFixed(2)}`, c:totalPnl>=0?"#00e676":"#ff1744"},
+                {l:"Win Rate",  v:`${wr.toFixed(0)}%`,   c:wr>=50?"#00e676":"#ff1744"},
+                {l:"Avg Win",   v:`$${avgW.toFixed(2)}`, c:"#00e676"},
+                {l:"Avg Loss",  v:`-$${avgL.toFixed(2)}`,c:"#ff1744"},
+                {l:"Prof Factor",v:pf.toFixed(2),         c:pf>=1?"#00e5ff":"#ffab00"},
+                {l:"Expectancy",v:`$${expectancy.toFixed(2)}`,c:expectancy>=0?"#00e5ff":"#ff1744"},
+              ].map(s=>(
+                <div key={s.l} style={{background:"rgba(255,255,255,0.03)",borderRadius:8,padding:"6px 8px",textAlign:"center" as const}}>
+                  <div style={{fontSize:8,color:"#4b5563",textTransform:"uppercase" as const,letterSpacing:"0.06em",marginBottom:2}}>{s.l}</div>
+                  <div style={{fontSize:12,fontWeight:800,color:s.c,fontFamily:"monospace"}}>{s.v}</div>
+                </div>
+              ))}
+            </div>
+          </div>
+        );
+      })()}
+
+      {/* New account modal */}
+      {showNew&&(
+        <div onClick={e=>{if(e.target===e.currentTarget)setShowNew(false);}} style={{position:"fixed",inset:0,zIndex:9999,background:"rgba(0,0,0,0.8)",display:"flex",alignItems:"center",justifyContent:"center"}}>
+          <div style={{width:340,background:"linear-gradient(160deg,#0f1520,#0b1017)",border:"1px solid rgba(255,255,255,0.09)",borderRadius:16,padding:24}}>
+            <div style={{fontSize:15,fontWeight:800,color:"#f0f6fc",marginBottom:16}}>New Sim Account</div>
+            <input value={newName} onChange={e=>setNewName(e.target.value)} onKeyDown={e=>e.key==="Enter"&&createAccount()}
+              placeholder="Account name..." autoFocus
+              style={{width:"100%",height:40,padding:"0 12px",background:"rgba(255,255,255,0.05)",border:"1px solid rgba(255,255,255,0.1)",borderRadius:9,color:"#f0f6fc",fontSize:14,outline:"none",boxSizing:"border-box" as const}}/>
+            <div style={{fontSize:11,color:"#4b5563",marginTop:6}}>Starts with $10,000 virtual balance</div>
+            <div style={{display:"flex",gap:8,marginTop:16}}>
+              <button onClick={()=>setShowNew(false)} style={{flex:1,height:36,borderRadius:9,border:"1px solid rgba(255,255,255,0.08)",background:"rgba(255,255,255,0.04)",color:"#6b7280",cursor:"pointer",fontSize:13}}>Cancel</button>
+              <button onClick={createAccount} style={{flex:2,height:36,borderRadius:9,border:"none",background:"linear-gradient(135deg,#00e5ff,#0088bb)",color:"#000",cursor:"pointer",fontSize:13,fontWeight:800}}>Create</button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Leaderboard */}
+      {showLB&&(
+        <div onClick={e=>{if(e.target===e.currentTarget)setShowLB(false);}} style={{position:"fixed",inset:0,zIndex:9999,background:"rgba(0,0,0,0.85)",display:"flex",alignItems:"center",justifyContent:"center",padding:20}}>
+          <div style={{width:"100%",maxWidth:500,background:"linear-gradient(160deg,#0f1520,#0b1017)",border:"1px solid rgba(213,0,249,0.2)",borderRadius:18,overflow:"hidden",boxShadow:"0 0 60px rgba(213,0,249,0.1)"}}>
+            <div style={{padding:"14px 20px",borderBottom:"1px solid rgba(255,255,255,0.06)",background:"rgba(0,0,0,0.3)",display:"flex",alignItems:"center",justifyContent:"space-between"}}>
+              <div style={{fontSize:15,fontWeight:800,color:"#f0f6fc"}}>🏆 Simulator Leaderboard</div>
+              <button onClick={()=>setShowLB(false)} style={{width:28,height:28,borderRadius:8,background:"rgba(255,255,255,0.05)",border:"1px solid rgba(255,255,255,0.08)",color:"#4b5563",cursor:"pointer",fontSize:17,display:"flex",alignItems:"center",justifyContent:"center"}}>×</button>
+            </div>
+            <div style={{padding:16}}>
+              {leaderboard.length===0?(
+                <div style={{textAlign:"center" as const,padding:"32px 0",color:"#374151",fontSize:13}}>No accounts yet — start trading!</div>
+              ):leaderboard.map((entry,i)=>{
+                const pnl=entry.balance-entry.startBalance;
+                const wr=entry.trades>0?Math.round(entry.wins/entry.trades*100):0;
+                return (
+                  <div key={i} style={{display:"flex",alignItems:"center",gap:12,padding:"10px 14px",borderRadius:10,background:i===0?"rgba(213,0,249,0.08)":"rgba(255,255,255,0.02)",border:`1px solid ${i===0?"rgba(213,0,249,0.2)":"rgba(255,255,255,0.04)"}`,marginBottom:6}}>
+                    <div style={{fontSize:18,width:28,textAlign:"center" as const}}>{i===0?"🥇":i===1?"🥈":i===2?"🥉":`#${i+1}`}</div>
+                    <div style={{flex:1}}>
+                      <div style={{fontSize:13,fontWeight:700,color:"#f0f6fc"}}>{entry.name}</div>
+                      <div style={{fontSize:10,color:"#4b5563"}}>{entry.trades} trades · {wr}% WR</div>
+                    </div>
+                    <div style={{textAlign:"right" as const}}>
+                      <div style={{fontSize:15,fontWeight:900,fontFamily:"monospace",color:pnl>=0?"#00e676":"#ff1744"}}>{fmt$(pnl)}</div>
+                      <div style={{fontSize:11,color:"#4b5563",fontFamily:"monospace"}}>${entry.balance.toLocaleString()}</div>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
