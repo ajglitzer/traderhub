@@ -154,7 +154,8 @@ export default function DailyRecapPage() {
       )}
 
       {/* AI Output */}
-      <div ref={scrollRef} style={{background:"linear-gradient(160deg,#0f1520,#0b1017)",border:"1px solid rgba(213,0,249,0.15)",borderRadius:14,padding:20,minHeight:200,overflowWrap:"break-word" as const,wordBreak:"break-word" as const,width:"100%",boxSizing:"border-box" as const,overflow:"visible" as const}}>
+      <div style={{background:"linear-gradient(160deg,#0f1520,#0b1017)",border:"1px solid rgba(213,0,249,0.15)",borderRadius:14,padding:20,overflowWrap:"break-word" as const,wordBreak:"break-word" as const,width:"100%",boxSizing:"border-box" as const}}>
+        <div ref={scrollRef}>
         {status==="idle"&&(
           <div style={{display:"flex",flexDirection:"column" as const,alignItems:"center",justifyContent:"center",height:"100%",gap:12,padding:"40px 0"}}>
             <div style={{width:48,height:48,borderRadius:14,background:"rgba(213,0,249,0.1)",border:"1px solid rgba(213,0,249,0.25)",display:"flex",alignItems:"center",justifyContent:"center",fontSize:24}}>✦</div>
@@ -177,6 +178,7 @@ export default function DailyRecapPage() {
             <button onClick={generate} style={{marginTop:16,height:32,padding:"0 18px",borderRadius:8,background:"rgba(213,0,249,0.1)",border:"1px solid rgba(213,0,249,0.3)",color:"#d500f9",fontSize:12,fontWeight:700,cursor:"pointer"}}>Retry</button>
           </div>
         )}
+        </div>
       </div>
       <style>{`@keyframes spin{to{transform:rotate(360deg)}} @keyframes blink{0%,100%{opacity:1}50%{opacity:0}}`}</style>
     </div>
