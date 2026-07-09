@@ -80,6 +80,8 @@ function TradeReplayPopup({ticker,entryTime,exitTime,side,entryPrice,exitPrice,s
   const [tool,        setTool]        = useState<Tool>("cursor");
   const [color,       setColor]       = useState("#00e5ff");
   const [drawings,    setDrawings]    = useState<Drawing[]>([]);
+  const [chartColors, setChartColors] = useState({up:"#26a69a",down:"#ef5350",bg:"#131722"});
+  const [showColorPicker, setShowColorPicker] = useState(false);
   const [drawing,     setDrawing]     = useState<Drawing|null>(null);
   const [pendingPt,   setPendingPt]   = useState<{x:number;y:number}|null>(null); // first click for trendline
   const [selected,    setSelected]    = useState<string|null>(null);   // selected drawing id
@@ -93,7 +95,7 @@ function TradeReplayPopup({ticker,entryTime,exitTime,side,entryPrice,exitPrice,s
   useEffect(()=>{
     if(!containerRef.current) return;
     const chart=createChart(containerRef.current,{
-      layout:{ background:{color:"#060a0f"}, textColor:"#4b5563", fontFamily:"'JetBrains Mono',monospace", fontSize:10 },
+      layout:{ background:{color:chartColors.bg}, textColor:"#4b5563", fontFamily:"'JetBrains Mono',monospace", fontSize:10 },
       grid:{ vertLines:{color:"rgba(255,255,255,0.04)"}, horzLines:{color:"rgba(255,255,255,0.04)"} },
       crosshair:{ mode:CrosshairMode.Normal },
       rightPriceScale:{ borderColor:"rgba(255,255,255,0.08)" },
@@ -104,9 +106,9 @@ function TradeReplayPopup({ticker,entryTime,exitTime,side,entryPrice,exitPrice,s
     chartRef.current=chart;
 
     const ser=chart.addSeries(CandlestickSeries,{
-      upColor:"#00e676",downColor:"#ff1744",
-      borderUpColor:"#00e676",borderDownColor:"#ff1744",
-      wickUpColor:"rgba(0,230,118,0.65)",wickDownColor:"rgba(255,23,68,0.65)",
+      upColor:chartColors.up,downColor:chartColors.down,
+      borderUpColor:chartColors.up,borderDownColor:chartColors.down,
+      wickUpColor:chartColors.up+"aa",wickDownColor:chartColors.down+"aa",
     });
     serRef.current=ser;
 
@@ -118,7 +120,7 @@ function TradeReplayPopup({ticker,entryTime,exitTime,side,entryPrice,exitPrice,s
     });
     if(containerRef.current) ro.observe(containerRef.current);
     return()=>{ ro.disconnect(); chart.remove(); chartRef.current=null; serRef.current=null; markersRef.current=null; };
-  },[]);
+  },[chartColors]);
 
   // ── Fetch ─────────────────────────────────────────────────────────────────
   useEffect(()=>{
@@ -580,6 +582,29 @@ function TradeReplayPopup({ticker,entryTime,exitTime,side,entryPrice,exitPrice,s
                 fontSize:11,fontWeight:700,cursor:"pointer",transition:"all 0.12s",
               }}>{s}×</button>
             ))}
+            {/* Color picker */}
+            <div style={{position:"relative" as const}}>
+              <button onClick={()=>setShowColorPicker(p=>!p)} style={{height:30,padding:"0 10px",borderRadius:8,border:"1px solid rgba(255,255,255,0.08)",background:"rgba(255,255,255,0.03)",color:"#4b5563",cursor:"pointer",fontSize:11,fontWeight:700,display:"flex",alignItems:"center",gap:5}}>
+                <span style={{width:8,height:8,borderRadius:"50%",background:chartColors.up,display:"inline-block"}}/>
+                <span style={{width:8,height:8,borderRadius:"50%",background:chartColors.down,display:"inline-block"}}/>
+                Theme
+              </button>
+              {showColorPicker&&(
+                <div style={{position:"absolute",bottom:36,right:0,zIndex:9999,background:"#0f1520",border:"1px solid rgba(255,255,255,0.12)",borderRadius:12,padding:12,display:"flex",flexDirection:"column",gap:8,minWidth:170}}>
+                  {([["Bull",chartColors.up,"up"],["Bear",chartColors.down,"down"],["BG",chartColors.bg,"bg"]] as const).map(([lbl,val,key])=>(
+                    <div key={key} style={{display:"flex",alignItems:"center",justifyContent:"space-between",gap:8}}>
+                      <span style={{fontSize:11,color:"#8b949e"}}>{lbl}</span>
+                      <input type="color" value={val} onChange={e=>setChartColors(c=>({...c,[key]:e.target.value}))} style={{width:28,height:22,borderRadius:5,border:"none",cursor:"pointer"}}/>
+                    </div>
+                  ))}
+                  <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:5,marginTop:4}}>
+                    {[["Classic","#00e676","#ff1744","#060a0f"],["TV Dark","#26a69a","#ef5350","#131722"],["Mono","#ffffff","#888888","#1a1a1a"],["Light","#089981","#f23645","#f0f3fa"]].map(([n,u,d,b])=>(
+                      <button key={n} onClick={()=>setChartColors({up:u,down:d,bg:b})} style={{height:24,borderRadius:6,border:"1px solid rgba(255,255,255,0.08)",background:"rgba(255,255,255,0.03)",color:"#8b949e",cursor:"pointer",fontSize:10}}>{n}</button>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
           </div>
         </div>
       </div>

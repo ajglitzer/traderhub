@@ -7,11 +7,13 @@ export function cn(...inputs: ClassValue[]) {
 
 export function fmt$(v: number, decimals = 2): string {
   const abs = Math.abs(v);
+  // Don't show .00 for clean whole numbers
+  const isWhole = Number.isInteger(abs);
   const s = abs >= 1_000_000
     ? `$${(abs / 1_000_000).toFixed(1)}M`
     : abs >= 1_000
     ? `$${(abs / 1_000).toFixed(1)}K`
-    : `$${abs.toFixed(decimals)}`;
+    : `$${isWhole && decimals === 2 ? abs.toFixed(0) : abs.toFixed(decimals)}`;
   return v < 0 ? `-${s}` : s;
 }
 

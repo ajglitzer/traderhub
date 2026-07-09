@@ -20,9 +20,10 @@ html { color-scheme: dark; }
 }
 
 /* ── Light mode ── */
+/* ── Light Mode ──────────────────────────────────────────────────────────── */
 [data-theme="light"] {
   color-scheme: light;
-  --bg: #f0f2f5;
+  --bg: #f4f6f9;
   --panel: #ffffff;
   --panel2: #f8f9fb;
   --border: rgba(0,0,0,0.08);
@@ -30,46 +31,87 @@ html { color-scheme: dark; }
 }
 
 [data-theme="light"] body {
-  background: var(--bg);
+  background: #f4f6f9;
   color: #111827;
 }
 
-[data-theme="light"] ::-webkit-scrollbar-thumb {
-  background: rgba(0,0,0,0.15);
+[data-theme="light"] ::-webkit-scrollbar-thumb { background: rgba(0,0,0,0.15); }
+
+/* Sidebar */
+[data-theme="light"] aside {
+  background: linear-gradient(180deg,#ffffff,#f8f9fb) !important;
+  border-right: 1px solid rgba(0,0,0,0.08) !important;
 }
 
-/* Light mode overrides for inline dark styles */
-[data-theme="light"] [style*="background: linear-gradient(160deg,#0f1520"] {
-  background: linear-gradient(160deg,#ffffff,#f8f9fb) !important;
+/* Topbar */
+[data-theme="light"] header {
+  background: rgba(255,255,255,0.95) !important;
+  border-bottom: 1px solid rgba(0,0,0,0.08) !important;
 }
-[data-theme="light"] [style*="#060a0f"] {
-  background: #f8f9fb !important;
-  color: #111827 !important;
+
+/* Panels / cards */
+[data-theme="light"] [style*="background: linear-gradient(160deg,#0f1520"],
+[data-theme="light"] [style*="background:linear-gradient(160deg,#0f1520"],
+[data-theme="light"] [style*="background: linear-gradient(160deg, #0f1520"] {
+  background: linear-gradient(160deg,#ffffff,#f8fafc) !important;
+  border-color: rgba(0,0,0,0.08) !important;
 }
-[data-theme="light"] [style*="color: #c9d1d9"] { color: #1f2937 !important; }
-[data-theme="light"] [style*="color: #f0f6fc"] { color: #111827 !important; }
-[data-theme="light"] [style*="color: #8b949e"] { color: #374151 !important; }
-[data-theme="light"] [style*="color: #6b7280"] { color: #4b5563 !important; }
-[data-theme="light"] [style*="color: #4b5563"] { color: #6b7280 !important; }
-[data-theme="light"] [style*="color: #3d4551"] { color: #9ca3af !important; }
-[data-theme="light"] [style*="color: #374151"] { color: #d1d5db !important; }
+
+[data-theme="light"] [style*="background:#060a0f"],
+[data-theme="light"] [style*="background: #060a0f"],
 [data-theme="light"] [style*="background: #0b1017"],
 [data-theme="light"] [style*="background:#0b1017"],
 [data-theme="light"] [style*="background: #0e1117"],
 [data-theme="light"] [style*="background: #0f1520"],
-[data-theme="light"] [style*="background:#0f1520"] {
+[data-theme="light"] [style*="background:#0f1520"],
+[data-theme="light"] [style*="background: #080d14"],
+[data-theme="light"] [style*="background:#080d14"] {
   background: #ffffff !important;
 }
-[data-theme="light"] [style*="background: rgba(0,0,0"] {
-  background: rgba(0,0,0,0.04) !important;
-}
+
+/* Text colors */
+[data-theme="light"] [style*="color: #f0f6fc"] { color: #0f172a !important; }
+[data-theme="light"] [style*="color: #e6edf3"] { color: #1e293b !important; }
+[data-theme="light"] [style*="color: #c9d1d9"] { color: #334155 !important; }
+[data-theme="light"] [style*="color: #8b949e"] { color: #475569 !important; }
+[data-theme="light"] [style*="color: #6b7280"] { color: #64748b !important; }
+[data-theme="light"] [style*="color: #4b5563"] { color: #94a3b8 !important; }
+[data-theme="light"] [style*="color: #3d4551"] { color: #94a3b8 !important; }
+[data-theme="light"] [style*="color: #374151"] { color: #cbd5e1 !important; }
+[data-theme="light"] [style*="color: #d1d5db"] { color: #1e293b !important; }
+
+/* Borders */
 [data-theme="light"] [style*="border: 1px solid rgba(255,255,255,0.07)"],
 [data-theme="light"] [style*="border:1px solid rgba(255,255,255,0.07)"],
 [data-theme="light"] [style*="border: 1px solid rgba(255,255,255,0.06)"],
 [data-theme="light"] [style*="border: 1px solid rgba(255,255,255,0.08)"],
-[data-theme="light"] [style*="border: 1px solid rgba(255,255,255,0.09)"] {
-  border-color: rgba(0,0,0,0.1) !important;
+[data-theme="light"] [style*="border: 1px solid rgba(255,255,255,0.09)"],
+[data-theme="light"] [style*="border: 1px solid rgba(255,255,255,0.05)"] {
+  border-color: rgba(0,0,0,0.09) !important;
 }
+
+/* Inputs */
+[data-theme="light"] input, [data-theme="light"] textarea, [data-theme="light"] select {
+  background: #f8fafc !important;
+  border-color: rgba(0,0,0,0.12) !important;
+  color: #0f172a !important;
+}
+
+/* Subtle backgrounds */
+[data-theme="light"] [style*="background: rgba(255,255,255,0.03)"],
+[data-theme="light"] [style*="background: rgba(255,255,255,0.02)"],
+[data-theme="light"] [style*="background: rgba(255,255,255,0.04)"],
+[data-theme="light"] [style*="background: rgba(255,255,255,0.05)"] {
+  background: rgba(0,0,0,0.02) !important;
+}
+
+/* Dark overlays */
+[data-theme="light"] [style*="background: rgba(0,0,0,0.3)"],
+[data-theme="light"] [style*="background: rgba(0,0,0,0.25)"],
+[data-theme="light"] [style*="background: rgba(0,0,0,0.2)"] {
+  background: rgba(0,0,0,0.04) !important;
+}
+
 [data-theme="light"] .card-3d {
   background: linear-gradient(145deg, #f8f9fb, #ffffff);
   border-color: rgba(0,0,0,0.08);

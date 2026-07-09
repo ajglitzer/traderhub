@@ -118,6 +118,9 @@ export async function getMessages(userId: string, otherId: string): Promise<Mess
 }
 
 export async function sendMessage(fromId: string, toId: string, content: string, type: Message["type"] = "text", metadata?: Record<string,any>): Promise<void> {
+  const { filterMessage } = await import("@/lib/profanity");
+  const check = filterMessage(content);
+  if (!check.ok) throw new Error(check.reason || "Message not allowed");
   await sb().from("messages").insert({ from_id: fromId, to_id: toId, content, type, metadata: metadata || null });
 }
 

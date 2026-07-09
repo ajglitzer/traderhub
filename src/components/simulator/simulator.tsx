@@ -37,69 +37,151 @@ function newAccount(name: string): SimAccount {
 }
 
 // ── Chart canvas ──────────────────────────────────────────────────────────────
-function drawChart(canvas:HTMLCanvasElement, candles:Candle[], cur:number, inTrade:boolean, entry:number, side:"LONG"|"SHORT", tp:number, sl:number) {
+function drawChart(canvas:HTMLCanvasElement, candles:Candle[], cur:number, inTrade:boolean, entry:number, side:"LONG"|"SHORT", tp:number, sl:number, colors:{up:string,down:string,bg:string}={up:"#00e676",down:"#ff1744",bg:"#060a0f"}) {
   const dpr=window.devicePixelRatio||1, W=canvas.offsetWidth, H=canvas.offsetHeight;
   if(!W||!H) return;
   canvas.width=W*dpr; canvas.height=H*dpr;
   const ctx=canvas.getContext("2d")!; ctx.scale(dpr,dpr);
-  ctx.fillStyle="#060a0f"; ctx.fillRect(0,0,W,H);
+  ctx.fillStyle=colors.bg; ctx.fillRect(0,0,W,H);
   const slice=candles.slice(Math.max(0,cur-80),cur);
   if(!slice.length) return;
   const prices=[...slice.map(c=>c.h),...slice.map(c=>c.l)];
   if(inTrade){prices.push(entry,tp,sl);}
   const lo=Math.min(...prices),hi=Math.max(...prices);
-  const pad=(hi-lo)*0.1||1;
+  const pad=(hi-lo)*0.12||1;
   const yMin=lo-pad,yMax=hi+pad,yR=yMax-yMin||1;
-  const bW=Math.max(2,Math.min(12,(W-24)/slice.length*0.7));
-  const toX=(i:number)=>12+(i/(slice.length-1||1))*(W-24);
-  const toY=(p:number)=>8+(H-16)-(p-yMin)/yR*(H-16);
-  // Grid
+  const bW=Math.max(2,Math.min(14,(W-32)/slice.length*0.75));
+  const toX=(i:number)=>16+(i/(slice.length-1||1))*(W-32);
+  const toY=(p:number)=>10+(H-20)-(p-yMin)/yR*(H-20);
+
+  // Background grid
+  const gridColor = colors.bg === "#ffffff" || colors.bg === "#f8f9fa" ? "rgba(0,0,0,0.06)" : "rgba(255,255,255,0.04)";
   for(let i=0;i<=4;i++){
-    ctx.strokeStyle="rgba(255,255,255,0.04)"; ctx.lineWidth=1;
-    ctx.beginPath(); ctx.moveTo(0,8+i/4*(H-16)); ctx.lineTo(W,8+i/4*(H-16)); ctx.stroke();
+    ctx.strokeStyle=gridColor; ctx.lineWidth=1;
+    ctx.beginPath(); ctx.moveTo(0,10+i/4*(H-20)); ctx.lineTo(W,10+i/4*(H-20)); ctx.stroke();
+    // Price labels
+    const price = yMax - (i/4)*yR;
+    ctx.fillStyle = colors.bg === "#ffffff" ? "rgba(0,0,0,0.3)" : "rgba(255,255,255,0.2)";
+    ctx.font="10px monospace"; ctx.textAlign="left";
+    ctx.fillText(price.toFixed(0), 4, 10+i/4*(H-20)-3);
   }
+
   // Candles
   slice.forEach((c,i)=>{
-    const g=c.c>=c.o;
-    ctx.strokeStyle=g?"rgba(0,230,118,0.6)":"rgba(255,23,68,0.6)"; ctx.lineWidth=1;
+    const bull=c.c>=c.o;
+    const upC = colors.up; const downC = colors.down;
+    // Wick
+    ctx.strokeStyle=bull?upC:downC; ctx.lineWidth=1;
     ctx.beginPath(); ctx.moveTo(toX(i),toY(c.h)); ctx.lineTo(toX(i),toY(c.l)); ctx.stroke();
-    ctx.fillStyle=g?"#00e676":"#ff1744"; ctx.globalAlpha=0.88;
-    ctx.fillRect(toX(i)-bW/2,toY(Math.max(c.o,c.c)),bW,Math.max(1.5,toY(Math.min(c.o,c.c))-toY(Math.max(c.o,c.c))));
+    // Body
+    const bodyTop=toY(Math.max(c.o,c.c));
+    const bodyBot=toY(Math.min(c.o,c.c));
+    const bodyH=Math.max(1.5,bodyBot-bodyTop);
+    ctx.fillStyle=bull?upC:downC; ctx.globalAlpha=0.9;
+    ctx.fillRect(toX(i)-bW/2,bodyTop,bW,bodyH);
     ctx.globalAlpha=1;
   });
-  // Trade lines
+
+  // TradingView-style TP/SL lines with filled zones
   if(inTrade&&entry){
-    [[entry,"#00e5ff","Entry",[]],[tp,"#00e676","TP",[8,5]],[sl,"#ff1744","SL",[8,5]]].forEach(([p,col,lbl,dash])=>{
-      const y=toY(p as number);
+    const entryY=toY(entry);
+    const tpY=toY(tp);
+    const slY=toY(sl);
+
+    // Fill zone between entry and TP (green)
+    if(tpY<H&&tpY>0){
+      ctx.fillStyle="rgba(0,230,118,0.06)";
+      ctx.fillRect(0,Math.min(entryY,tpY),W,Math.abs(entryY-tpY));
+    }
+    // Fill zone between entry and SL (red)
+    if(slY>0&&slY<H){
+      ctx.fillStyle="rgba(255,23,68,0.06)";
+      ctx.fillRect(0,Math.min(entryY,slY),W,Math.abs(entryY-slY));
+    }
+
+    // Lines
+    const lines:[number,string,string,number[]?][]=[
+      [entry,"#00e5ff","Entry"],
+      [tp,"#00e676","TP",[6,4]],
+      [sl,"#ff1744","SL",[6,4]],
+    ];
+    lines.forEach(([price,col,lbl,dash])=>{
+      const y=toY(price as number);
       if(y<0||y>H) return;
       ctx.strokeStyle=col as string; ctx.lineWidth=lbl==="Entry"?2:1.5;
-      ctx.setLineDash(dash as number[]);
+      ctx.setLineDash((dash||[]) as number[]);
       ctx.beginPath(); ctx.moveTo(0,y); ctx.lineTo(W,y); ctx.stroke();
       ctx.setLineDash([]);
-      ctx.fillStyle=col as string; ctx.font="bold 9px Inter"; ctx.textAlign="right";
-      ctx.fillText(lbl as string,W-4,y-3);
+      // Label pill on right
+      const txt=`${lbl} ${(price as number).toFixed(1)}`;
+      const tw=ctx.measureText(txt).width+10;
+      ctx.fillStyle=col as string;
+      ctx.beginPath();
+      ctx.roundRect(W-tw-4,y-9,tw,16,3);
+      ctx.fill();
+      ctx.fillStyle="#000"; ctx.font="bold 10px monospace"; ctx.textAlign="center";
+      ctx.fillText(txt,W-tw/2-4,y+2);
     });
   }
-  // Current price
+
+  // Current price line
   if(slice.length){
-    const lp=slice[slice.length-1].c, y=toY(lp), g=lp>=slice[slice.length-1].o;
-    ctx.strokeStyle=g?"rgba(0,230,118,0.5)":"rgba(255,23,68,0.5)"; ctx.lineWidth=1; ctx.setLineDash([3,4]);
+    const lp=slice[slice.length-1].c, y=toY(lp), bull=lp>=slice[slice.length-1].o;
+    ctx.strokeStyle=bull?`${colors.up}88`:`${colors.down}88`; ctx.lineWidth=1; ctx.setLineDash([3,4]);
     ctx.beginPath(); ctx.moveTo(0,y); ctx.lineTo(W,y); ctx.stroke(); ctx.setLineDash([]);
+    // Price tag
+    const tag=lp.toFixed(1);
+    const tw=ctx.measureText(tag).width+8;
+    ctx.fillStyle=bull?colors.up:colors.down;
+    ctx.fillRect(W-tw-2,y-8,tw,14);
+    ctx.fillStyle="#000"; ctx.font="bold 10px monospace"; ctx.textAlign="center";
+    ctx.fillText(tag,W-tw/2-2,y+3);
   }
 }
 
-// ── Generate candles ──────────────────────────────────────────────────────────
+// ── Generate realistic candles with volatility clustering ──────────────────────
 function genCandles(symbol:string, count=500): Candle[] {
   const bases:Record<string,number>={NQ:20000,ES:5000,MGC:2500,GC:2500,CL:80,BTC:65000,ETH:3500};
-  let p=bases[symbol]||100; const v=(bases[symbol]||100)*0.002;
+  const base = bases[symbol]||100;
+  let p = base;
+  const v = base * 0.0015; // base volatility per candle
   const out:Candle[]=[];
-  let trend=(Math.random()-0.5)*0.3;
+  let trend = 0;
+  let volatility = 1.0; // volatility multiplier (clusters)
+  let trendStrength = 0;
+
   for(let i=0;i<count;i++){
-    if(Math.random()<0.05) trend=(Math.random()-0.5)*0.3;
-    const move=(Math.random()-0.49+trend)*v;
-    const o=p,cl=+(p+move).toFixed(2);
-    out.push({o,h:+Math.max(o,cl,o+Math.random()*v*0.5).toFixed(2),l:+Math.min(o,cl,o-Math.random()*v*0.5).toFixed(2),c:cl});
-    p=cl;
+    // Volatility clustering — vol stays high or low for runs
+    if(Math.random()<0.08) volatility = 0.5 + Math.random()*2.5;
+    else volatility = volatility*0.97 + (0.5+Math.random()*1.5)*0.03;
+
+    // Trend regime changes
+    if(Math.random()<0.04){
+      trend = (Math.random()-0.5)*0.8;
+      trendStrength = 5 + Math.floor(Math.random()*20);
+    }
+    if(trendStrength>0) trendStrength--;
+    else trend *= 0.92;
+
+    const curV = v * volatility;
+    const bodyMove = (Math.random()-0.48+trend*0.1)*curV;
+    const o = p;
+    const c = +(p + bodyMove).toFixed(2);
+
+    // Realistic wicks — larger on high vol candles
+    const wickScale = 0.3 + Math.random()*0.7;
+    const upperWick = Math.random()*curV*wickScale*(Math.random()<0.3?2:1);
+    const lowerWick = Math.random()*curV*wickScale*(Math.random()<0.3?2:1);
+    const h = +(Math.max(o,c) + upperWick).toFixed(2);
+    const l = +(Math.min(o,c) - lowerWick).toFixed(2);
+
+    // Occasional news spikes
+    const spike = Math.random()<0.02 ? (Math.random()-0.5)*curV*5 : 0;
+    out.push({o, h:+(h+Math.abs(spike)).toFixed(2), l:+(l-Math.abs(spike)).toFixed(2), c:+(c+spike).toFixed(2)});
+    p = +(c+spike).toFixed(2);
+    // Prevent price going negative
+    if(p<base*0.5) p=base*0.5;
+    if(p>base*2) p=base*1.5;
   }
   return out;
 }
@@ -116,7 +198,8 @@ export default function SimulatorPage() {
   const [activeId, setActiveId]   = useState<string>("");
   const [newName,  setNewName]    = useState("");
   const [showNew,  setShowNew]    = useState(false);
-  const [showLB,   setShowLB]     = useState(false);
+  const [chartColors, setChartColors] = useState({up:"#00e676",down:"#ff1744",bg:"#060a0f"});
+  const [showColorPicker, setShowColorPicker] = useState(false);
   const [leaderboard,setLB]       = useState<any[]>([]);
 
   const [symbol,   setSymbol]     = useState("NQ");
@@ -157,8 +240,8 @@ export default function SimulatorPage() {
   // Draw only
   useEffect(()=>{
     const cv=canvasRef.current; if(!cv||!candles.length) return;
-    drawChart(cv,candles,cur,inTrade,entry,side,entry+(+tp),entry-(+sl));
-  },[candles,cur,inTrade,entry,side,tp,sl]);
+    drawChart(cv,candles,cur,inTrade,entry,side,entry+(+tp),entry-(+sl),chartColors);
+  },[candles,cur,inTrade,entry,side,tp,sl,chartColors]);
 
   // TP/SL auto-close check — separate effect, guarded against double-fire
   useEffect(()=>{
@@ -287,6 +370,26 @@ export default function SimulatorPage() {
     setLB(JSON.parse(localStorage.getItem(LB_KEY)||"[]"));
   }
 }} style={{height:32,padding:"0 12px",borderRadius:9,border:"1px solid rgba(213,0,249,0.25)",background:"rgba(213,0,249,0.08)",color:"#d500f9",cursor:"pointer",fontSize:11,fontWeight:700,marginLeft:"auto",flexShrink:0}}>🏆 Leaderboard</button>
+        <div style={{position:"relative",flexShrink:0}}>
+          <button onClick={()=>setShowColorPicker(p=>!p)} style={{height:32,padding:"0 12px",borderRadius:9,border:"1px solid rgba(255,255,255,0.1)",background:"rgba(255,255,255,0.05)",color:"#8b949e",cursor:"pointer",fontSize:11,fontWeight:700,display:"flex",alignItems:"center",gap:6}}>
+            <span style={{width:10,height:10,borderRadius:"50%",background:chartColors.up,display:"inline-block"}}/>
+            <span style={{width:10,height:10,borderRadius:"50%",background:chartColors.down,display:"inline-block"}}/>
+            Colors
+          </button>
+          {showColorPicker&&(
+            <div style={{position:"absolute",top:36,right:0,zIndex:999,background:"#0f1520",border:"1px solid rgba(255,255,255,0.12)",borderRadius:12,padding:14,display:"flex",flexDirection:"column",gap:10,minWidth:180}}>
+              {([["Bullish",chartColors.up,"up"],["Bearish",chartColors.down,"down"],["Background",chartColors.bg,"bg"]] as const).map(([lbl,val,key])=>(
+                <div key={key} style={{display:"flex",alignItems:"center",justifyContent:"space-between",gap:10}}>
+                  <span style={{fontSize:12,color:"#8b949e"}}>{lbl}</span>
+                  <input type="color" value={val} onChange={e=>setChartColors(c=>({...c,[key]:e.target.value}))} style={{width:32,height:24,borderRadius:6,border:"none",cursor:"pointer",background:"none"}}/>
+                </div>
+              ))}
+              {[["Classic","#00e676","#ff1744","#060a0f"],["TradingView","#26a69a","#ef5350","#131722"],["Monochrome","#ffffff","#ffffff","#1a1a1a"],["Light","#089981","#f23645","#ffffff"]].map(([name,up,down,bg])=>(
+                <button key={name} onClick={()=>{setChartColors({up,down,bg});}} style={{height:26,borderRadius:7,border:"1px solid rgba(255,255,255,0.08)",background:"rgba(255,255,255,0.03)",color:"#8b949e",cursor:"pointer",fontSize:11}}>{name}</button>
+              ))}
+            </div>
+          )}
+        </div>
       </div>
 
       {/* Controls bar */}

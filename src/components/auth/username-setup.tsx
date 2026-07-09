@@ -53,6 +53,10 @@ export function UsernameSetupLocal({ userId }: { userId: string }) {
     if (!username.trim() || username.length < 3) { setError("Username must be at least 3 characters"); return; }
     if (!/^[a-zA-Z0-9_]{3,20}$/.test(username)) { setError("Letters, numbers, underscores only (3-20 chars)"); return; }
     if (available === false) { setError("Username already taken — choose another"); return; }
+    // Profanity check
+    const { filterUsername } = await import("@/lib/profanity");
+    const pf = filterUsername(username);
+    if (!pf.ok) { setError(pf.reason || "Username not allowed"); return; }
 
     setSaving(true);
     setError("");

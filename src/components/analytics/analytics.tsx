@@ -5,6 +5,7 @@ import { calculateMetrics, buildEquityCurve, runMonteCarlo } from "@/lib/calcula
 import { EquityChart } from "@/components/charts/equity-chart";
 import { fmt$ } from "@/lib/utils";
 import { Trade } from "@/types/trade";
+import { exportToCSV } from "@/lib/export";
 import {
   BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Cell,
   ReferenceLine, LineChart, Line, CartesianGrid, AreaChart, Area,
@@ -109,6 +110,13 @@ export default function AnalyticsPage() {
 
   return (
     <div style={{ padding:20, overflowY:"auto", height:"100%", display:"flex", flexDirection:"column", gap:14 }}>
+      <div style={{ display:"flex", alignItems:"center", justifyContent:"space-between" }}>
+        <div style={{ fontSize:10, color:"#4b5563" }}>{closed.length} closed trades analyzed</div>
+        <button onClick={()=>exportToCSV(closed as Trade[], `traderhub_analytics_${new Date().toISOString().slice(0,10)}.csv`)}
+          style={{ height:28, padding:"0 14px", borderRadius:8, border:"1px solid rgba(0,229,255,0.2)", background:"rgba(0,229,255,0.06)", color:"#00e5ff", fontSize:11, fontWeight:700, cursor:"pointer" }}>
+          ↓ Export CSV
+        </button>
+      </div>
 
       <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:14 }}>
         <Panel title="Equity Curve" sub={"Total: "+fmt$(equity[equity.length-1]?.equity||0)}>

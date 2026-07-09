@@ -224,25 +224,25 @@ function Dashboard() {
           <Label>Recent Trades</Label>
           {recent.length === 0
             ? <div style={{ textAlign:"center" as const, padding:"30px 0", color:"#3d4551", fontSize:12 }}>No trades yet</div>
-            : <div style={{ display:"flex", flexDirection:"column", gap:5 }}>
+            : <div style={{ display:"flex", flexDirection:"column", gap:5, overflow:"hidden" }}> 
               {recent.map(t => (
                 <div key={t.id} style={{ display:"flex", alignItems:"center", justifyContent:"space-between", padding:"7px 10px", borderRadius:8,
                   background:"rgba(255,255,255,0.02)", border:"1px solid rgba(255,255,255,0.04)",
-                  transition:"background 0.1s" }}
+                  transition:"background 0.1s", minWidth:0, overflow:"hidden" }}
                   onMouseEnter={e=>(e.currentTarget as HTMLElement).style.background="rgba(255,255,255,0.04)"}
                   onMouseLeave={e=>(e.currentTarget as HTMLElement).style.background="rgba(255,255,255,0.02)"}
                 >
-                  <div style={{ display:"flex", alignItems:"center", gap:8 }}>
+                  <div style={{ display:"flex", alignItems:"center", gap:6, minWidth:0, overflow:"hidden", flexShrink:1 }}>
                     <span style={{ width:6, height:6, borderRadius:"50%", background:(t.netPnl||0)>=0?"#00e676":"#ff1744", display:"inline-block", flexShrink:0,
                       boxShadow:`0 0 6px ${(t.netPnl||0)>=0?"#00e676":"#ff1744"}` }}/>
-                    <span style={{ fontWeight:700, fontSize:13, color:"#f0f6fc", fontFamily:"monospace" }}>{t.ticker}</span>
-                    <span style={{ fontSize:9, padding:"1px 5px", borderRadius:4, fontWeight:700,
+                    <span style={{ fontWeight:700, fontSize:12, color:"#f0f6fc", fontFamily:"monospace", flexShrink:0 }}>{t.ticker}</span>
+                    <span style={{ fontSize:9, padding:"1px 5px", borderRadius:4, fontWeight:700, flexShrink:0,
                       background: t.assetClass==="FUTURES"?"rgba(213,0,249,0.1)": t.assetClass==="FOREX"?"rgba(0,229,255,0.1)":"rgba(0,230,118,0.1)",
                       color: t.assetClass==="FUTURES"?"#d500f9": t.assetClass==="FOREX"?"#00e5ff":"#00e676" }}>{t.assetClass}</span>
                   </div>
-                  <div style={{ display:"flex", alignItems:"center", gap:6 }}>
-                    <CandleChartBtn trade={t} size={24}/>
-                    <AIAnalysisBtn trade={t} size={24}/>
+                  <div style={{ display:"flex", alignItems:"center", gap:4, flexShrink:0 }}>
+                    <CandleChartBtn trade={t} size={22}/>
+                    <AIAnalysisBtn trade={t} size={22}/>
                     <TradeCardBtn trade={t} username={getStoredUsername()}/>
                     <div style={{ textAlign:"right" as const }}>
                       <div style={{ fontWeight:800, fontSize:13, fontFamily:"monospace",
