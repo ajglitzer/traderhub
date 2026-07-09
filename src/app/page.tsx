@@ -7,9 +7,8 @@ import { getMyProfile, Profile } from "@/lib/social";
 import { useEffect, useMemo, useState } from "react";
 import { useStore } from "@/store";
 import { useAccountStore } from "@/store/accounts";
-import { calculateMetrics, buildEquityCurve, runMonteCarlo } from "@/lib/calculations";
+import { calculateMetrics, buildEquityCurve } from "@/lib/calculations";
 import { EquityChart } from "@/components/charts/equity-chart";
-import { CalendarHeatmap } from "@/components/charts/calendar-heatmap";
 import { TradeTable } from "@/components/trades/trade-table";
 import { ImportDialog } from "@/components/import/import-dialog";
 import MarketsPage from "@/components/markets/markets";
@@ -116,23 +115,6 @@ function Dashboard() {
   const closed = useMemo(() => trades.filter(t => t.status === "CLOSED" && t.netPnl !== null), [trades]);
   const M = useMemo(() => calculateMetrics(closed as Trade[]), [closed]);
   const equity = useMemo(() => buildEquityCurve(closed as Trade[]), [closed]);
-  const mc = useMemo(() => closed.length > 10 ? runMonteCarlo(closed as Trade[], 400) : null, [closed]);
-  const byDay = useMemo(() => {
-    const m: Record<string,{pnl:number;count:number}> = {};
-    DAYS.forEach(d => (m[d] = {pnl:0,count:0}));
-    for (const t of closed) { const d = DAYS[new Date(t.entryTime).getDay()]; m[d].pnl += t.netPnl||0; m[d].count++; }
-    return DAYS.map(d => ({ day:d, ...m[d] }));
-  }, [closed]);
-  const calendar = useMemo(() => {
-    const m: Record<string,{pnl:number;count:number}> = {};
-    for (const t of closed) { const k = new Date(t.entryTime).toISOString().slice(0,10); if(!m[k]) m[k]={pnl:0,count:0}; m[k].pnl += t.netPnl||0; m[k].count++; }
-    return m;
-  }, [closed]);
-  const recent = useMemo(() => [...closed].sort((a,b) => new Date(b.entryTime).getTime()-new Date(a.entryTime).getTime()).slice(0,8), [closed]);
-  const isPos = M.totalNetPnl >= 0;
-  const netColor = isPos ? "#00e676" : "#ff1744";
-  const pct = (M.winRate*100).toFixed(1);
-
   return (
     <div style={{ padding:20, overflowY:"auto", height:"100%", display:"flex", flexDirection:"column", gap:14 }}>
 
@@ -259,42 +241,7 @@ function Dashboard() {
         </Panel>
       </div>
 
-      {/* ── DAY OF WEEK + CALENDAR ── */}
-      <div style={{ display:"grid", gridTemplateColumns:"300px 1fr", gap:14 }}>
-        <Panel>
-          <Label>P&L by Day of Week</Label>
-          <ResponsiveContainer width="100%" height={155}>
-            <BarChart data={byDay} margin={{top:4,right:0,left:0,bottom:0}}>
-              <CartesianGrid strokeDasharray="1 6" stroke="rgba(255,255,255,0.03)" vertical={false}/>
-              <XAxis dataKey="day" tick={{fontSize:11,fill:"#3d4551"}} axisLine={false} tickLine={false}/>
-              <YAxis tickFormatter={v=>"$"+v.toFixed(0)} tick={{fontSize:9,fill:"#3d4551"}} axisLine={false} tickLine={false} width={46}/>
-              <ReferenceLine y={0} stroke="rgba(255,255,255,0.06)"/>
-              <Tooltip {...TTP} formatter={(v:any) => [fmt$(v as number), "P&L"]}/>
-              <Bar dataKey="pnl" radius={[4,4,0,0]} maxBarSize={34}>
-                {byDay.map((d,i) => <Cell key={i} fill={d.pnl>=0?"#00e676":"#ff1744"} fillOpacity={0.8}/>)}
-              </Bar>
-            </BarChart>
-          </ResponsiveContainer>
-        </Panel>
 
-        <Panel>
-          <div style={{ display:"flex", alignItems:"center", justifyContent:"space-between", marginBottom:14 }}>
-            <Label>Trade Calendar — {new Date().getFullYear()}</Label>
-          </div>
-          <CalendarHeatmap data={calendar}/>
-          <div style={{ display:"flex", gap:16, marginTop:12, fontSize:10, color:"#3d4551" }}>
-            <div style={{ display:"flex", alignItems:"center", gap:6 }}>
-              <div style={{ width:10,height:10,borderRadius:3,background:"rgba(255,23,68,0.6)",border:"1px solid rgba(255,23,68,0.3)",boxShadow:"0 0 4px rgba(255,23,68,0.3)" }}/>Loss day
-            </div>
-            <div style={{ display:"flex", alignItems:"center", gap:6 }}>
-              <div style={{ width:10,height:10,borderRadius:3,background:"rgba(255,255,255,0.03)",border:"1px solid rgba(255,255,255,0.05)" }}/>No trades
-            </div>
-            <div style={{ display:"flex", alignItems:"center", gap:6 }}>
-              <div style={{ width:10,height:10,borderRadius:3,background:"rgba(0,230,118,0.6)",border:"1px solid rgba(0,230,118,0.3)",boxShadow:"0 0 4px rgba(0,230,118,0.3)" }}/>Profit day
-            </div>
-          </div>
-        </Panel>
-      </div>
     </div>
   );
 }

@@ -3,6 +3,7 @@ import { useMemo, useState } from "react";
 import { useAccountStore } from "@/store/accounts";
 import { calculateMetrics, buildEquityCurve, runMonteCarlo } from "@/lib/calculations";
 import { EquityChart } from "@/components/charts/equity-chart";
+import { CalendarHeatmap } from "@/components/charts/calendar-heatmap";
 import { fmt$ } from "@/lib/utils";
 import { Trade } from "@/types/trade";
 import { exportToCSV } from "@/lib/export";
@@ -103,6 +104,20 @@ export default function AnalyticsPage() {
   ],[M]);
 
   const recentBar = useMemo(()=>[...closed].sort((a,b)=>new Date(b.entryTime).getTime()-new Date(a.entryTime).getTime()).slice(0,30).reverse().map((t,i)=>({i,pnl:t.netPnl||0,ticker:t.ticker})),[closed]);
+
+  const byDay = useMemo(()=>{
+    const days=["Sun","Mon","Tue","Wed","Thu","Fri","Sat"];
+    const acc:Record<string,number>={};
+    days.forEach(d=>{acc[d]=0;});
+    closed.forEach(t=>{ const d=days[new Date(t.entryTime||"").getDay()]; acc[d]=(acc[d]||0)+(t.netPnl||0); });
+    return days.map(d=>({day:d,pnl:acc[d]}));
+  },[closed]);
+
+  const calendar = useMemo(()=>{
+    const acc:Record<string,number>={};
+    closed.forEach(t=>{ const d=(t.entryTime||"").slice(0,10); acc[d]=(acc[d]||0)+(t.netPnl||0); });
+    return acc;
+  },[closed]);
 
   if(!closed.length) return (
     <div style={{display:"flex",alignItems:"center",justifyContent:"center",height:"100%",color:"#374151",flexDirection:"column" as const,gap:12}}>
@@ -307,6 +322,32 @@ export default function AnalyticsPage() {
           </ResponsiveContainer>
         </Panel>
       )}
+      <div style={{ display:"grid", gridTemplateColumns:"300px 1fr", gap:14 }}>
+        <Panel title="P&L by Day of Week">
+          <ResponsiveContainer width="100%" height={155}>
+            <BarChart data={byDay} margin={{top:4,right:0,left:0,bottom:0}}>
+              <CartesianGrid strokeDasharray="1 6" stroke="rgba(255,255,255,0.03)" vertical={false}/>
+              <XAxis dataKey="day" tick={{fontSize:11,fill:"#3d4551"}} axisLine={false} tickLine={false}/>
+              <YAxis tickFormatter={v=>"$"+v.toFixed(0)} tick={{fontSize:9,fill:"#3d4551"}} axisLine={false} tickLine={false} width={46}/>
+              <ReferenceLine y={0} stroke="rgba(255,255,255,0.06)"/>
+              <Tooltip {...TTP} formatter={(v:any)=>[fmt$(v as number),"P&L"]}/>
+              <Bar dataKey="pnl" radius={[4,4,0,0]} maxBarSize={34}>
+                {byDay.map((d,i)=><Cell key={i} fill={d.pnl>=0?"#00e676":"#ff1744"} fillOpacity={0.8}/>)}
+              </Bar>
+            </BarChart>
+          </ResponsiveContainer>
+        </Panel>
+        <Panel title={`Trade Calendar — ${new Date().getFullYear()}`}>
+          <CalendarHeatmap data={calendar}/>
+          <div style={{display:"flex",gap:16,marginTop:12,fontSize:10,color:"#3d4551"}}>
+            {[["rgba(255,23,68,0.6)","rgba(255,23,68,0.3)","Loss day"],["rgba(255,255,255,0.03)","rgba(255,255,255,0.05)","No trades"],["rgba(0,230,118,0.6)","rgba(0,230,118,0.3)","Profit day"]].map(([bg,border,label])=>(
+              <div key={label} style={{display:"flex",alignItems:"center",gap:6}}>
+                <div style={{width:10,height:10,borderRadius:3,background:bg,border:`1px solid ${border}`}}/>{label}
+              </div>
+            ))}
+          </div>
+        </Panel>
+      </div>
       </>}
     </div>
   );
