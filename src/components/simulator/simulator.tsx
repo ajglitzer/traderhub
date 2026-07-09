@@ -198,7 +198,8 @@ export default function SimulatorPage() {
   const [activeId, setActiveId]   = useState<string>("");
   const [newName,  setNewName]    = useState("");
   const [showNew,  setShowNew]    = useState(false);
-  const [chartColors, setChartColors] = useState({up:"#00e676",down:"#ff1744",bg:"#060a0f"});
+  const [showLB,        setShowLB]        = useState(false);
+  const [chartColors,   setChartColors]   = useState({up:"#00e676",down:"#ff1744",bg:"#060a0f"});
   const [showColorPicker, setShowColorPicker] = useState(false);
   const [leaderboard,setLB]       = useState<any[]>([]);
 
