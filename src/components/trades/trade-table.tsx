@@ -168,15 +168,15 @@ export function TradeTable() {
                       {t.rMultiple !== null ? t.rMultiple.toFixed(2)+"R" : "—"}
                     </td>
                     <td style={{ padding:"8px 12px", textAlign:"right", fontSize:11, color:"#4b5563", fontFamily:"monospace" }}>{fmtHold(t.holdTimeSeconds)}</td>
-                    {/* ── CHART BUTTON ── */}
+                    {/* -- CHART BUTTON -- */}
                     <td style={{ padding:"6px 8px" }}>
                       <CandleChartBtn trade={t} size={26}/>
                     </td>
-                    {/* ── AI ANALYSIS ── */}
+                    {/* -- AI ANALYSIS -- */}
                     <td style={{ padding:"6px 8px" }}>
                       <AIAnalysisBtn trade={t} size={26}/>
                     </td>
-                    {/* ── SHARE CARD ── */}
+                    {/* -- SHARE CARD -- */}
                     <td style={{ padding:"6px 8px" }}>
                       <TradeCardBtn trade={t}/>
                     </td>

@@ -73,7 +73,7 @@ export default async function ProfilePage({ params }: { params: Promise<{ userna
 
         <div style={{textAlign:"center",paddingTop:24,borderTop:"1px solid rgba(255,255,255,0.05)"}}>
           <div style={{fontSize:11,color:"#4b5563",marginBottom:12}}>Track your trading with TraderHub</div>
-          <a href="https://traderhub-nine.vercel.app" style={{display:"inline-block",padding:"12px 28px",borderRadius:12,background:`linear-gradient(135deg,${color},${color}99)`,color:"#000",fontSize:13,fontWeight:900,textDecoration:"none"}}>Join Free →</a>
+          <a href="https://traderhub-nine.vercel.app" style={{display:"inline-block",padding:"12px 28px",borderRadius:12,background:`linear-gradient(135deg,${color},${color}99)`,color:"#000",fontSize:13,fontWeight:900,textDecoration:"none"}}>Join Free -</a>
         </div>
       </div>
     </body></html>

@@ -42,7 +42,7 @@ export function ImportDialog() {
       else if (head.includes("fill price") || (head.includes("status") && head.includes("side"))) orderFile = f;
     }
 
-    // Case 1: both files → merge
+    // Case 1: both files - merge
     if (balanceFile && orderFile) {
       const balResult = parseCSV(balanceFile.text);
       const fills = extractOrderFills(orderFile.text);
@@ -59,7 +59,7 @@ export function ImportDialog() {
       return;
     }
 
-    // Case 2: single file → normal parse
+    // Case 2: single file - normal parse
     const first = texts[0];
     const result = parseCSV(first.text);
     setParsed(result.trades);

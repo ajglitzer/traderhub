@@ -205,7 +205,7 @@ export default function SettingsPage() {
       const uiStore = localStorage.getItem("tv-ui-store");
       if (uiStore) {
         const parsed = JSON.parse(uiStore);
-        // Keep only playbook, goals, tags — wipe trades
+        // Keep only playbook, goals, tags - wipe trades
         savedUIStore = JSON.stringify({
           ...parsed,
           state: { ...parsed.state, trades: [] }

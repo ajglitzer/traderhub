@@ -3,13 +3,13 @@ import { useState, useEffect } from "react";
 
 type Mode = "login" | "signup" | "forgot";
 
-// ── Supabase version ───────────────────────────────────────────────────────────
+// -- Supabase version -----------------------------------------------------------
 async function getSupabase() {
   const { createClient } = await import("@/lib/supabase");
   return createClient();
 }
 
-// ── localStorage fallback version ─────────────────────────────────────────────
+// -- localStorage fallback version ---------------------------------------------
 interface LocalUser { id: string; email: string; password: string; }
 function localSignUp(email: string, password: string): { user: LocalUser | null; error: string | null } {
   const users: LocalUser[] = JSON.parse(localStorage.getItem("th_users") || "[]");
@@ -56,7 +56,7 @@ export function AuthPage({ onAuth }: { onAuth: () => void }) {
     setError(""); setMessage(""); setLoading(true);
 
     if (hasSupabase) {
-      // ── Supabase auth ───────────────────────────────────────────────────────
+      // -- Supabase auth -------------------------------------------------------
       try {
         const sb = await getSupabase();
         if (mode === "signup") {
@@ -79,7 +79,7 @@ export function AuthPage({ onAuth }: { onAuth: () => void }) {
         setError(e.message || "Something went wrong");
       }
     } else {
-      // ── localStorage fallback ───────────────────────────────────────────────
+      // -- localStorage fallback -----------------------------------------------
       if (mode === "signup") {
         if (pass !== confirm) { setError("Passwords don't match"); setLoading(false); return; }
         if (pass.length < 6)  { setError("Password must be at least 6 characters"); setLoading(false); return; }

@@ -5,7 +5,7 @@ import { Trade } from "@/types/trade";
 
 const fmt$ = (n:number) => (n>=0?"+":"")+`$${Math.abs(n).toLocaleString("en-US",{minimumFractionDigits:2,maximumFractionDigits:2})}`;
 
-// ── Build a rich data summary to feed the AI ──────────────────────────────────
+// -- Build a rich data summary to feed the AI ----------------------------------
 function buildAnalysisPrompt(trades: Trade[]): string {
   const closed = trades.filter(t => t.status==="CLOSED" && t.netPnl!==null);
   if (!closed.length) return "";

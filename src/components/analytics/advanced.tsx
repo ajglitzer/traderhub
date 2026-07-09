@@ -32,7 +32,7 @@ export default function AdvancedAnalyticsPage() {
   const closed = useMemo(()=>trades.filter(t=>t.status==="CLOSED"&&t.netPnl!==null) as Trade[],[trades]);
   const M = useMemo(()=>calculateMetrics(closed),[closed]);
 
-  // ── Time of day heatmap (hour × day) ──────────────────────────────────────
+  // -- Time of day heatmap (hour - day) --------------------------------------
   const heatmap = useMemo(()=>{
     const m: Record<string, {pnl:number;count:number}> = {};
     for(const t of closed){
@@ -47,7 +47,7 @@ export default function AdvancedAnalyticsPage() {
 
   const maxAbsHeat = useMemo(()=>Math.max(...Object.values(heatmap).map(v=>Math.abs(v.pnl)),1),[heatmap]);
 
-  // ── Best/worst tickers ────────────────────────────────────────────────────
+  // -- Best/worst tickers ----------------------------------------------------
   const byTicker = useMemo(()=>{
     const m: Record<string,{pnl:number;count:number;wins:number}> = {};
     for(const t of closed){
@@ -59,7 +59,7 @@ export default function AdvancedAnalyticsPage() {
     return Object.entries(m).map(([ticker,v])=>({ticker,...v,wr:+(v.wins/v.count*100).toFixed(0)})).sort((a,b)=>b.pnl-a.pnl);
   },[closed]);
 
-  // ── Slippage data ─────────────────────────────────────────────────────────
+  // -- Slippage data ---------------------------------------------------------
   const slippageData = useMemo(()=>
     closed.filter(t=>t.expectedEntry&&t.expectedEntry>0).map(t=>({
       ticker:t.ticker,
@@ -70,7 +70,7 @@ export default function AdvancedAnalyticsPage() {
     }))
   ,[closed]);
 
-  // ── Tag performance ───────────────────────────────────────────────────────
+  // -- Tag performance -------------------------------------------------------
   const byTag = useMemo(()=>{
     const m: Record<string,{pnl:number;count:number;wins:number}> = {};
     for(const t of closed){
@@ -99,7 +99,7 @@ export default function AdvancedAnalyticsPage() {
   return (
     <div style={{padding:20,overflowY:"auto",height:"100%",display:"flex",flexDirection:"column",gap:14}}>
 
-      {/* ── Time of Day Heatmap ── */}
+      {/* -- Time of Day Heatmap -- */}
       <Panel title="P&L by Hour & Day of Week" sub="Darker = larger magnitude · Green = profit · Red = loss" p={18}>
         <div style={{overflowX:"auto"}}>
           <div style={{display:"grid",gridTemplateColumns:`60px repeat(${HOURS.length},1fr)`,gap:3,minWidth:700}}>
@@ -143,7 +143,7 @@ export default function AdvancedAnalyticsPage() {
         </div>
       </Panel>
 
-      {/* ── Best/Worst Tickers ── */}
+      {/* -- Best/Worst Tickers -- */}
       <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:14}}>
         <Panel title="Best Performing Symbols" sub="By net P&L">
           {byTicker.slice(0,8).map((r,i)=>(
@@ -177,7 +177,7 @@ export default function AdvancedAnalyticsPage() {
         </Panel>
       </div>
 
-      {/* ── Slippage Tracker ── */}
+      {/* -- Slippage Tracker -- */}
       <Panel title="Slippage Tracker" sub="Difference between expected and actual fill price">
         {slippageData.length===0
           ?(
@@ -208,7 +208,7 @@ export default function AdvancedAnalyticsPage() {
         }
       </Panel>
 
-      {/* ── Breakeven Win Rate ── */}
+      {/* -- Breakeven Win Rate -- */}
       <Panel title="Breakeven Win Rate" sub="What win rate you need to be profitable given your avg win/loss">
         {(() => {
           const beWR = M.avgLoss > 0 ? M.avgLoss / (M.avgWin + M.avgLoss) * 100 : 0;
@@ -249,7 +249,7 @@ export default function AdvancedAnalyticsPage() {
         })()}
       </Panel>
 
-      {/* ── Commission Impact ── */}
+      {/* -- Commission Impact -- */}
       <Panel title="Commission Impact" sub="How much fees are costing you over time">
         {(() => {
           const totalComm = closed.reduce((a,t)=>a+(t.commissions||0)+(t.fees||0),0);
@@ -303,7 +303,7 @@ export default function AdvancedAnalyticsPage() {
         })()}
       </Panel>
 
-      {/* ── MAE/MFE Tracker ── */}
+      {/* -- MAE/MFE Tracker -- */}
       <Panel title="MAE / MFE Analysis" sub="Max Adverse Excursion · Max Favorable Excursion — how far trades moved before close">
         <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:14}}>
           <div>

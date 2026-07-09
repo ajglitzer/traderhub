@@ -77,7 +77,7 @@ export default function CalendarPage() {
   return (
     <div style={{ padding:20, overflowY:"auto", height:"100%", display:"flex", flexDirection:"column", gap:14 }}>
 
-      {/* ── Month header + stats ── */}
+      {/* -- Month header + stats -- */}
       <div style={{ background:"linear-gradient(160deg,#0f1520,#0b1017)", border:"1px solid rgba(255,255,255,0.07)", borderRadius:16, padding:"18px 22px" }}>
         <div style={{ display:"flex", alignItems:"center", justifyContent:"space-between", marginBottom:16 }}>
           {/* Month nav */}
@@ -118,7 +118,7 @@ export default function CalendarPage() {
         </div>
       </div>
 
-      {/* ── Calendar grid ── */}
+      {/* -- Calendar grid -- */}
       <div style={{ background:"linear-gradient(160deg,#0f1520,#0b1017)", border:"1px solid rgba(255,255,255,0.07)", borderRadius:16, padding:16, flex:1 }}>
         {/* Day headers */}
         <div style={{ display:"grid", gridTemplateColumns:"repeat(7,1fr)", gap:4, marginBottom:6 }}>
@@ -195,7 +195,7 @@ export default function CalendarPage() {
         </div>
       </div>
 
-      {/* ── Legend ── */}
+      {/* -- Legend -- */}
       <div style={{ display:"flex", alignItems:"center", gap:20, fontSize:10, color:"#3d4551" }}>
         <div style={{ display:"flex", alignItems:"center", gap:6 }}>
           <div style={{ width:12, height:12, borderRadius:3, background:"rgba(0,230,118,0.25)", border:"1px solid rgba(0,230,118,0.4)" }}/>

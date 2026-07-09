@@ -7,7 +7,7 @@ export default function NotFound() {
       <div style={{fontSize:48}}>🔍</div>
       <div style={{fontSize:20,fontWeight:900}}>Profile Not Found</div>
       <div style={{fontSize:13,color:"#4b5563"}}>This trader doesn&apos;t exist or hasn&apos;t set up their profile yet.</div>
-      <a href="https://traderhub-nine.vercel.app" style={{padding:"10px 24px",borderRadius:10,background:"linear-gradient(135deg,#00e5ff,#0088bb)",color:"#000",fontSize:13,fontWeight:800,textDecoration:"none",marginTop:8}}>Go to TraderHub →</a>
+      <a href="https://traderhub-nine.vercel.app" style={{padding:"10px 24px",borderRadius:10,background:"linear-gradient(135deg,#00e5ff,#0088bb)",color:"#000",fontSize:13,fontWeight:800,textDecoration:"none",marginTop:8}}>Go to TraderHub -</a>
     </body></html>
   );
 }

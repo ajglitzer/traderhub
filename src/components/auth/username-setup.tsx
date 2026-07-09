@@ -79,7 +79,7 @@ export function UsernameSetupLocal({ userId }: { userId: string }) {
         });
 
         if (insertErr) {
-          // Profile may already exist — try update instead
+          // Profile may already exist - try update instead
           const { error: upsertErr } = await sb.from("profiles").upsert({
             id: userId,
             username: uname,

@@ -59,7 +59,7 @@ export interface BattleTrade {
 
 const sb = () => createClient();
 
-// ── Profile ───────────────────────────────────────────────────────────────────
+// -- Profile -------------------------------------------------------------------
 export async function getMyProfile(userId: string): Promise<Profile | null> {
   const { data } = await sb().from("profiles").select("*").eq("id", userId).single();
   return data;
@@ -82,7 +82,7 @@ export async function searchProfiles(query: string): Promise<Profile[]> {
   return data || [];
 }
 
-// ── Friends ───────────────────────────────────────────────────────────────────
+// -- Friends -------------------------------------------------------------------
 export async function sendFriendRequest(fromId: string, toId: string): Promise<void> {
   await sb().from("friend_requests").insert({ from_id: fromId, to_id: toId });
 }
@@ -108,7 +108,7 @@ export async function getFriends(userId: string): Promise<Profile[]> {
   return data.map((r: any) => r.from_id === userId ? r.to_profile : r.from_profile).filter(Boolean);
 }
 
-// ── Messages ──────────────────────────────────────────────────────────────────
+// -- Messages ------------------------------------------------------------------
 export async function getMessages(userId: string, otherId: string): Promise<Message[]> {
   const { data } = await sb().from("messages")
     .select("*, from_profile:profiles!messages_from_id_fkey(*)")
@@ -153,7 +153,7 @@ export async function getConversations(userId: string): Promise<{profile: Profil
   return convos;
 }
 
-// ── Battles ───────────────────────────────────────────────────────────────────
+// -- Battles -------------------------------------------------------------------
 export async function sendBattleRequest(challengerId: string, opponentId: string, symbol: string): Promise<string> {
   const { data } = await sb().from("battles").insert({ challenger_id: challengerId, opponent_id: opponentId, symbol }).select().single();
   return data?.id;
@@ -183,7 +183,7 @@ export async function finalizeBattle(battle: Battle): Promise<void> {
   await sb().from("battles").update({ status: "completed", winner_id: winnerId, completed_at: new Date().toISOString() }).eq("id", battle.id);
 }
 
-// ── localStorage fallback for when Supabase auth not used ────────────────────
+// -- localStorage fallback for when Supabase auth not used --------------------
 export function getLocalProfile(userId: string): Profile | null {
   try {
     const username = localStorage.getItem("th_username_" + userId);
@@ -202,7 +202,7 @@ export function searchLocalProfiles(query: string, currentUserId: string): Profi
   } catch { return []; }
 }
 
-// ── Leaderboard via Supabase ──────────────────────────────────────────────────
+// -- Leaderboard via Supabase --------------------------------------------------
 export async function getProfileByUsername(username: string): Promise<Profile | null> {
   try {
     const { data } = await sb().from("profiles").select("*").eq("username", username.toLowerCase()).single();

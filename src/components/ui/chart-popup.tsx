@@ -6,7 +6,7 @@ import {
   CrosshairMode, LineStyle, Time,
 } from "lightweight-charts";
 
-// ── Types ──────────────────────────────────────────────────────────────────────
+// -- Types ----------------------------------------------------------------------
 interface Candle { t: number; o: number; h: number; l: number; c: number; }
 interface Props {
   ticker: string; entryTime: string; exitTime?: string|null;
@@ -17,7 +17,7 @@ interface Props {
 type Tool = "cursor"|"trendline"|"line"|"hline"|"rect"|"text";
 interface Drawing { id:string; type:Tool; pts:{x:number;y:number}[]; color:string; text?:string; extended?:boolean; }
 
-// ── Symbol mapping ─────────────────────────────────────────────────────────────
+// -- Symbol mapping -------------------------------------------------------------
 function toYahoo(ticker: string): string {
   const root = ticker.toUpperCase().replace(/\d+!$/,"").replace(/!$/,"").replace(/[A-Z]\d{2,4}$/,"").trim();
   const m: Record<string,string> = {
@@ -30,7 +30,7 @@ function toYahoo(ticker: string): string {
   return m[root]||root;
 }
 
-// ── Fetch via server-side proxy (no CORS issues) ──────────────────────────────
+// -- Fetch via server-side proxy (no CORS issues) ------------------------------
 async function fetchCandles(sym:string,from:number,to:number): Promise<Candle[]> {
   const url = `/api/chart?sym=${encodeURIComponent(sym)}&from=${from}&to=${to}`;
   try {
@@ -53,7 +53,7 @@ async function fetchCandles(sym:string,from:number,to:number): Promise<Candle[]>
   }
 }
 
-// ── Helpers ────────────────────────────────────────────────────────────────────
+// -- Helpers --------------------------------------------------------------------
 const f$=(n:number)=>(n>=0?"+":"")+`$${Math.abs(n).toLocaleString("en-US",{minimumFractionDigits:2,maximumFractionDigits:2})}`;
 const fP=(n:number)=>n>=100?n.toFixed(2):n>=1?n.toFixed(4):n.toFixed(6);
 const fT=(ts:number)=>new Date(ts*1000).toLocaleTimeString("en-US",{hour:"2-digit",minute:"2-digit",second:"2-digit",hour12:false});
@@ -61,7 +61,7 @@ const fDT=(ts:number)=>new Date(ts*1000).toLocaleString("en-US",{month:"short",d
 
 const BARS_PAD = 15; // bars before entry and after exit
 
-// ── Main popup ─────────────────────────────────────────────────────────────────
+// -- Main popup -----------------------------------------------------------------
 function TradeReplayPopup({ticker,entryTime,exitTime,side,entryPrice,exitPrice,stopLoss,takeProfit,netPnl,onClose}:Props) {
   const containerRef = useRef<HTMLDivElement>(null);
   const overlayRef   = useRef<HTMLCanvasElement>(null);
@@ -91,7 +91,7 @@ function TradeReplayPopup({ticker,entryTime,exitTime,side,entryPrice,exitPrice,s
   const exitTs  = useMemo(()=>exitTime?Math.floor(new Date(exitTime).getTime()/1000):null,[exitTime]);
   const isPos   = (netPnl??0)>=0;
 
-  // ── Init chart ────────────────────────────────────────────────────────────
+  // -- Init chart ------------------------------------------------------------
   useEffect(()=>{
     if(!containerRef.current) return;
     const chart=createChart(containerRef.current,{
@@ -122,7 +122,7 @@ function TradeReplayPopup({ticker,entryTime,exitTime,side,entryPrice,exitPrice,s
     return()=>{ ro.disconnect(); chart.remove(); chartRef.current=null; serRef.current=null; markersRef.current=null; };
   },[chartColors]);
 
-  // ── Fetch ─────────────────────────────────────────────────────────────────
+  // -- Fetch -----------------------------------------------------------------
   useEffect(()=>{
     let dead=false;
     setStatus("loading"); setAllCandles([]); setPlaying(false);
@@ -147,7 +147,7 @@ function TradeReplayPopup({ticker,entryTime,exitTime,side,entryPrice,exitPrice,s
     return()=>{dead=true;};
   },[ticker,entryTs,exitTs]);
 
-  // ── Update chart data as replay advances ──────────────────────────────────
+  // -- Update chart data as replay advances ----------------------------------
   useEffect(()=>{
     const ser=serRef.current;
     const chart=chartRef.current;
@@ -163,13 +163,13 @@ function TradeReplayPopup({ticker,entryTime,exitTime,side,entryPrice,exitPrice,s
     priceLines.current.forEach(l=>{ try{ser.removePriceLine(l);}catch{} });
     priceLines.current=[];
 
-    // Entry/Exit horizontal lines removed — arrows mark the levels instead.
-    // SL — dashed red, thicker
+    // Entry/Exit horizontal lines removed - arrows mark the levels instead.
+    // SL - dashed red, thicker
     if(stopLoss) priceLines.current.push(ser.createPriceLine({
       price:stopLoss, color:"#ff1744", lineWidth:2,
       lineStyle:LineStyle.Dashed, axisLabelVisible:true, title:"SL",
     }));
-    // TP — dashed green
+    // TP - dashed green
     if(takeProfit) priceLines.current.push(ser.createPriceLine({
       price:takeProfit, color:"#00e676", lineWidth:2,
       lineStyle:LineStyle.Dashed, axisLabelVisible:true, title:"TP",
@@ -214,7 +214,7 @@ function TradeReplayPopup({ticker,entryTime,exitTime,side,entryPrice,exitPrice,s
     if(visible>=allCandles.length) chart.timeScale().fitContent();
   },[allCandles,visible,entryTs,exitTs,entryPrice,exitPrice,stopLoss,takeProfit,side]);
 
-  // ── Replay timer ──────────────────────────────────────────────────────────
+  // -- Replay timer ----------------------------------------------------------
   useEffect(()=>{
     if(tickRef.current) clearInterval(tickRef.current);
     if(!playing||!allCandles.length) return;
@@ -227,7 +227,7 @@ function TradeReplayPopup({ticker,entryTime,exitTime,side,entryPrice,exitPrice,s
     return()=>{ if(tickRef.current) clearInterval(tickRef.current); };
   },[playing,speed,allCandles.length]);
 
-  // ── Drawing overlay ───────────────────────────────────────────────────────
+  // -- Drawing overlay -------------------------------------------------------
   useEffect(()=>{
     const canvas=overlayRef.current; if(!canvas) return;
     const ctx=canvas.getContext("2d"); if(!ctx) return;
@@ -304,7 +304,7 @@ function TradeReplayPopup({ticker,entryTime,exitTime,side,entryPrice,exitPrice,s
     }
   },[drawings,drawing,selected,pendingPt,tool]);
 
-  // ── Overlay mouse handlers ────────────────────────────────────────────────
+  // -- Overlay mouse handlers ------------------------------------------------
   const getPos=(e:React.MouseEvent<HTMLCanvasElement>)=>{
     const r=overlayRef.current!.getBoundingClientRect();
     return{x:e.clientX-r.left,y:e.clientY-r.top};
@@ -613,7 +613,7 @@ function TradeReplayPopup({ticker,entryTime,exitTime,side,entryPrice,exitPrice,s
   );
 }
 
-// ── Icon + exported button ─────────────────────────────────────────────────────
+// -- Icon + exported button -----------------------------------------------------
 function CandleIcon({color="#00e5ff"}:{color?:string}) {
   return (
     <svg width="14" height="14" viewBox="0 0 14 14" fill="none">

@@ -22,7 +22,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [loading, setLoading] = useState(hasSupabase); // only load if supabase configured
 
   useEffect(() => {
-    if (!hasSupabase) return; // no supabase — stay not loading
+    if (!hasSupabase) return; // no supabase - stay not loading
 
     let mounted = true;
 

@@ -10,7 +10,7 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({ error: "Missing params" }, { status: 400 });
 
   for (const host of ["query1", "query2"]) {
-    const url = `https://${host}.finance.yahoo.com/v8/finance/chart/${encodeURIComponent(sym)}?interval=1m&period1=${from}&period2=${to}&includePrePost=true`;
+    const url = `https://${host}.finance.yahoo.com/v8/finance/chart/${encodeURIComponent(sym)}-interval=1m&period1=${from}&period2=${to}&includePrePost=true`;
     try {
       const res = await fetch(url, {
         headers: { "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36", "Accept": "application/json" },

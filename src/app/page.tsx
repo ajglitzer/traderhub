@@ -118,7 +118,7 @@ function Dashboard() {
   return (
     <div style={{ padding:20, overflowY:"auto", height:"100%", display:"flex", flexDirection:"column", gap:14 }}>
 
-      {/* ── HERO ── */}
+      {/* -- HERO -- */}
       <Panel glow={isPos ? "green" : "red"} p={24} style={{minHeight:120, paddingTop:28}}>
         <div style={{ display:"flex", alignItems:"center", gap:32, flexWrap:"nowrap", overflowX:"auto" }}>
           {/* Big P&L number */}
@@ -169,13 +169,13 @@ function Dashboard() {
         </div>
       )}
 
-      {/* ── GOALS + STREAK TRACKER ── */}
+      {/* -- GOALS + STREAK TRACKER -- */}
       <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:14, marginTop:4 }}>
         <GoalsWidget trades={closed as Trade[]}/>
         <StreakTracker/>
       </div>
 
-      {/* ── SECONDARY METRIC GRID ── */}
+      {/* -- SECONDARY METRIC GRID -- */}
       <div style={{ display:"grid", gridTemplateColumns:"repeat(8,1fr)", gap:10 }}>
         {([
           ["Max Drawdown",    fmt$(M.maxDrawdown),     "#ff1744",  "red"],
@@ -195,7 +195,7 @@ function Dashboard() {
         ))}
       </div>
 
-      {/* ── EQUITY + RECENT TRADES ── */}
+      {/* -- EQUITY + RECENT TRADES -- */}
       <div style={{ display:"grid", gridTemplateColumns:"1fr 300px", gap:14 }}>
         <Panel glow="cyan">
           <Label>Equity Curve</Label>

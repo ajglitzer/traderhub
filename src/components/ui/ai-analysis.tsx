@@ -182,7 +182,7 @@ function AIAnalysisPopup({ trade, onClose }: Props) {
     }
   };
 
-  // Simple markdown renderer — handles ##, **, bullets
+  // Simple markdown renderer - handles ##, **, bullets
   const renderMd = (md: string) => {
     return md.split("\n").map((line, i) => {
       if (line.startsWith("## ")) {

@@ -1,6 +1,6 @@
 import { Trade } from "@/types/trade";
 
-// ── CSV Export ────────────────────────────────────────────────────────────────
+// -- CSV Export ----------------------------------------------------------------
 export function exportToCSV(trades: Trade[], filename = "traderhub_export.csv"): void {
   const headers = [
     "Date","Ticker","Asset Class","Side","Status",
@@ -63,7 +63,7 @@ export function exportToCSV(trades: Trade[], filename = "traderhub_export.csv"):
   URL.revokeObjectURL(url);
 }
 
-// ── JSON Backup Export ─────────────────────────────────────────────────────────
+// -- JSON Backup Export ---------------------------------------------------------
 export function exportToJSON(trades: Trade[], filename = "traderhub_backup.json"): void {
   const data = JSON.stringify({ version: 1, exportedAt: new Date().toISOString(), trades }, null, 2);
   const blob = new Blob([data], { type: "application/json" });
@@ -75,7 +75,7 @@ export function exportToJSON(trades: Trade[], filename = "traderhub_backup.json"
   URL.revokeObjectURL(url);
 }
 
-// ── JSON Import (restore backup) ──────────────────────────────────────────────
+// -- JSON Import (restore backup) ----------------------------------------------
 export function importFromJSON(file: File): Promise<Trade[]> {
   return new Promise((resolve, reject) => {
     const reader = new FileReader();

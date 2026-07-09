@@ -14,7 +14,7 @@ import { useStore } from "@/store";
 
 const fmt$ = (n:number) => (n>=0?"+":"")+`$${Math.abs(n).toLocaleString("en-US",{minimumFractionDigits:2,maximumFractionDigits:2})}`;
 
-// ── Avatar ────────────────────────────────────────────────────────────────────
+// -- Avatar --------------------------------------------------------------------
 function Avatar({ profile, size=32 }: { profile: Profile; size?: number }) {
   const initial = (profile.display_name || profile.username)[0].toUpperCase();
   return (
@@ -24,7 +24,7 @@ function Avatar({ profile, size=32 }: { profile: Profile; size?: number }) {
   );
 }
 
-// ── Battle simulator — 5 simulated trades ─────────────────────────────────────
+// -- Battle simulator - 5 simulated trades -------------------------------------
 function BattleSimulator({ battle, myId, onSubmit }: { battle: Battle; myId: string; onSubmit: (trades: BattleTrade[]) => void }) {
   const isChallenger = myId === battle.challenger_id;
   const myTrades = isChallenger ? battle.challenger_trades : battle.opponent_trades;
@@ -194,7 +194,7 @@ function BattleSimulator({ battle, myId, onSubmit }: { battle: Battle; myId: str
   );
 }
 
-// ── Main Social Hub ───────────────────────────────────────────────────────────
+// -- Main Social Hub -----------------------------------------------------------
 export default function SocialPage({ myProfile }: { myProfile: Profile }) {
   const hasSupabase = !!(process.env.NEXT_PUBLIC_SUPABASE_URL && process.env.NEXT_PUBLIC_SUPABASE_URL !== "https://placeholder.supabase.co");
   if (!hasSupabase) return (
@@ -457,7 +457,7 @@ export default function SocialPage({ myProfile }: { myProfile: Profile }) {
         )}
       </div>
 
-      {/* Right panel — chat or battle */}
+      {/* Right panel - chat or battle */}
       <div style={{flex:1,display:"flex",flexDirection:"column",minWidth:0}}>
         {activeBattle&&(
           <div style={{flex:1,display:"flex",flexDirection:"column",overflow:"hidden"}}>

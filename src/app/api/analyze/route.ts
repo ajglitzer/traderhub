@@ -18,7 +18,7 @@ export async function POST(req: NextRequest) {
     const groqKey      = (process.env.GROQ_API_KEY      || "").trim();
     const anthropicKey = (process.env.ANTHROPIC_API_KEY || "").trim();
 
-    // ── Try Groq streaming ────────────────────────────────────────────────────
+    // -- Try Groq streaming ----------------------------------------------------
     if (groqKey) {
       for (const model of GROQ_MODELS) {
         try {
@@ -60,7 +60,7 @@ export async function POST(req: NextRequest) {
       } catch {}
     }
 
-    // ── Try Anthropic streaming ───────────────────────────────────────────────
+    // -- Try Anthropic streaming -----------------------------------------------
     if (anthropicKey) {
       try {
         const res = await fetch("https://api.anthropic.com/v1/messages", {

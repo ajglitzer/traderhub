@@ -2,7 +2,7 @@
 import { upsertLeaderboardEntry, getGlobalLeaderboard } from "@/lib/social";
 import { useState, useEffect, useRef, useCallback } from "react";
 
-// ── Types ─────────────────────────────────────────────────────────────────────
+// -- Types ---------------------------------------------------------------------
 interface Candle { o:number; h:number; l:number; c:number; }
 interface SimTrade { side:"LONG"|"SHORT"; entry:number; exit:number; pnl:number; result:"TP"|"SL"|"MANUAL"; }
 interface SimAccount {
@@ -36,7 +36,7 @@ function newAccount(name: string): SimAccount {
   return { id: Date.now().toString(), name, balance:10000, startBalance:10000, trades:[], createdAt: new Date().toISOString() };
 }
 
-// ── Chart canvas ──────────────────────────────────────────────────────────────
+// -- Chart canvas --------------------------------------------------------------
 function drawChart(canvas:HTMLCanvasElement, candles:Candle[], cur:number, inTrade:boolean, entry:number, side:"LONG"|"SHORT", tp:number, sl:number, colors:{up:string,down:string,bg:string}={up:"#00e676",down:"#ff1744",bg:"#060a0f"}) {
   const dpr=window.devicePixelRatio||1, W=canvas.offsetWidth, H=canvas.offsetHeight;
   if(!W||!H) return;
@@ -139,7 +139,7 @@ function drawChart(canvas:HTMLCanvasElement, candles:Candle[], cur:number, inTra
   }
 }
 
-// ── Generate realistic candles with volatility clustering ──────────────────────
+// -- Generate realistic candles with volatility clustering ----------------------
 function genCandles(symbol:string, count=500): Candle[] {
   const bases:Record<string,number>={NQ:20000,ES:5000,MGC:2500,GC:2500,CL:80,BTC:65000,ETH:3500};
   const base = bases[symbol]||100;
@@ -151,7 +151,7 @@ function genCandles(symbol:string, count=500): Candle[] {
   let trendStrength = 0;
 
   for(let i=0;i<count;i++){
-    // Volatility clustering — vol stays high or low for runs
+    // Volatility clustering - vol stays high or low for runs
     if(Math.random()<0.08) volatility = 0.5 + Math.random()*2.5;
     else volatility = volatility*0.97 + (0.5+Math.random()*1.5)*0.03;
 
@@ -168,7 +168,7 @@ function genCandles(symbol:string, count=500): Candle[] {
     const o = p;
     const c = +(p + bodyMove).toFixed(2);
 
-    // Realistic wicks — larger on high vol candles
+    // Realistic wicks - larger on high vol candles
     const wickScale = 0.3 + Math.random()*0.7;
     const upperWick = Math.random()*curV*wickScale*(Math.random()<0.3?2:1);
     const lowerWick = Math.random()*curV*wickScale*(Math.random()<0.3?2:1);
@@ -189,7 +189,7 @@ function genCandles(symbol:string, count=500): Candle[] {
 const SYMS=["NQ","ES","MGC","GC","CL","BTC","ETH"];
 const fmt$=(n:number)=>(n>=0?"+":"")+`$${Math.abs(n).toLocaleString("en-US",{minimumFractionDigits:2,maximumFractionDigits:2})}`;
 
-// ── Main ──────────────────────────────────────────────────────────────────────
+// -- Main ----------------------------------------------------------------------
 export default function SimulatorPage() {
   const canvasRef=useRef<HTMLCanvasElement>(null);
   const drawingCanvasRef=useRef<HTMLCanvasElement>(null);
@@ -317,7 +317,7 @@ export default function SimulatorPage() {
     drawChart(cv,candles,cur,inTrade,entry,side,entry+(+tp),entry-(+sl),chartColors);
   },[candles,cur,inTrade,entry,side,tp,sl,chartColors]);
 
-  // TP/SL auto-close check — separate effect, guarded against double-fire
+  // TP/SL auto-close check - separate effect, guarded against double-fire
   useEffect(()=>{
     if(!inTrade||!candles[cur-1]) return;
     const c=candles[cur-1];

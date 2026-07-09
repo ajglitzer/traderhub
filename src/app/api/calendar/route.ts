@@ -20,7 +20,7 @@ function normalizeImpact(i: string): "High" | "Medium" | "Low" {
 
 export async function GET() {
   try {
-    // ForexFactory free calendar API — no key needed
+    // ForexFactory free calendar API - no key needed
     const urls = [
       "https://nfs.faireconomy.media/ff_calendar_thisweek.json",
       "https://nfs.faireconomy.media/ff_calendar_nextweek.json",

@@ -53,7 +53,7 @@ export default function MarketsPage() {
   const tf = TIMEFRAMES[tfIdx];
   const containerRef = useRef<HTMLDivElement>(null);
 
-  // Load TradingView widget via their official script — reliably loads any symbol
+  // Load TradingView widget via their official script - reliably loads any symbol
   useEffect(() => {
     const container = containerRef.current;
     if (!container) return;
@@ -123,7 +123,7 @@ export default function MarketsPage() {
   return (
     <div style={{ height:"100%", display:"flex", flexDirection:"column", overflow:"hidden" }}>
 
-      {/* ── Symbol strip ── */}
+      {/* -- Symbol strip -- */}
       <div style={{ display:"flex", alignItems:"center", gap:0, padding:"0 0", borderBottom:"1px solid rgba(255,255,255,0.05)", background:"rgba(0,0,0,0.3)", flexShrink:0, overflowX:"auto" }}>
         {allWatchlist.map((item) => {
           const active = item.sym === selected.sym;
@@ -160,7 +160,7 @@ export default function MarketsPage() {
         </div>
       </div>
 
-      {/* ── Timeframe bar ── */}
+      {/* -- Timeframe bar -- */}
       <div style={{ display:"flex", alignItems:"center", gap:6, padding:"8px 16px", borderBottom:"1px solid rgba(255,255,255,0.05)", background:"rgba(0,0,0,0.15)", flexShrink:0 }}>
         <span style={{ fontSize:10, color:"#3d4551", textTransform:"uppercase" as const, letterSpacing:"0.08em", marginRight:4 }}>Interval</span>
         {TIMEFRAMES.map((t,i) => (
@@ -177,7 +177,7 @@ export default function MarketsPage() {
         </div>
       </div>
 
-      {/* ── Chart ── */}
+      {/* -- Chart -- */}
       <div style={{ flex:1, position:"relative", background:"#060a0f", minHeight:0 }}>
         {!loaded && (
           <div style={{ position:"absolute", inset:0, display:"flex", flexDirection:"column" as const, alignItems:"center", justifyContent:"center", gap:12, zIndex:2, pointerEvents:"none" }}>

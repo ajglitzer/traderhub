@@ -4,7 +4,7 @@ import { calculateTradePnl } from "./calculations";
 
 export type BrokerFormat = "TRADINGVIEW" | "TRADINGVIEW_BALANCE" | "GENERIC";
 
-// ── Helpers ───────────────────────────────────────────────────────────────────
+// -- Helpers -------------------------------------------------------------------
 function pDate(v: string): string {
   if (!v?.trim()) return new Date().toISOString();
   const d = new Date(v.trim());
@@ -31,7 +31,7 @@ function getCol(row: Record<string, string>, ...keys: string[]): string {
   return "";
 }
 
-// ── Symbol helpers ────────────────────────────────────────────────────────────
+// -- Symbol helpers ------------------------------------------------------------
 // TradingView paper trading uses full exchange-prefixed symbols: CME_MINI:NQ1!
 // Strip to get root: CME_MINI:NQ1! -> NQ, COMEX_MINI:MGC1! -> MGC
 function getRootSymbol(sym: string): string {
@@ -69,7 +69,7 @@ function displaySymbol(sym: string): string {
   return sym.includes(":") ? sym.split(":")[1] : sym;
 }
 
-// ── TradingView parser ────────────────────────────────────────────────────────
+// -- TradingView parser --------------------------------------------------------
 // Columns: Symbol, Side, Type, Quantity, Limit price, Stop price, Fill price,
 //          Status, Commission, Placing time, Closing time, Order ID, ...
 function parseTradingView(rows: Record<string, string>[], debug: string[]): Partial<Trade>[] {
@@ -151,7 +151,7 @@ function parseTradingView(rows: Record<string, string>[], debug: string[]): Part
             pos = { qty: leftOrd, avgPrice: o.fp, entryTime: o.time, side: isBuy ? "LONG" : "SHORT" };
           }
         } else {
-          // Same direction — pyramid: weighted avg entry
+          // Same direction - pyramid: weighted avg entry
           const total: number = pos.qty + o.qty;
           pos = { qty: total, avgPrice: (pos.avgPrice * pos.qty + o.fp * o.qty) / total, entryTime: pos.entryTime, side: pos.side };
         }
@@ -171,7 +171,7 @@ function parseTradingView(rows: Record<string, string>[], debug: string[]): Part
   return trades;
 }
 
-// ── TradingView Balance History parser (most accurate — uses exact realized PnL) ─
+// -- TradingView Balance History parser (most accurate - uses exact realized PnL) -
 function parseTradingViewBalance(rows: Record<string, string>[], debug: string[]): Partial<Trade>[] {
   const trades: Partial<Trade>[] = [];
   const actionPat = /Close (short|long) position for symbol ([\w:!]+) at price ([\d.]+) for ([\d.]+) units\. Position AVG Price was ([\d.]+)(?:.*?point value: ([\d.]+))?/i;
@@ -220,7 +220,7 @@ function parseTradingViewBalance(rows: Record<string, string>[], debug: string[]
 }
 
 
-// ── Merge balance-history (accurate PnL) with order-history (entry times) ───────
+// -- Merge balance-history (accurate PnL) with order-history (entry times) -------
 export function mergeBalanceAndOrders(
   balanceTrades: Partial<Trade>[],
   orderFills: { sym: string; side: string; qty: number; fp: number; time: string }[]
@@ -266,7 +266,7 @@ export function extractOrderFills(text: string): { sym: string; side: string; qt
     .filter(o => o.status === "filled" && o.qty > 0 && o.fp > 0 && o.sym);
 }
 
-// ── Auto-correct trade side using PnL sign vs price direction ───────────────────
+// -- Auto-correct trade side using PnL sign vs price direction -------------------
 // If a trade has a known realized PnL and exit/entry prices, the side is
 // determined: LONG profits when exit>entry, SHORT profits when exit<entry.
 // This fixes mis-paired directions from order-history reconstruction.
@@ -276,7 +276,7 @@ export function correctSideFromPnl(t: Partial<Trade>): Partial<Trade> {
   if (t.entryPrice == null || t.exitPrice == null) return t;
   const priceDiff = t.exitPrice - t.entryPrice;
   if (Math.abs(priceDiff) < 1e-9) return t;
-  // What side would the PnL sign imply?
+  // What side would the PnL sign imply-
   // profit & price up => LONG; profit & price down => SHORT
   // loss   & price up => SHORT; loss   & price down => LONG
   const impliedSide: "LONG" | "SHORT" =
@@ -329,10 +329,10 @@ function parseGeneric(rows: Record<string, string>[]): Partial<Trade>[] {
   return trades;
 }
 
-// ── Format detection ──────────────────────────────────────────────────────────
+// -- Format detection ----------------------------------------------------------
 function detectFormat(headers: string[]): BrokerFormat {
   const h = headers.map(clean);
-  // TradingView balance history — explicit realized PnL + Action description
+  // TradingView balance history - explicit realized PnL + Action description
   if (h.some(x => x.includes("realizedpnl")) && h.includes("action")) return "TRADINGVIEW_BALANCE";
   // TradingView paper trading has these exact columns
   if (h.includes("fillprice") || (h.includes("closingtime") && h.includes("orderid"))) return "TRADINGVIEW";
@@ -340,7 +340,7 @@ function detectFormat(headers: string[]): BrokerFormat {
   return "GENERIC";
 }
 
-// ── Main export ───────────────────────────────────────────────────────────────
+// -- Main export ---------------------------------------------------------------
 export function parseCSV(text: string): {
   trades: Partial<Trade>[];
   format: BrokerFormat;
