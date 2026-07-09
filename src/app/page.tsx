@@ -295,7 +295,9 @@ function Dashboard() {
           </div>
         </Panel>
       </div>
-
+    </div>
+  );
+}
 
 // Social wrapper that loads real profile
 function SocialPageWrapper({ userId }: { userId: string }) {
