@@ -525,7 +525,6 @@ export default function SimulatorPage() {
           <div style={{width:28,height:1,background:"rgba(255,255,255,0.1)"}}/>
           <button onClick={()=>setDrawings([])} title="Clear" style={{width:28,height:28,borderRadius:6,border:"1px solid rgba(255,23,68,0.3)",background:"rgba(255,23,68,0.1)",color:"#ff1744",cursor:"pointer",fontSize:10}}>⌫</button>
         </div>
-      </div>
         <div style={{position:"absolute",top:8,left:12,fontSize:10,color:"#3d4551",fontFamily:"monospace"}}>{symbol} · {cur}/{candles.length}</div>
       </div>
 
