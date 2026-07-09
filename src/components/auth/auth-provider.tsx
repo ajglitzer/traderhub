@@ -33,8 +33,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       supabase.auth.getSession().then(({ data, error }) => {
         if (!mounted) return;
         if (error) console.error("[Auth] getSession error:", error.message);
-        setUser(data?.session?.user ?? null);
+        const sessionUser = data?.session?.user ?? null;
+        setUser(sessionUser);
         setLoading(false);
+        if (sessionUser) localStorage.setItem("th_current_user_id", sessionUser.id);
       }).catch(err => {
         if (!mounted) return;
         console.error("[Auth] getSession failed:", err);
@@ -44,8 +46,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       // Listen for changes
       const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
         if (!mounted) return;
-        setUser(session?.user ?? null);
+        const newUser = session?.user ?? null;
+        setUser(newUser);
         setLoading(false);
+        // Scope accounts store to this user
+        if (newUser) {
+          localStorage.setItem("th_current_user_id", newUser.id);
+        } else {
+          localStorage.removeItem("th_current_user_id");
+        }
       });
 
       return () => {

@@ -100,6 +100,49 @@ export const useAccountStore = create<AccountStore>()(
     }),
     {
       name: "tv-accounts-store",
+      // Use a storage key scoped to the current user so trades don't bleed across accounts
+      storage: {
+        getItem: (key: string) => {
+          try {
+            // Try user-scoped key first
+            let userId = "";
+            try {
+              const u = localStorage.getItem("th_current_user_id");
+              if (u) userId = u;
+              else {
+                // Try Supabase session
+                for (let i = 0; i < localStorage.length; i++) {
+                  const k = localStorage.key(i);
+                  if (k && k.includes("auth-token")) {
+                    const v = localStorage.getItem(k);
+                    if (v) { const j = JSON.parse(v); userId = j?.user?.id || ""; break; }
+                  }
+                }
+              }
+            } catch {}
+            const scopedKey = userId ? `${key}-${userId}` : key;
+            const val = localStorage.getItem(scopedKey) || localStorage.getItem(key);
+            return val ? JSON.parse(val) : null;
+          } catch { return null; }
+        },
+        setItem: (key: string, value: unknown) => {
+          try {
+            let userId = "";
+            try { userId = localStorage.getItem("th_current_user_id") || ""; } catch {}
+            const scopedKey = userId ? `${key}-${userId}` : key;
+            localStorage.setItem(scopedKey, JSON.stringify(value));
+          } catch {}
+        },
+        removeItem: (key: string) => {
+          try {
+            let userId = "";
+            try { userId = localStorage.getItem("th_current_user_id") || ""; } catch {}
+            const scopedKey = userId ? `${key}-${userId}` : key;
+            localStorage.removeItem(scopedKey);
+            localStorage.removeItem(key);
+          } catch {}
+        },
+      },
     }
   )
 );

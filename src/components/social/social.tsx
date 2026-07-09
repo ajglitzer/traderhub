@@ -47,15 +47,22 @@ function BattleSimulator({ battle, myId, onSubmit }: { battle: Battle; myId: str
   const bases: Record<string,number> = { NQ:20000, ES:5000, MGC:2500, CL:80 };
   const base = bases[battle.symbol] || 100;
 
-  // Generate candles on mount
+  // Generate realistic candles on mount
   useEffect(() => {
     const c: Candle[] = [];
     let p = base;
+    let trend = 0, vol = 1.0;
     for (let i = 0; i < 300; i++) {
-      const move = (Math.random()-0.49)*base*0.002;
-      const o=p, cl=+(p+move).toFixed(2);
-      c.push({ o, h:+Math.max(o,cl,o+Math.random()*base*0.001).toFixed(2), l:+Math.min(o,cl,o-Math.random()*base*0.001).toFixed(2), c:cl });
-      p=cl;
+      if(Math.random()<0.06) vol = 0.5+Math.random()*2.5;
+      else vol = vol*0.97+(0.5+Math.random()*1.5)*0.03;
+      if(Math.random()<0.04) trend=(Math.random()-0.5)*0.8;
+      else trend*=0.95;
+      const v = base*0.0015*vol;
+      const o=p, move=(Math.random()-0.48+trend*0.1)*v;
+      const cl=+(p+move).toFixed(2);
+      const uW=Math.random()*v*0.5, lW=Math.random()*v*0.5;
+      c.push({ o, h:+(Math.max(o,cl)+uW).toFixed(2), l:+(Math.min(o,cl)-lW).toFixed(2), c:cl });
+      p=+(cl).toFixed(2);
     }
     setCandles(c);
   }, [base]);

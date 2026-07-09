@@ -17,7 +17,6 @@ import CalendarPage from "@/components/calendar/calendar-page";
 import SettingsPage from "@/components/settings/settings";
 import JournalPage from "@/components/journal/journal";
 import AnalyticsPage from "@/components/analytics/analytics";
-import AdvancedPage from "@/components/analytics/advanced";
 import PlaybookPage from "@/components/playbook/playbook";
 import ChecklistPage from "@/components/checklist/checklist";
 import DailyRecapPage from "@/components/recap/daily-recap";
@@ -297,40 +296,6 @@ function Dashboard() {
         </Panel>
       </div>
 
-      {/* ── MONTE CARLO ── */}
-      {mc && (
-        <Panel glow="purple">
-          <div style={{ display:"flex", alignItems:"center", justifyContent:"space-between", marginBottom:12 }}>
-            <Label>Monte Carlo Simulation</Label>
-            <span style={{ fontSize:10, color:"#3d4551" }}>400 runs · randomized trade sequencing</span>
-          </div>
-          <div style={{ display:"flex", gap:20, marginBottom:14 }}>
-            {([["Worst 5%",mc.percentiles.p5,"#ff1744"],["P25",mc.percentiles.p25,"#ffab00"],["Median",mc.percentiles.p50,"#00e5ff"],["P75",mc.percentiles.p75,"#00e676"],["Best 5%",mc.percentiles.p95,"#69f0ae"]] as [string,number,string][]).map(([l,v,c])=>(
-              <div key={l}>
-                <div style={{fontSize:9,color:"#3d4551",marginBottom:3,textTransform:"uppercase" as const,letterSpacing:"0.08em"}}>{l}</div>
-                <div style={{fontFamily:"monospace",fontWeight:800,color:c,fontSize:14,textShadow:`0 0 16px ${c}60`}}>{fmt$(v)}</div>
-              </div>
-            ))}
-          </div>
-          <div style={{height:140}}>
-          <ResponsiveContainer width="100%" height={140}>
-            <LineChart data={Array.from({length:mc.paths[0]?.length||0},(_,i)=>({i,min:mc.paths.reduce((m,p)=>Math.min(m,p[i]),Infinity),max:mc.paths.reduce((m,p)=>Math.max(m,p[i]),-Infinity),med:mc.paths.map(p=>p[i]).sort((a,b)=>a-b)[Math.floor(mc.paths.length/2)]}))} margin={{top:4,right:4,left:0,bottom:0}}>
-              <CartesianGrid strokeDasharray="1 6" stroke="rgba(255,255,255,0.03)" vertical={false}/>
-              <XAxis dataKey="i" tick={{fontSize:9,fill:"#3d4551"}} axisLine={false} tickLine={false}/>
-              <YAxis tickFormatter={v=>"$"+v.toFixed(0)} tick={{fontSize:9,fill:"#3d4551"}} axisLine={false} tickLine={false} width={52}/>
-              <ReferenceLine y={0} stroke="rgba(255,255,255,0.08)"/>
-              <Tooltip {...TTP}/>
-              <Line type="monotone" dataKey="max" stroke="rgba(0,230,118,0.25)" dot={false} strokeWidth={1}/>
-              <Line type="monotone" dataKey="med" stroke="#00e5ff" dot={false} strokeWidth={2.5} style={{filter:"drop-shadow(0 0 4px rgba(0,229,255,0.5))"}}/>
-              <Line type="monotone" dataKey="min" stroke="rgba(255,23,68,0.25)" dot={false} strokeWidth={1}/>
-            </LineChart>
-          </ResponsiveContainer>
-          </div>
-        </Panel>
-      )}
-    </div>
-  );
-}
 
 // ── Social wrapper that loads real profile ─────────────────────────────────────
 function SocialPageWrapper({ userId }: { userId: string }) {
@@ -461,7 +426,6 @@ function AppContent({ activeTab, activeUser, d }: { activeTab: string; activeUse
     </div>{d}</>
   );
   if (activeTab === "analytics") return <><AnalyticsPage/>{d}</>;
-  if (activeTab === "advanced")  return <><AdvancedPage/>{d}</>;
   if (activeTab === "playbook")  return <><PlaybookPage/>{d}</>;
   if (activeTab === "checklist") return <><ChecklistPage/>{d}</>;
   if (activeTab === "recap")     return <><DailyRecapPage/>{d}</>;

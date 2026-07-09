@@ -235,10 +235,6 @@ export default function SettingsPage() {
 
 
 
-      <Section title="Public Profile">
-        <ProfileEditor userId={user?.id}/>
-      </Section>
-
       <Section title="Account">
         <Row label="Signed in as" desc={user?.email || "Unknown"}>
           <div style={{display:"flex",alignItems:"center",gap:10}}>
@@ -248,6 +244,7 @@ export default function SettingsPage() {
   if(window.confirm("Sign out of TraderHub?")) {
     await signOut();
     localStorage.removeItem("th_user");
+    localStorage.removeItem("th_current_user_id");
     window.location.reload();
   }
 }}

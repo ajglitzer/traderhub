@@ -192,6 +192,13 @@ const fmt$=(n:number)=>(n>=0?"+":"")+`$${Math.abs(n).toLocaleString("en-US",{min
 // ── Main ──────────────────────────────────────────────────────────────────────
 export default function SimulatorPage() {
   const canvasRef=useRef<HTMLCanvasElement>(null);
+  const drawingCanvasRef=useRef<HTMLCanvasElement>(null);
+  const [drawTool, setDrawTool] = useState<"none"|"line"|"rect"|"pencil">("none");
+  const [drawColor, setDrawColor] = useState("#00e5ff");
+  const [drawings, setDrawings] = useState<{type:string;pts:number[];color:string}[]>([]);
+  const isDrawing = useRef(false);
+  const drawStart = useRef<{x:number;y:number}|null>(null);
+  const currentPath = useRef<number[]>([]);
   const tickRef=useRef<any>(null);
 
   const [accounts, setAccounts]   = useState<SimAccount[]>([]);
@@ -238,8 +245,71 @@ export default function SimulatorPage() {
     setCur(80); setPlaying(false); setInTrade(false);
   },[symbol]);
 
-  // Draw only
+  // Redraw drawing overlay
   useEffect(()=>{
+    const dc=drawingCanvasRef.current; if(!dc) return;
+    const dpr=window.devicePixelRatio||1;
+    dc.width=dc.offsetWidth*dpr; dc.height=dc.offsetHeight*dpr;
+    const ctx=dc.getContext("2d")!; ctx.scale(dpr,dpr);
+    ctx.clearRect(0,0,dc.offsetWidth,dc.offsetHeight);
+    drawings.forEach(d=>{
+      ctx.strokeStyle=d.color; ctx.lineWidth=2; ctx.lineCap="round";
+      if(d.type==="line"&&d.pts.length===4){
+        ctx.beginPath(); ctx.moveTo(d.pts[0],d.pts[1]); ctx.lineTo(d.pts[2],d.pts[3]); ctx.stroke();
+      } else if(d.type==="rect"&&d.pts.length===4){
+        ctx.strokeRect(d.pts[0],d.pts[1],d.pts[2]-d.pts[0],d.pts[3]-d.pts[1]);
+        ctx.fillStyle=d.color+"22"; ctx.fillRect(d.pts[0],d.pts[1],d.pts[2]-d.pts[0],d.pts[3]-d.pts[1]);
+      } else if(d.type==="pencil"&&d.pts.length>=4){
+        ctx.beginPath(); ctx.moveTo(d.pts[0],d.pts[1]);
+        for(let i=2;i<d.pts.length;i+=2) ctx.lineTo(d.pts[i],d.pts[i+1]);
+        ctx.stroke();
+      }
+    });
+  },[drawings]);
+
+  const getPos=(e:React.MouseEvent<HTMLCanvasElement>)=>{
+    const r=e.currentTarget.getBoundingClientRect();
+    return{x:e.clientX-r.left,y:e.clientY-r.top};
+  };
+  const onDrawMouseDown=(e:React.MouseEvent<HTMLCanvasElement>)=>{
+    if(drawTool==="none") return;
+    const p=getPos(e); isDrawing.current=true; drawStart.current=p;
+    if(drawTool==="pencil") currentPath.current=[p.x,p.y];
+  };
+  const onDrawMouseMove=(e:React.MouseEvent<HTMLCanvasElement>)=>{
+    if(!isDrawing.current||drawTool==="none"||!drawStart.current) return;
+    const p=getPos(e);
+    if(drawTool==="pencil"){
+      currentPath.current=[...currentPath.current,p.x,p.y];
+      // Live preview
+      const dc=drawingCanvasRef.current; if(!dc) return;
+      const dpr=window.devicePixelRatio||1;
+      dc.width=dc.offsetWidth*dpr; dc.height=dc.offsetHeight*dpr;
+      const ctx=dc.getContext("2d")!; ctx.scale(dpr,dpr);
+      ctx.clearRect(0,0,dc.offsetWidth,dc.offsetHeight);
+      drawings.forEach(d=>{
+        ctx.strokeStyle=d.color; ctx.lineWidth=2; ctx.lineCap="round";
+        if(d.type==="line"&&d.pts.length===4){ctx.beginPath();ctx.moveTo(d.pts[0],d.pts[1]);ctx.lineTo(d.pts[2],d.pts[3]);ctx.stroke();}
+        else if(d.type==="rect"&&d.pts.length===4){ctx.strokeRect(d.pts[0],d.pts[1],d.pts[2]-d.pts[0],d.pts[3]-d.pts[1]);ctx.fillStyle=d.color+"22";ctx.fillRect(d.pts[0],d.pts[1],d.pts[2]-d.pts[0],d.pts[3]-d.pts[1]);}
+        else if(d.type==="pencil"){ctx.beginPath();ctx.moveTo(d.pts[0],d.pts[1]);for(let i=2;i<d.pts.length;i+=2)ctx.lineTo(d.pts[i],d.pts[i+1]);ctx.stroke();}
+      });
+      ctx.strokeStyle=drawColor; ctx.lineWidth=2; ctx.lineCap="round";
+      ctx.beginPath(); ctx.moveTo(currentPath.current[0],currentPath.current[1]);
+      for(let i=2;i<currentPath.current.length;i+=2) ctx.lineTo(currentPath.current[i],currentPath.current[i+1]);
+      ctx.stroke();
+    }
+  };
+  const onDrawMouseUp=(e:React.MouseEvent<HTMLCanvasElement>)=>{
+    if(!isDrawing.current||drawTool==="none"||!drawStart.current) return;
+    const p=getPos(e);
+    if(drawTool==="pencil"){
+      setDrawings(prev=>[...prev,{type:"pencil",pts:currentPath.current,color:drawColor}]);
+      currentPath.current=[];
+    } else {
+      setDrawings(prev=>[...prev,{type:drawTool,pts:[drawStart.current!.x,drawStart.current!.y,p.x,p.y],color:drawColor}]);
+    }
+    isDrawing.current=false; drawStart.current=null;
+  };
     const cv=canvasRef.current; if(!cv||!candles.length) return;
     drawChart(cv,candles,cur,inTrade,entry,side,entry+(+tp),entry-(+sl),chartColors);
   },[candles,cur,inTrade,entry,side,tp,sl,chartColors]);
@@ -433,8 +503,26 @@ export default function SimulatorPage() {
       </div>
 
       {/* Chart */}
-      <div style={{flex:1,position:"relative",minHeight:0,background:"#060a0f"}}>
-        <canvas ref={canvasRef} style={{width:"100%",height:"100%",display:"block"}}/>
+      <div style={{flex:1,position:"relative",minHeight:0,background:chartColors.bg}}>
+        <canvas ref={canvasRef} style={{width:"100%",height:"100%",display:"block",position:"absolute",inset:0}}/>
+        {/* Drawing overlay */}
+        <canvas ref={drawingCanvasRef}
+          style={{width:"100%",height:"100%",display:"block",position:"absolute",inset:0,cursor:drawTool==="none"?"default":drawTool==="pencil"?"crosshair":"crosshair",zIndex:2}}
+          onMouseDown={onDrawMouseDown} onMouseMove={onDrawMouseMove} onMouseUp={onDrawMouseUp} onMouseLeave={onDrawMouseUp}
+        />
+        {/* Drawing toolbar */}
+        <div style={{position:"absolute",top:8,right:8,zIndex:3,display:"flex",flexDirection:"column",gap:4,background:"rgba(0,0,0,0.6)",borderRadius:10,padding:6,border:"1px solid rgba(255,255,255,0.08)"}}>
+          {([["none","✕","Cursor"],["line","╱","Line"],["rect","▭","Rect"],["pencil","✏","Draw"]] as const).map(([t,icon,label])=>(
+            <button key={t} onClick={()=>setDrawTool(t)} title={label} style={{width:28,height:28,borderRadius:6,border:"1px solid",borderColor:drawTool===t?"rgba(0,229,255,0.5)":"rgba(255,255,255,0.1)",background:drawTool===t?"rgba(0,229,255,0.15)":"transparent",color:drawTool===t?"#00e5ff":"#6b7280",cursor:"pointer",fontSize:12,display:"flex",alignItems:"center",justifyContent:"center"}}>{icon}</button>
+          ))}
+          <div style={{width:28,height:1,background:"rgba(255,255,255,0.1)"}}/>
+          {["#00e5ff","#00e676","#ff1744","#ffab00","#ffffff","#d500f9"].map(c=>(
+            <button key={c} onClick={()=>setDrawColor(c)} style={{width:28,height:28,borderRadius:6,border:`2px solid ${drawColor===c?"#fff":"transparent"}`,background:c,cursor:"pointer"}}/>
+          ))}
+          <div style={{width:28,height:1,background:"rgba(255,255,255,0.1)"}}/>
+          <button onClick={()=>setDrawings([])} title="Clear" style={{width:28,height:28,borderRadius:6,border:"1px solid rgba(255,23,68,0.3)",background:"rgba(255,23,68,0.1)",color:"#ff1744",cursor:"pointer",fontSize:10}}>⌫</button>
+        </div>
+      </div>
         <div style={{position:"absolute",top:8,left:12,fontSize:10,color:"#3d4551",fontFamily:"monospace"}}>{symbol} · {cur}/{candles.length}</div>
       </div>
 

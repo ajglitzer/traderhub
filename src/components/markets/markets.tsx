@@ -38,8 +38,16 @@ export default function MarketsPage() {
   const [tfIdx, setTfIdx] = useState(1); // default 5m
   const [loaded, setLoaded] = useState(false);
   const [custom, setCustom] = useState("");
-  const [customList, setCustomList] = useState<{sym:string;label:string;name:string}[]>([]);
-  const [hidden, setHidden] = useState<string[]>([]);
+  const [customList, setCustomList] = useState<{sym:string;label:string;name:string}[]>(() => {
+    try { return JSON.parse(localStorage.getItem("th_markets_custom") || "[]"); } catch { return []; }
+  });
+  const [hidden, setHidden] = useState<string[]>(() => {
+    try { return JSON.parse(localStorage.getItem("th_markets_hidden") || "[]"); } catch { return []; }
+  });
+
+  // Persist on change
+  useEffect(() => { try { localStorage.setItem("th_markets_custom", JSON.stringify(customList)); } catch {} }, [customList]);
+  useEffect(() => { try { localStorage.setItem("th_markets_hidden", JSON.stringify(hidden)); } catch {} }, [hidden]);
   const [editMode, setEditMode] = useState(false);
 
   const tf = TIMEFRAMES[tfIdx];

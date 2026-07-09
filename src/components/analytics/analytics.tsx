@@ -1,11 +1,12 @@
 "use client";
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
 import { useAccountStore } from "@/store/accounts";
 import { calculateMetrics, buildEquityCurve, runMonteCarlo } from "@/lib/calculations";
 import { EquityChart } from "@/components/charts/equity-chart";
 import { fmt$ } from "@/lib/utils";
 import { Trade } from "@/types/trade";
 import { exportToCSV } from "@/lib/export";
+import AdvancedAnalyticsPage from "@/components/analytics/advanced";
 import {
   BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Cell,
   ReferenceLine, LineChart, Line, CartesianGrid, AreaChart, Area,
@@ -41,6 +42,7 @@ export default function AnalyticsPage() {
   const M = useMemo(()=>calculateMetrics(closed as Trade[]),[closed]);
   const equity = useMemo(()=>buildEquityCurve(closed as Trade[]),[closed]);
   const mc = useMemo(()=>closed.length>5?runMonteCarlo(closed as Trade[],500):null,[closed]);
+  const [tab, setTab] = useState<"analytics"|"deep">("analytics");
 
   const rDist = useMemo(()=>{
     // Use rMultiple if available, otherwise estimate from netPnl / avgLoss
@@ -110,15 +112,26 @@ export default function AnalyticsPage() {
 
   return (
     <div style={{ padding:20, overflowY:"auto", height:"100%", display:"flex", flexDirection:"column", gap:14 }}>
-      <div style={{ display:"flex", alignItems:"center", justifyContent:"space-between" }}>
-        <div style={{ fontSize:10, color:"#4b5563" }}>{closed.length} closed trades analyzed</div>
+      {/* Tab switcher + export */}
+      <div style={{ display:"flex", alignItems:"center", gap:8 }}>
+        {(["analytics","deep"] as const).map(t=>(
+          <button key={t} onClick={()=>setTab(t)} style={{ height:30, padding:"0 16px", borderRadius:20, border:"1px solid", fontSize:12, fontWeight:700, cursor:"pointer", transition:"all 0.12s",
+            borderColor:tab===t?"rgba(0,229,255,0.4)":"rgba(255,255,255,0.08)",
+            background:tab===t?"rgba(0,229,255,0.1)":"rgba(255,255,255,0.03)",
+            color:tab===t?"#00e5ff":"#4b5563",
+          }}>{t==="analytics"?"Analytics":"Deep Stats"}</button>
+        ))}
+        <span style={{fontSize:10,color:"#4b5563",marginLeft:4}}>{closed.length} closed trades</span>
         <button onClick={()=>exportToCSV(closed as Trade[], `traderhub_analytics_${new Date().toISOString().slice(0,10)}.csv`)}
-          style={{ height:28, padding:"0 14px", borderRadius:8, border:"1px solid rgba(0,229,255,0.2)", background:"rgba(0,229,255,0.06)", color:"#00e5ff", fontSize:11, fontWeight:700, cursor:"pointer" }}>
+          style={{ height:28, padding:"0 14px", borderRadius:8, border:"1px solid rgba(0,229,255,0.2)", background:"rgba(0,229,255,0.06)", color:"#00e5ff", fontSize:11, fontWeight:700, cursor:"pointer", marginLeft:"auto" }}>
           ↓ Export CSV
         </button>
       </div>
 
-      <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:14 }}>
+      {/* Deep Stats tab */}
+      {tab==="deep" && <AdvancedAnalyticsPage/>}      <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:14 }}>
+      {/* Analytics tab content */}
+      {tab==="analytics" && <>
         <Panel title="Equity Curve" sub={"Total: "+fmt$(equity[equity.length-1]?.equity||0)}>
           <EquityChart data={equity} height={195}/>
         </Panel>
@@ -292,6 +305,7 @@ export default function AnalyticsPage() {
           </ResponsiveContainer>
         </Panel>
       )}
+      </>}
     </div>
   );
 }

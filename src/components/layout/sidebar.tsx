@@ -6,7 +6,6 @@ const NAV = [
   { id:"dashboard",  label:"Dashboard",  icon:"◈" },
   { id:"trades",     label:"Trade Log",  icon:"≋" },
   { id:"analytics",  label:"Analytics",  icon:"⌬" },
-  { id:"advanced",   label:"Deep Stats", icon:"⊞" },
   { id:"calendar",   label:"Calendar",   icon:"⊡" },
   { id:"playbook",   label:"Playbook",   icon:"◧" },
   { id:"checklist",  label:"Checklist",  icon:"☑" },
