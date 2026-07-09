@@ -299,7 +299,7 @@ function Dashboard() {
 
 // ── Social wrapper that loads real profile ─────────────────────────────────────
 function SocialPageWrapper({ userId }: { userId: string }) {
-  const [profile, setProfile] = useState<import("@/lib/social").Profile | null>(null);
+  const [profile, setProfile] = useState<Profile | null>(null);
   const [loadingProfile, setLoadingProfile] = useState(true);
   const hasSupabase = !!process.env.NEXT_PUBLIC_SUPABASE_URL && !process.env.NEXT_PUBLIC_SUPABASE_URL.includes("placeholder");
 
