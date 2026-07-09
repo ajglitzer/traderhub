@@ -310,6 +310,9 @@ export default function SimulatorPage() {
     }
     isDrawing.current=false; drawStart.current=null;
   };
+
+  // Draw only
+  useEffect(()=>{
     const cv=canvasRef.current; if(!cv||!candles.length) return;
     drawChart(cv,candles,cur,inTrade,entry,side,entry+(+tp),entry-(+sl),chartColors);
   },[candles,cur,inTrade,entry,side,tp,sl,chartColors]);

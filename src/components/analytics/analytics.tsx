@@ -129,9 +129,11 @@ export default function AnalyticsPage() {
       </div>
 
       {/* Deep Stats tab */}
-      {tab==="deep" && <AdvancedAnalyticsPage/>}      <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:14 }}>
+      {tab==="deep" && <AdvancedAnalyticsPage/>}
+
       {/* Analytics tab content */}
       {tab==="analytics" && <>
+      <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:14 }}>
         <Panel title="Equity Curve" sub={"Total: "+fmt$(equity[equity.length-1]?.equity||0)}>
           <EquityChart data={equity} height={195}/>
         </Panel>
