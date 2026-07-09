@@ -94,7 +94,7 @@ function Stat({ label, value, color = "#c9d1d9", sub }: { label:string; value:st
   );
 }
 
-// ── DASHBOARD ──────────────────────────────────────────────────────────────────
+//  DASHBOARD 
 function getStoredUsername(): string | undefined {
   if (typeof window === "undefined") return undefined;
   // Find any th_username_* key in localStorage
@@ -297,7 +297,7 @@ function Dashboard() {
       </div>
 
 
-// ── Social wrapper that loads real profile ─────────────────────────────────────
+// Social wrapper that loads real profile
 function SocialPageWrapper({ userId }: { userId: string }) {
   const [profile, setProfile] = useState<Profile | null>(null);
   const [loadingProfile, setLoadingProfile] = useState(true);
@@ -329,7 +329,7 @@ function SocialPageWrapper({ userId }: { userId: string }) {
   return <SocialPage myProfile={profile}/>;
 }
 
-// ── PAGE SHELL ─────────────────────────────────────────────────────────────────
+//  PAGE SHELL 
 export default function Page() {
   const { activeTab, init } = useStore();
   const { user, loading } = useAuth();
@@ -357,13 +357,13 @@ export default function Page() {
   const activeUser = hasSupabase ? user : localUser;
   if (!activeUser) return <AuthPage onAuth={()=>{ try{const s=localStorage.getItem("th_user");if(s)setLocalUser(JSON.parse(s));}catch{} }}/>;
 
-  // Username gate — checks Supabase profile (with localStorage cache) before showing setup
+  // Username gate  checks Supabase profile (with localStorage cache) before showing setup
   return <UsernameGate userId={activeUser.id} hasSupabase={hasSupabase}>
     <AppContent activeTab={activeTab} activeUser={activeUser} d={d}/>
   </UsernameGate>;
 }
 
-// ── Username gate: checks Supabase profile before showing setup screen ──────────
+//  Username gate: checks Supabase profile before showing setup screen 
 function UsernameGate({ userId, hasSupabase, children }: { userId: string; hasSupabase: boolean; children: React.ReactNode }) {
   const [state, setState] = useState<"checking"|"needs-setup"|"ready">(() => {
     // Fast path: localStorage cache
@@ -393,7 +393,7 @@ function UsernameGate({ userId, hasSupabase, children }: { userId: string; hasSu
             setState("ready");
             return;
           }
-          // No profile found — user needs to pick a username
+          // No profile found  user needs to pick a username
           console.log("[UsernameGate] no profile found for user, showing setup");
         } catch (e) {
           console.error("[UsernameGate] check failed:", e);
@@ -414,7 +414,7 @@ function UsernameGate({ userId, hasSupabase, children }: { userId: string; hasSu
   return <>{children}</>;
 }
 
-// ── Main app content (post-auth, post-username) ─────────────────────────────────
+//  Main app content (post-auth, post-username) 
 function AppContent({ activeTab, activeUser, d }: { activeTab: string; activeUser: { id: string }; d: React.ReactNode }) {
   const { setImportOpen } = useStore();
 
