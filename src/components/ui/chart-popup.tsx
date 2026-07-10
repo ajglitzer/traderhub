@@ -1,5 +1,6 @@
 "use client";
 import { useState, useEffect, useRef, useCallback, useMemo } from "react";
+import { useStore } from "@/store";
 import {
   createChart, IChartApi, ISeriesApi,
   CandlestickSeries, createSeriesMarkers,
@@ -63,6 +64,7 @@ const BARS_PAD = 15; // bars before entry and after exit
 
 // -- Main popup -----------------------------------------------------------------
 function TradeReplayPopup({ticker,entryTime,exitTime,side,entryPrice,exitPrice,stopLoss,takeProfit,netPnl,onClose}:Props) {
+  const { simShowLevels } = useStore();
   const containerRef = useRef<HTMLDivElement>(null);
   const overlayRef   = useRef<HTMLCanvasElement>(null);
   const chartRef     = useRef<IChartApi|null>(null);
@@ -164,16 +166,18 @@ function TradeReplayPopup({ticker,entryTime,exitTime,side,entryPrice,exitPrice,s
     priceLines.current=[];
 
     // Entry/Exit horizontal lines removed - arrows mark the levels instead.
-    // SL - dashed red, thicker
-    if(stopLoss) priceLines.current.push(ser.createPriceLine({
-      price:stopLoss, color:"#ff1744", lineWidth:2,
-      lineStyle:LineStyle.Dashed, axisLabelVisible:true, title:"SL",
-    }));
-    // TP - dashed green
-    if(takeProfit) priceLines.current.push(ser.createPriceLine({
-      price:takeProfit, color:"#00e676", lineWidth:2,
-      lineStyle:LineStyle.Dashed, axisLabelVisible:true, title:"TP",
-    }));
+    if(simShowLevels){
+      // SL - dashed red
+      if(stopLoss) priceLines.current.push(ser.createPriceLine({
+        price:stopLoss, color:"#ff1744", lineWidth:2,
+        lineStyle:LineStyle.Dashed, axisLabelVisible:true, title:"SL",
+      }));
+      // TP - dashed green
+      if(takeProfit) priceLines.current.push(ser.createPriceLine({
+        price:takeProfit, color:"#00e676", lineWidth:2,
+        lineStyle:LineStyle.Dashed, axisLabelVisible:true, title:"TP",
+      }));
+    }
 
     // Entry / exit arrow markers
     const mks: Parameters<typeof markers.setMarkers>[0]=[];
@@ -212,7 +216,7 @@ function TradeReplayPopup({ticker,entryTime,exitTime,side,entryPrice,exitPrice,s
 
     // Auto-fit when replay finishes
     if(visible>=allCandles.length) chart.timeScale().fitContent();
-  },[allCandles,visible,entryTs,exitTs,entryPrice,exitPrice,stopLoss,takeProfit,side]);
+  },[allCandles,visible,entryTs,exitTs,entryPrice,exitPrice,stopLoss,takeProfit,side,simShowLevels]);
 
   // -- Replay timer ----------------------------------------------------------
   useEffect(()=>{
