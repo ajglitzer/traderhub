@@ -1,6 +1,7 @@
 "use client";
 import { upsertLeaderboardEntry, getGlobalLeaderboard } from "@/lib/social";
 import { useState, useEffect, useRef, useCallback } from "react";
+import { useStore } from "@/store";
 
 // -- Types ---------------------------------------------------------------------
 interface Candle { o:number; h:number; l:number; c:number; }
@@ -192,6 +193,7 @@ const fmt$=(n:number)=>(n>=0?"+":"")+`$${Math.abs(n).toLocaleString("en-US",{min
 
 // -- Main ----------------------------------------------------------------------
 export default function SimulatorPage() {
+  const { simShowLevels } = useStore();
   const canvasRef=useRef<HTMLCanvasElement>(null);
   const drawingCanvasRef=useRef<HTMLCanvasElement>(null);
   const [drawTool, setDrawTool] = useState<"none"|"line"|"rect"|"pencil">("none");
@@ -320,8 +322,8 @@ export default function SimulatorPage() {
     const cv=canvasRef.current; if(!cv||!candles.length) return;
     const tpP=side==="LONG"?entry+(+tp):entry-(+tp);
     const slP=side==="LONG"?entry-(+sl):entry+(+sl);
-    drawChart(cv,candles,cur,inTrade,entry,side,tpP,slP,chartColors,ghostEntry,ghostTp,ghostSl);
-  },[candles,cur,inTrade,entry,side,tp,sl,chartColors,ghostEntry,ghostTp,ghostSl]);
+    drawChart(cv,candles,cur,inTrade&&simShowLevels,entry,side,tpP,slP,chartColors,simShowLevels?ghostEntry:0,simShowLevels?ghostTp:0,simShowLevels?ghostSl:0);
+  },[candles,cur,inTrade,entry,side,tp,sl,chartColors,ghostEntry,ghostTp,ghostSl,simShowLevels]);
 
   // TP/SL auto-close check - separate effect, guarded against double-fire
   useEffect(()=>{

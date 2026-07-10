@@ -160,7 +160,7 @@ function ConfirmBtn({ label, confirmLabel, onConfirm, danger, primary }: Confirm
 
 export default function SettingsPage() {
   const { user, signOut } = useAuth();
-  const { trades, setTrades, addTrades, theme, setTheme } = useStore();
+  const { trades, setTrades, addTrades, theme, setTheme, simShowLevels, setSimShowLevels } = useStore();
   const { activeAccountId, getActiveTrades, setAccountTrades } = useAccountStore();
   const allTrades = getActiveTrades().length > 0 ? getActiveTrades() : trades;
   const [toast, setToast] = useState<{msg:string;type:"ok"|"err"}|null>(null);
@@ -252,6 +252,14 @@ export default function SettingsPage() {
               Sign Out
             </button>
           </div>
+        </Row>
+      </Section>
+
+      <Section title="Simulator">
+        <Row label="Show TP/SL levels on chart" desc="Display entry, take profit, and stop loss lines during and after each trade">
+          <button onClick={() => setSimShowLevels(!simShowLevels)} style={{ width:44, height:24, borderRadius:12, border:"none", cursor:"pointer", background: simShowLevels ? "#00e5ff" : "rgba(255,255,255,0.1)", position:"relative" as const, flexShrink:0, transition:"background 0.2s" }}>
+            <div style={{ width:18, height:18, borderRadius:"50%", background:"#fff", position:"absolute" as const, top:3, left: simShowLevels ? 22 : 3, transition:"left 0.2s", boxShadow:"0 1px 4px rgba(0,0,0,0.4)" }}/>
+          </button>
         </Row>
       </Section>
 

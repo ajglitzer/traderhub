@@ -39,6 +39,9 @@ interface Store {
   allTags: string[];
   addTag: (tag:string)=>void;
 
+  // Simulator settings
+  simShowLevels: boolean; setSimShowLevels: (v:boolean)=>void;
+
   // Init
   initialized: boolean;
   init: ()=>void;
@@ -56,6 +59,7 @@ export const useStore = create<Store>()(
         activeTab: "dashboard", setActiveTab: (t)=>set({activeTab:t}),
         theme: "dark", setTheme: (t)=>{ set({theme:t}); if(typeof document!=="undefined") document.documentElement.setAttribute("data-theme",t); },
         communityBadge: 0, setCommunityBadge: (v)=>set({communityBadge:v}),
+        simShowLevels: true, setSimShowLevels: (v)=>set({simShowLevels:v}),
 
         filters: DEFAULT_FILTERS,
         setFilters: (f)=>set(s=>({filters:{...s.filters,...f},page:1})),
@@ -121,7 +125,7 @@ export const useStore = create<Store>()(
       }),
       {
         name:"tv-ui-store",
-        partialize:(s)=>({sidebarOpen:s.sidebarOpen,activeTab:s.activeTab,theme:s.theme,goals:s.goals,playbook:s.playbook,allTags:s.allTags}),
+        partialize:(s)=>({sidebarOpen:s.sidebarOpen,activeTab:s.activeTab,theme:s.theme,goals:s.goals,playbook:s.playbook,allTags:s.allTags,simShowLevels:s.simShowLevels}),
       }
     )
   )
