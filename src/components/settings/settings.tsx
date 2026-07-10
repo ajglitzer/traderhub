@@ -177,6 +177,7 @@ export default function SettingsPage() {
 
   const handleExportCSV = () => {
     if(!isPro){ setShowUpgrade("Export CSV"); return; }
+    // isPro confirmed
     exportToCSV(allTrades, `traderhub_${new Date().toISOString().slice(0,10)}.csv`);
     showToast(`✓ Exported ${allTrades.length} trades as CSV`);
   };

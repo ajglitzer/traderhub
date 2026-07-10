@@ -14,11 +14,12 @@ export interface SubInfo {
 const DEFAULT: SubInfo = { status: "loading", plan: null, periodEnd: null, isPro: false };
 
 export function useSubscription(): SubInfo {
-  const { user } = useAuth();
+  const { user, loading: authLoading } = useAuth();
   const [info, setInfo] = useState<SubInfo>(DEFAULT);
 
   useEffect(() => {
-    if (!user) { setInfo({ ...DEFAULT, status: "none" }); return; }
+    if (authLoading) return;
+    if (!user) { setInfo({ status: "none", plan: null, periodEnd: null, isPro: false }); return; }
     fetch("/api/subscription/status")
       .then(r => r.json())
       .then(d => setInfo({
@@ -27,8 +28,8 @@ export function useSubscription(): SubInfo {
         periodEnd: d.periodEnd ?? null,
         isPro: d.status === "active" || d.status === "trialing",
       }))
-      .catch(() => setInfo({ ...DEFAULT, status: "none" }));
-  }, [user]);
+      .catch(() => setInfo({ status: "none", plan: null, periodEnd: null, isPro: false }));
+  }, [user, authLoading]);
 
   return info;
 }
