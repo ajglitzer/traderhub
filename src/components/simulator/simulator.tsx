@@ -57,13 +57,14 @@ function drawChart(canvas:HTMLCanvasElement, candles:Candle[], cur:number, inTra
   const toY=(p:number)=>10+(H-20)-(p-yMin)/yR*(H-20);
 
   // Background grid
-  const gridColor = colors.bg === "#ffffff" || colors.bg === "#f8f9fa" ? "rgba(0,0,0,0.06)" : "rgba(255,255,255,0.04)";
+  const isLight = colors.bg === "#ffffff" || colors.bg === "#f0f2f5" || colors.bg === "#f8f9fa";
+  const gridColor = isLight ? "rgba(0,0,0,0.08)" : "rgba(255,255,255,0.04)";
   for(let i=0;i<=4;i++){
     ctx.strokeStyle=gridColor; ctx.lineWidth=1;
     ctx.beginPath(); ctx.moveTo(0,10+i/4*(H-20)); ctx.lineTo(W,10+i/4*(H-20)); ctx.stroke();
     // Price labels
     const price = yMax - (i/4)*yR;
-    ctx.fillStyle = colors.bg === "#ffffff" ? "rgba(0,0,0,0.3)" : "rgba(255,255,255,0.2)";
+    ctx.fillStyle = isLight ? "rgba(0,0,0,0.45)" : "rgba(255,255,255,0.2)";
     ctx.font="10px monospace"; ctx.textAlign="left";
     ctx.fillText(price.toFixed(0), 4, 10+i/4*(H-20)-3);
   }
@@ -475,7 +476,7 @@ export default function SimulatorPage() {
                   <input type="color" value={val} onChange={e=>setChartColors(c=>({...c,[key]:e.target.value}))} style={{width:32,height:24,borderRadius:6,border:"none",cursor:"pointer",background:"none"}}/>
                 </div>
               ))}
-              {[["Classic","#00e676","#ff1744","#060a0f"],["TradingView","#26a69a","#ef5350","#131722"],["Monochrome","#ffffff","#ffffff","#1a1a1a"],["Light","#089981","#f23645","#ffffff"]].map(([name,up,down,bg])=>(
+              {[["Classic","#00e676","#ff1744","#060a0f"],["TradingView","#26a69a","#ef5350","#131722"],["Monochrome","#ffffff","#ffffff","#1a1a1a"],["Light","#089981","#f23645","#f0f2f5"]].map(([name,up,down,bg])=>(
                 <button key={name} onClick={()=>{setChartColors({up,down,bg});}} style={{height:26,borderRadius:7,border:"1px solid rgba(255,255,255,0.08)",background:"rgba(255,255,255,0.03)",color:"#8b949e",cursor:"pointer",fontSize:11}}>{name}</button>
               ))}
             </div>
@@ -527,7 +528,7 @@ export default function SimulatorPage() {
         <canvas ref={canvasRef} style={{width:"100%",height:"100%",display:"block",position:"absolute",inset:0}}/>
         {/* Drawing overlay */}
         <canvas ref={drawingCanvasRef}
-          style={{width:"100%",height:"100%",display:"block",position:"absolute",inset:0,cursor:drawTool==="none"?"default":drawTool==="pencil"?"crosshair":"crosshair",zIndex:2}}
+          style={{width:"100%",height:"100%",display:"block",position:"absolute",inset:0,background:"transparent",cursor:drawTool==="none"?"default":drawTool==="pencil"?"crosshair":"crosshair",zIndex:2}}
           onMouseDown={onDrawMouseDown} onMouseMove={onDrawMouseMove} onMouseUp={onDrawMouseUp} onMouseLeave={onDrawMouseUp}
         />
         {/* Drawing toolbar */}

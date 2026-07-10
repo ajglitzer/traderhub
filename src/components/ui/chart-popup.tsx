@@ -64,7 +64,7 @@ const BARS_PAD = 15; // bars before entry and after exit
 
 // -- Main popup -----------------------------------------------------------------
 function TradeReplayPopup({ticker,entryTime,exitTime,side,entryPrice,exitPrice,stopLoss,takeProfit,netPnl,onClose}:Props) {
-  const { simShowLevels } = useStore();
+  const { replayShowLevels } = useStore();
   const containerRef = useRef<HTMLDivElement>(null);
   const overlayRef   = useRef<HTMLCanvasElement>(null);
   const chartRef     = useRef<IChartApi|null>(null);
@@ -166,7 +166,7 @@ function TradeReplayPopup({ticker,entryTime,exitTime,side,entryPrice,exitPrice,s
     priceLines.current=[];
 
     // Entry/Exit horizontal lines removed - arrows mark the levels instead.
-    if(simShowLevels){
+    if(replayShowLevels){
       // SL - dashed red
       if(stopLoss) priceLines.current.push(ser.createPriceLine({
         price:stopLoss, color:"#ff1744", lineWidth:2,
@@ -216,7 +216,7 @@ function TradeReplayPopup({ticker,entryTime,exitTime,side,entryPrice,exitPrice,s
 
     // Auto-fit when replay finishes
     if(visible>=allCandles.length) chart.timeScale().fitContent();
-  },[allCandles,visible,entryTs,exitTs,entryPrice,exitPrice,stopLoss,takeProfit,side,simShowLevels]);
+  },[allCandles,visible,entryTs,exitTs,entryPrice,exitPrice,stopLoss,takeProfit,side,replayShowLevels]);
 
   // -- Replay timer ----------------------------------------------------------
   useEffect(()=>{

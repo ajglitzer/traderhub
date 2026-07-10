@@ -160,7 +160,7 @@ function ConfirmBtn({ label, confirmLabel, onConfirm, danger, primary }: Confirm
 
 export default function SettingsPage() {
   const { user, signOut } = useAuth();
-  const { trades, setTrades, addTrades, theme, setTheme, simShowLevels, setSimShowLevels } = useStore();
+  const { trades, setTrades, addTrades, theme, setTheme, simShowLevels, setSimShowLevels, replayShowLevels, setReplayShowLevels } = useStore();
   const { activeAccountId, getActiveTrades, setAccountTrades } = useAccountStore();
   const allTrades = getActiveTrades().length > 0 ? getActiveTrades() : trades;
   const [toast, setToast] = useState<{msg:string;type:"ok"|"err"}|null>(null);
@@ -255,10 +255,15 @@ export default function SettingsPage() {
         </Row>
       </Section>
 
-      <Section title="Simulator">
-        <Row label="Show TP/SL levels on chart" desc="Display TP and SL lines on the trade replay and simulator">
+      <Section title="Simulator & Replay">
+        <Row label="Show TP/SL lines on Simulator" desc="Display TP and SL level lines while using the simulator">
           <button onClick={() => setSimShowLevels(!simShowLevels)} style={{ width:44, height:24, borderRadius:12, border:"none", cursor:"pointer", background: simShowLevels ? "#00e5ff" : "rgba(255,255,255,0.1)", position:"relative" as const, flexShrink:0, transition:"background 0.2s" }}>
             <div style={{ width:18, height:18, borderRadius:"50%", background:"#fff", position:"absolute" as const, top:3, left: simShowLevels ? 22 : 3, transition:"left 0.2s", boxShadow:"0 1px 4px rgba(0,0,0,0.4)" }}/>
+          </button>
+        </Row>
+        <Row label="Show TP/SL lines on Replay" desc="Display TP and SL level lines on the trade chart replay">
+          <button onClick={() => setReplayShowLevels(!replayShowLevels)} style={{ width:44, height:24, borderRadius:12, border:"none", cursor:"pointer", background: replayShowLevels ? "#00e5ff" : "rgba(255,255,255,0.1)", position:"relative" as const, flexShrink:0, transition:"background 0.2s" }}>
+            <div style={{ width:18, height:18, borderRadius:"50%", background:"#fff", position:"absolute" as const, top:3, left: replayShowLevels ? 22 : 3, transition:"left 0.2s", boxShadow:"0 1px 4px rgba(0,0,0,0.4)" }}/>
           </button>
         </Row>
       </Section>
