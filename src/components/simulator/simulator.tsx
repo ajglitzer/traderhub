@@ -37,7 +37,7 @@ function newAccount(name: string): SimAccount {
 }
 
 // -- Chart canvas --------------------------------------------------------------
-function drawChart(canvas:HTMLCanvasElement, candles:Candle[], cur:number, inTrade:boolean, entry:number, side:"LONG"|"SHORT", tp:number, sl:number, colors:{up:string,down:string,bg:string}={up:"#00e676",down:"#ff1744",bg:"#060a0f"}) {
+function drawChart(canvas:HTMLCanvasElement, candles:Candle[], cur:number, inTrade:boolean, entry:number, side:"LONG"|"SHORT", tp:number, sl:number, colors:{up:string,down:string,bg:string}={up:"#00e676",down:"#ff1744",bg:"#060a0f"}, ghostEntry:number=0, ghostTp:number=0, ghostSl:number=0) {
   const dpr=window.devicePixelRatio||1, W=canvas.offsetWidth, H=canvas.offsetHeight;
   if(!W||!H) return;
   canvas.width=W*dpr; canvas.height=H*dpr;
@@ -47,6 +47,7 @@ function drawChart(canvas:HTMLCanvasElement, candles:Candle[], cur:number, inTra
   if(!slice.length) return;
   const prices=[...slice.map(c=>c.h),...slice.map(c=>c.l)];
   if(inTrade){prices.push(entry,tp,sl);}
+  if(ghostEntry){prices.push(ghostEntry,ghostTp,ghostSl);}
   const lo=Math.min(...prices),hi=Math.max(...prices);
   const pad=(hi-lo)*0.12||1;
   const yMin=lo-pad,yMax=hi+pad,yR=yMax-yMin||1;
@@ -82,46 +83,46 @@ function drawChart(canvas:HTMLCanvasElement, candles:Candle[], cur:number, inTra
     ctx.globalAlpha=1;
   });
 
+  // Helper to draw level lines
+  const drawLevel=(price:number,col:string,lbl:string,dash:number[]=[],alpha:number=1)=>{
+    const y=toY(price);
+    if(y<0||y>H) return;
+    ctx.globalAlpha=alpha;
+    ctx.strokeStyle=col; ctx.lineWidth=lbl==="Entry"?2:1.5;
+    ctx.setLineDash(dash);
+    ctx.beginPath(); ctx.moveTo(0,y); ctx.lineTo(W,y); ctx.stroke();
+    ctx.setLineDash([]);
+    const txt=`${lbl} ${price.toFixed(1)}`;
+    const tw=ctx.measureText(txt).width+10;
+    ctx.fillStyle=col;
+    ctx.beginPath(); ctx.roundRect(W-tw-4,y-9,tw,16,3); ctx.fill();
+    ctx.fillStyle="#000"; ctx.font="bold 10px monospace"; ctx.textAlign="center";
+    ctx.fillText(txt,W-tw/2-4,y+2);
+    ctx.globalAlpha=1;
+  };
+
   // TradingView-style TP/SL lines with filled zones
   if(inTrade&&entry){
     const entryY=toY(entry);
+    // Correct TP/SL direction per side
+    const tpAbove=side==="LONG";
     const tpY=toY(tp);
     const slY=toY(sl);
 
-    // Fill zone between entry and TP (green)
-    if(tpY<H&&tpY>0){
-      ctx.fillStyle="rgba(0,230,118,0.06)";
-      ctx.fillRect(0,Math.min(entryY,tpY),W,Math.abs(entryY-tpY));
-    }
-    // Fill zone between entry and SL (red)
-    if(slY>0&&slY<H){
-      ctx.fillStyle="rgba(255,23,68,0.06)";
-      ctx.fillRect(0,Math.min(entryY,slY),W,Math.abs(entryY-slY));
-    }
+    // Fill zones
+    if(tpY>0&&tpY<H){ ctx.fillStyle="rgba(0,230,118,0.06)"; ctx.fillRect(0,Math.min(entryY,tpY),W,Math.abs(entryY-tpY)); }
+    if(slY>0&&slY<H){ ctx.fillStyle="rgba(255,23,68,0.06)";  ctx.fillRect(0,Math.min(entryY,slY),W,Math.abs(entryY-slY)); }
 
-    // Lines
-    const lines:[number,string,string,number[]?][]=[
-      [entry,"#00e5ff","Entry"],
-      [tp,"#00e676","TP",[6,4]],
-      [sl,"#ff1744","SL",[6,4]],
-    ];
-    lines.forEach(([price,col,lbl,dash])=>{
-      const y=toY(price as number);
-      if(y<0||y>H) return;
-      ctx.strokeStyle=col as string; ctx.lineWidth=lbl==="Entry"?2:1.5;
-      ctx.setLineDash((dash||[]) as number[]);
-      ctx.beginPath(); ctx.moveTo(0,y); ctx.lineTo(W,y); ctx.stroke();
-      ctx.setLineDash([]);
-      // Label pill on right
-      const txt=`${lbl} ${(price as number).toFixed(1)}`;
-      const tw=ctx.measureText(txt).width+10;
-      ctx.fillStyle=col as string;
-      ctx.beginPath();
-      ctx.roundRect(W-tw-4,y-9,tw,16,3);
-      ctx.fill();
-      ctx.fillStyle="#000"; ctx.font="bold 10px monospace"; ctx.textAlign="center";
-      ctx.fillText(txt,W-tw/2-4,y+2);
-    });
+    drawLevel(entry,"#00e5ff","Entry");
+    drawLevel(tp, tpAbove?"#00e676":"#ff1744","TP",[6,4]);
+    drawLevel(sl, tpAbove?"#ff1744":"#00e676","SL",[6,4]);
+  }
+
+  // Ghost lines after trade closed
+  if(!inTrade&&ghostEntry){
+    drawLevel(ghostEntry,"#00e5ff","Entry",[],0.35);
+    drawLevel(ghostTp,"#00e676","TP",[6,4],0.35);
+    drawLevel(ghostSl,"#ff1744","SL",[6,4],0.35);
   }
 
   // Current price line
@@ -220,6 +221,9 @@ export default function SimulatorPage() {
   const [entry,    setEntry]      = useState(0);
   const [tp,       setTp]         = useState("20");
   const [sl,       setSl]         = useState("10");
+  const [ghostEntry, setGhostEntry] = useState(0);
+  const [ghostTp,    setGhostTp]    = useState(0);
+  const [ghostSl,    setGhostSl]    = useState(0);
 
   const activeAcc = accounts.find(a=>a.id===activeId);
 
@@ -314,8 +318,10 @@ export default function SimulatorPage() {
   // Draw only
   useEffect(()=>{
     const cv=canvasRef.current; if(!cv||!candles.length) return;
-    drawChart(cv,candles,cur,inTrade,entry,side,entry+(+tp),entry-(+sl),chartColors);
-  },[candles,cur,inTrade,entry,side,tp,sl,chartColors]);
+    const tpP=side==="LONG"?entry+(+tp):entry-(+tp);
+    const slP=side==="LONG"?entry-(+sl):entry+(+sl);
+    drawChart(cv,candles,cur,inTrade,entry,side,tpP,slP,chartColors,ghostEntry,ghostTp,ghostSl);
+  },[candles,cur,inTrade,entry,side,tp,sl,chartColors,ghostEntry,ghostTp,ghostSl]);
 
   // TP/SL auto-close check - separate effect, guarded against double-fire
   useEffect(()=>{
@@ -368,6 +374,10 @@ export default function SimulatorPage() {
       setLB(JSON.parse(localStorage.getItem(LB_KEY)||"[]"));
       return updated;
     });
+    // Save ghost lines so chart still shows where TP/SL were
+    const tpPrice=side==="LONG"?entry+(+tp):entry-(+tp);
+    const slPrice=side==="LONG"?entry-(+sl):entry+(+sl);
+    setGhostEntry(entry); setGhostTp(tpPrice); setGhostSl(slPrice);
     setInTrade(false);
   };
 
@@ -376,6 +386,7 @@ export default function SimulatorPage() {
     const p=candles[cur-1]?.c||candles[cur]?.c||0;
     if(!p) return;
     // Set all trade state together (batched by React)
+    setGhostEntry(0); setGhostTp(0); setGhostSl(0);
     setEntry(p);
     setSide(s);
     setInTrade(true);
@@ -396,6 +407,10 @@ export default function SimulatorPage() {
       const updated=prev.map(a=>a.id===activeId?{...a,balance:10000,startBalance:10000,trades:[]}:a);
       saveAccounts(updated); return updated;
     });
+    // Save ghost lines so chart still shows where TP/SL were
+    const tpPrice=side==="LONG"?entry+(+tp):entry-(+tp);
+    const slPrice=side==="LONG"?entry-(+sl):entry+(+sl);
+    setGhostEntry(entry); setGhostTp(tpPrice); setGhostSl(slPrice);
     setInTrade(false);
   };
 
