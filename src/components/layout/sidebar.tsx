@@ -2,6 +2,8 @@
 import { useStore } from "@/store";
 import { useAuth } from "@/components/auth/auth-provider";
 import { useEffect, useState } from "react";
+import { useSubscription } from "@/hooks/useSubscription";
+import { PricingModal } from "@/components/subscription/pro-gate";
 
 const NAV = [
   { id:"dashboard",  label:"Dashboard",  icon:"◈" },
@@ -50,6 +52,8 @@ export function Sidebar() {
   }, []);
 
   const hasSupabase = !!process.env.NEXT_PUBLIC_SUPABASE_URL && !process.env.NEXT_PUBLIC_SUPABASE_URL.includes("placeholder");
+  const { isPro } = useSubscription();
+  const [showUpgrade, setShowUpgrade] = useState(false);
   const isAuthed = hasSupabase ? (!loading && !!user) : localUser;
   if (!isAuthed) return null;
 
@@ -153,12 +157,27 @@ export function Sidebar() {
         {sidebarOpen && (
           <div style={{ overflow:"hidden" }}>
             <div style={{ fontSize:13, fontWeight:800, color:"#f0f6fc", letterSpacing:"-0.03em", lineHeight:1 }}>TraderHub</div>
-            <div style={{ fontSize:9, color:"rgba(0,229,255,0.6)", letterSpacing:"0.14em", textTransform:"uppercase", marginTop:2 }}>PRO</div>
+            {isPro ? <div style={{ fontSize:9, color:"rgba(0,229,255,0.6)", letterSpacing:"0.14em", textTransform:"uppercase", marginTop:2 }}>PRO</div> : <div style={{ fontSize:9, color:"#3d4551", letterSpacing:"0.14em", textTransform:"uppercase", marginTop:2 }}>FREE</div>}
           </div>
         )}
       </div>
 
       <nav style={{ flex:1, padding:"10px 7px", display:"flex", flexDirection:"column", gap:2 }}>
+        {!isPro && (
+          <button onClick={()=>setShowUpgrade(true)} style={{
+            display:"flex", alignItems:"center", gap:8,
+            padding: sidebarOpen ? "9px 11px" : "9px 0",
+            justifyContent: sidebarOpen ? "flex-start" : "center",
+            width:"100%", borderRadius:10, border:"1px solid rgba(0,229,255,0.25)",
+            background:"linear-gradient(135deg,rgba(0,229,255,0.08),rgba(0,120,180,0.05))",
+            color:"#00e5ff", cursor:"pointer", fontSize:12, fontWeight:700,
+            marginBottom:6,
+          }}>
+            <span style={{fontSize:14}}>⚡</span>
+            {sidebarOpen && "Upgrade to Pro"}
+          </button>
+        )}
+        {showUpgrade && <PricingModal onClose={()=>setShowUpgrade(false)}/>}
         {NAV.map(({ id, label, icon }) => {
           const active = activeTab === id;
           const badge = id === "social" && activeTab !== "social" ? communityBadge : 0;

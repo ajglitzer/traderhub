@@ -677,7 +677,7 @@ export function CandleChartBtn({trade,size=28}:{trade:Record<string,any>;size?:n
   };
   return (
     <>
-      <button onClick={e=>{e.stopPropagation(); if(isPro||status==="loading") setOpen(true); else setShowUpgrade(true);}} title="Replay trade chart"
+      <button onClick={e=>{e.stopPropagation(); if(status==="loading") return; if(isPro) setOpen(true); else setShowUpgrade(true);}} title="Replay trade chart"
         style={{width:size,height:size,borderRadius:7,background:"rgba(0,229,255,0.06)",border:"1px solid rgba(0,229,255,0.18)",display:"flex",alignItems:"center",justifyContent:"center",cursor:"pointer",flexShrink:0,transition:"all 0.12s"}}
         onMouseEnter={e=>{const el=e.currentTarget as HTMLElement;el.style.background="rgba(0,229,255,0.16)";el.style.borderColor="rgba(0,229,255,0.45)";el.style.boxShadow="0 0 12px rgba(0,229,255,0.25)";}}
         onMouseLeave={e=>{const el=e.currentTarget as HTMLElement;el.style.background="rgba(0,229,255,0.06)";el.style.borderColor="rgba(0,229,255,0.18)";el.style.boxShadow="none";}}
