@@ -89,6 +89,9 @@ function TradeReplayPopup({ticker,entryTime,exitTime,side,entryPrice,exitPrice,s
   const [selected,    setSelected]    = useState<string|null>(null);   // selected drawing id
   const [dragging,    setDragging]    = useState<{id:string;ptIdx:number;ox:number;oy:number}|null>(null);
 
+  const [localTp, setLocalTp] = useState<string>(takeProfit!=null?String(takeProfit):"");
+  const [localSl, setLocalSl] = useState<string>(stopLoss!=null?String(stopLoss):"");
+
   const entryTs = useMemo(()=>Math.floor(new Date(entryTime).getTime()/1000),[entryTime]);
   const exitTs  = useMemo(()=>exitTime?Math.floor(new Date(exitTime).getTime()/1000):null,[exitTime]);
   const isPos   = (netPnl??0)>=0;
@@ -167,14 +170,13 @@ function TradeReplayPopup({ticker,entryTime,exitTime,side,entryPrice,exitPrice,s
 
     // Entry/Exit horizontal lines removed - arrows mark the levels instead.
     if(replayShowLevels){
-      // SL - dashed red
-      if(stopLoss) priceLines.current.push(ser.createPriceLine({
-        price:stopLoss, color:"#ff1744", lineWidth:2,
+      const slVal=parseFloat(localSl); const tpVal=parseFloat(localTp);
+      if(!isNaN(slVal)&&slVal>0) priceLines.current.push(ser.createPriceLine({
+        price:slVal, color:"#ff1744", lineWidth:2,
         lineStyle:LineStyle.Dashed, axisLabelVisible:true, title:"SL",
       }));
-      // TP - dashed green
-      if(takeProfit) priceLines.current.push(ser.createPriceLine({
-        price:takeProfit, color:"#00e676", lineWidth:2,
+      if(!isNaN(tpVal)&&tpVal>0) priceLines.current.push(ser.createPriceLine({
+        price:tpVal, color:"#00e676", lineWidth:2,
         lineStyle:LineStyle.Dashed, axisLabelVisible:true, title:"TP",
       }));
     }
@@ -216,7 +218,7 @@ function TradeReplayPopup({ticker,entryTime,exitTime,side,entryPrice,exitPrice,s
 
     // Auto-fit when replay finishes
     if(visible>=allCandles.length) chart.timeScale().fitContent();
-  },[allCandles,visible,entryTs,exitTs,entryPrice,exitPrice,stopLoss,takeProfit,side,replayShowLevels]);
+  },[allCandles,visible,entryTs,exitTs,entryPrice,exitPrice,stopLoss,takeProfit,side,replayShowLevels,localSl,localTp]);
 
   // -- Replay timer ----------------------------------------------------------
   useEffect(()=>{
@@ -454,14 +456,24 @@ function TradeReplayPopup({ticker,entryTime,exitTime,side,entryPrice,exitPrice,s
               ["Entry","$"+fP(entryPrice),"#00e5ff"],
               ["Exit",exitPrice?"$"+fP(exitPrice):"Open","#ff6b35"],
               ["P&L",netPnl!=null?f$(netPnl):"—",isPos?"#00e676":"#ff1744"],
-              ...(stopLoss?[["SL","$"+fP(stopLoss),"#ff1744"]]:[] as any),
-              ...(takeProfit?[["TP","$"+fP(takeProfit),"#00e676"]]:[] as any),
-            ] as [string,string,string][]).map(([l,v,c])=>(
+              ] as [string,string,string][]).map(([l,v,c])=>(
               <div key={l}>
                 <div style={{fontSize:9,color:"#3d4551",textTransform:"uppercase" as const,letterSpacing:"0.07em",marginBottom:1}}>{l}</div>
                 <div style={{fontSize:11,fontWeight:700,fontFamily:"monospace",color:c}}>{v}</div>
               </div>
             ))}
+            <div style={{width:1,height:16,background:"rgba(255,255,255,0.07)"}}/>
+            {/* Editable SL/TP inputs */}
+            <div>
+              <div style={{fontSize:9,color:"#ff1744",textTransform:"uppercase" as const,letterSpacing:"0.07em",marginBottom:1}}>SL</div>
+              <input type="number" value={localSl} onChange={e=>setLocalSl(e.target.value)} placeholder="price"
+                style={{width:72,height:20,background:"rgba(255,23,68,0.1)",border:"1px solid rgba(255,23,68,0.25)",borderRadius:4,color:"#ff1744",fontSize:10,fontFamily:"monospace",fontWeight:700,padding:"0 5px",outline:"none"}}/>
+            </div>
+            <div>
+              <div style={{fontSize:9,color:"#00e676",textTransform:"uppercase" as const,letterSpacing:"0.07em",marginBottom:1}}>TP</div>
+              <input type="number" value={localTp} onChange={e=>setLocalTp(e.target.value)} placeholder="price"
+                style={{width:72,height:20,background:"rgba(0,230,118,0.1)",border:"1px solid rgba(0,230,118,0.25)",borderRadius:4,color:"#00e676",fontSize:10,fontFamily:"monospace",fontWeight:700,padding:"0 5px",outline:"none"}}/>
+            </div>
           </div>
           <button onClick={onClose} style={{width:28,height:28,borderRadius:8,background:"rgba(255,255,255,0.05)",border:"1px solid rgba(255,255,255,0.08)",color:"#4b5563",cursor:"pointer",fontSize:17,display:"flex",alignItems:"center",justifyContent:"center"}}
             onMouseEnter={e=>{const el=e.currentTarget as HTMLElement;el.style.background="rgba(255,255,255,0.1)";el.style.color="#c9d1d9";}}
