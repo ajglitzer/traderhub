@@ -13,7 +13,7 @@ interface Props {
   ticker: string; entryTime: string; exitTime?: string|null;
   side: string; entryPrice: number; exitPrice?: number|null;
   stopLoss?: number|null; takeProfit?: number|null;
-  netPnl?: number|null; onClose: () => void;
+  netPnl?: number|null; onClose: () => void; onSaveLevels?: (sl:number|null,tp:number|null)=>void;
 }
 type Tool = "cursor"|"trendline"|"line"|"hline"|"rect"|"text";
 interface Drawing { id:string; type:Tool; pts:{x:number;y:number}[]; color:string; text?:string; extended?:boolean; }
@@ -63,7 +63,7 @@ const fDT=(ts:number)=>new Date(ts*1000).toLocaleString("en-US",{month:"short",d
 const BARS_PAD = 15; // bars before entry and after exit
 
 // -- Main popup -----------------------------------------------------------------
-function TradeReplayPopup({ticker,entryTime,exitTime,side,entryPrice,exitPrice,stopLoss,takeProfit,netPnl,onClose}:Props) {
+function TradeReplayPopup({ticker,entryTime,exitTime,side,entryPrice,exitPrice,stopLoss,takeProfit,netPnl,onClose,onSaveLevels}:Props) {
   const { replayShowLevels } = useStore();
   const containerRef = useRef<HTMLDivElement>(null);
   const overlayRef   = useRef<HTMLCanvasElement>(null);
@@ -447,7 +447,7 @@ function TradeReplayPopup({ticker,entryTime,exitTime,side,entryPrice,exitPrice,s
   const COLORS=["#00e5ff","#00e676","#ff1744","#ff6b35","#ffab00","#ffffff","#d500f9","#f9fafb"];
 
   return(
-    <div onClick={e=>{if(e.target===e.currentTarget)onClose();}} style={{
+    <div onClick={e=>{if(e.target===e.currentTarget){ onSaveLevels?.(parseFloat(localSl)||null, parseFloat(localTp)||null); onClose(); }}} style={{
       position:"fixed",inset:0,zIndex:9999,background:"rgba(0,0,0,0.9)",
       backdropFilter:"blur(12px)",display:"flex",alignItems:"center",justifyContent:"center",padding:12,
     }}>
@@ -488,7 +488,7 @@ function TradeReplayPopup({ticker,entryTime,exitTime,side,entryPrice,exitPrice,s
                 style={{width:72,height:20,background:"rgba(0,230,118,0.1)",border:"1px solid rgba(0,230,118,0.25)",borderRadius:4,color:"#00e676",fontSize:10,fontFamily:"monospace",fontWeight:700,padding:"0 5px",outline:"none"}}/>
             </div>
           </div>
-          <button onClick={onClose} style={{width:28,height:28,borderRadius:8,background:"rgba(255,255,255,0.05)",border:"1px solid rgba(255,255,255,0.08)",color:"#4b5563",cursor:"pointer",fontSize:17,display:"flex",alignItems:"center",justifyContent:"center"}}
+          <button onClick={()=>{ onSaveLevels?.(parseFloat(localSl)||null, parseFloat(localTp)||null); onClose(); }} style={{width:28,height:28,borderRadius:8,background:"rgba(255,255,255,0.05)",border:"1px solid rgba(255,255,255,0.08)",color:"#4b5563",cursor:"pointer",fontSize:17,display:"flex",alignItems:"center",justifyContent:"center"}}
             onMouseEnter={e=>{const el=e.currentTarget as HTMLElement;el.style.background="rgba(255,255,255,0.1)";el.style.color="#c9d1d9";}}
             onMouseLeave={e=>{const el=e.currentTarget as HTMLElement;el.style.background="rgba(255,255,255,0.05)";el.style.color="#4b5563";}}>×</button>
         </div>
@@ -658,6 +658,11 @@ function CandleIcon({color="#00e5ff"}:{color?:string}) {
 
 export function CandleChartBtn({trade,size=28}:{trade:Record<string,any>;size?:number}) {
   const [open,setOpen]=useState(false);
+  const { updateTrade, setTrades, trades } = useStore();
+  const handleSaveLevels=(sl:number|null,tp:number|null)=>{
+    if(!trade.id) return;
+    updateTrade(trade.id,{stopLoss:sl,takeProfit:tp});
+  };
   return (
     <>
       <button onClick={e=>{e.stopPropagation();setOpen(true);}} title="Replay trade chart"
@@ -677,6 +682,7 @@ export function CandleChartBtn({trade,size=28}:{trade:Record<string,any>;size?:n
           takeProfit={trade.takeProfit as number|null}
           netPnl={trade.netPnl as number|null}
           onClose={()=>setOpen(false)}
+          onSaveLevels={handleSaveLevels}
         />
       )}
     </>
