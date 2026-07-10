@@ -114,8 +114,8 @@ export default function AnalyticsPage() {
   },[closed]);
 
   const calendar = useMemo(()=>{
-    const acc:Record<string,number>={};
-    closed.forEach(t=>{ const d=(t.entryTime||"").slice(0,10); acc[d]=(acc[d]||0)+(t.netPnl||0); });
+    const acc:Record<string,{pnl:number;count:number}>={};
+    closed.forEach(t=>{ const d=(t.entryTime||"").slice(0,10); if(!acc[d])acc[d]={pnl:0,count:0}; acc[d].pnl+=(t.netPnl||0); acc[d].count++; });
     return acc;
   },[closed]);
 

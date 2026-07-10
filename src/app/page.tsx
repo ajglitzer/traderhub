@@ -117,6 +117,7 @@ function Dashboard() {
   const equity = useMemo(() => buildEquityCurve(closed as Trade[]), [closed]);
   const isPos = M.totalNetPnl >= 0;
   const netColor = isPos ? "#00e676" : "#ff1744";
+  const pct = M.totalTrades > 0 ? Math.round((M.winCount / M.totalTrades) * 100) : 0;
   const recent = useMemo(() => [...closed].sort((a,b) => new Date(b.entryTime||0).getTime() - new Date(a.entryTime||0).getTime()).slice(0,8), [closed]);
   return (
     <div style={{ padding:20, overflowY:"auto", height:"100%", display:"flex", flexDirection:"column", gap:14 }}>

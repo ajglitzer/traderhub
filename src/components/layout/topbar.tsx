@@ -1,6 +1,7 @@
 "use client";
 import { AccountSwitcher } from "@/components/ui/account-switcher";
 import { useStore } from "@/store";
+import { useAuth } from "@/components/auth/auth-provider";
 import { useEffect, useState } from "react";
 
 const TITLES: Record<string,{label:string;sub:string}> = {
@@ -26,9 +27,13 @@ const TITLES: Record<string,{label:string;sub:string}> = {
 
 export function Topbar() {
   const { activeTab, setImportOpen } = useStore();
-  const t = TITLES[activeTab] || TITLES.dashboard;
-  const now = new Date();
+  const { user, loading } = useAuth();
+  const [localUser, setLocalUser] = useState<boolean>(false);
   const [isMobile, setIsMobile] = useState(() => typeof window !== "undefined" ? window.innerWidth < 768 : false);
+
+  useEffect(() => {
+    try { if (localStorage.getItem("th_user")) setLocalUser(true); } catch {}
+  }, []);
 
   useEffect(() => {
     const check = () => setIsMobile(window.innerWidth < 768);
@@ -36,6 +41,13 @@ export function Topbar() {
     window.addEventListener("resize", check);
     return () => window.removeEventListener("resize", check);
   }, []);
+
+  const hasSupabase = typeof process !== "undefined" && !!process.env.NEXT_PUBLIC_SUPABASE_URL && !process.env.NEXT_PUBLIC_SUPABASE_URL.includes("placeholder");
+  const isAuthed = hasSupabase ? (!loading && !!user) : localUser;
+  if (!isAuthed) return null;
+
+  const t = TITLES[activeTab] || TITLES.dashboard;
+  const now = new Date();
 
   return (
     <header style={{
@@ -50,7 +62,6 @@ export function Topbar() {
       <div style={{ position:"absolute", bottom:0, left:0, right:0, height:1, background:"linear-gradient(90deg, transparent 0%, rgba(0,229,255,0.2) 40%, rgba(0,229,255,0.2) 60%, transparent 100%)", pointerEvents:"none" }}/>
 
       <div style={{ display:"flex", alignItems:"center", gap:12 }}>
-        {/* Mobile: show T logo */}
         {isMobile && (
           <div style={{ width:28, height:28, borderRadius:8, background:"linear-gradient(135deg,#00e5ff,#0077aa)", display:"flex", alignItems:"center", justifyContent:"center", fontSize:13, fontWeight:900, color:"#000", flexShrink:0 }}>T</div>
         )}

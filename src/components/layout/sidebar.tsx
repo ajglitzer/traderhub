@@ -1,5 +1,6 @@
 "use client";
 import { useStore } from "@/store";
+import { useAuth } from "@/components/auth/auth-provider";
 import { useEffect, useState } from "react";
 
 const NAV = [
@@ -32,6 +33,8 @@ const MOBILE_NAV = [
 
 export function Sidebar() {
   const { sidebarOpen, setSidebarOpen, activeTab, setActiveTab, communityBadge } = useStore();
+  const { user, loading } = useAuth();
+  const [localUser, setLocalUser] = useState<boolean>(false);
   const [isMobile, setIsMobile] = useState(() => typeof window !== "undefined" ? window.innerWidth < 768 : false);
   const [showMobileMenu, setShowMobileMenu] = useState(false);
 
@@ -41,6 +44,14 @@ export function Sidebar() {
     window.addEventListener("resize", check);
     return () => window.removeEventListener("resize", check);
   }, []);
+
+  useEffect(() => {
+    try { if (localStorage.getItem("th_user")) setLocalUser(true); } catch {}
+  }, []);
+
+  const hasSupabase = !!process.env.NEXT_PUBLIC_SUPABASE_URL && !process.env.NEXT_PUBLIC_SUPABASE_URL.includes("placeholder");
+  const isAuthed = hasSupabase ? (!loading && !!user) : localUser;
+  if (!isAuthed) return null;
 
   // Mobile: bottom nav + full-screen drawer
   if (isMobile) {
