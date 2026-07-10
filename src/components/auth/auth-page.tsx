@@ -109,7 +109,7 @@ export function AuthPage({ onAuth }: { onAuth: () => void }) {
   return (
     <div style={{ minHeight:"100vh", background:"#060a0f", display:"flex", alignItems:"center", justifyContent:"center", padding:20 }}>
       <div style={{ position:"fixed", inset:0, pointerEvents:"none", overflow:"hidden" }}>
-        <div style={{ position:"absolute", top:"20%", left:"30%", width:600, height:600, borderRadius:"50%", background:"radial-gradient(circle,rgba(0,229,255,0.04) 0%,transparent 70%)", transform:"translate(-50%,-50%)" }}/>
+
       </div>
 
       <div style={{ width:"100%", maxWidth:420, background:"linear-gradient(160deg,#0f1520,#0b1017)", border:"1px solid rgba(255,255,255,0.09)", borderRadius:22, overflow:"hidden", boxShadow:"0 0 80px rgba(0,0,0,0.8)", position:"relative" }}>
