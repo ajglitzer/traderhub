@@ -179,6 +179,19 @@ function TradeReplayPopup({ticker,entryTime,exitTime,side,entryPrice,exitPrice,s
         price:tpVal, color:"#00e676", lineWidth:2,
         lineStyle:LineStyle.Dashed, axisLabelVisible:true, title:"TP",
       }));
+      // Fit price scale to include SL/TP levels
+      const validPrices=[slVal,tpVal].filter(v=>!isNaN(v)&&v>0);
+      if(validPrices.length&&chart){
+        try{
+          const ps=chart.priceScale("right");
+          const cur=ps.getVisibleRange();
+          if(cur){
+            const all=[...validPrices,cur.from,cur.to];
+            const lo=Math.min(...all),hi=Math.max(...all),pad=(hi-lo)*0.08||10;
+            ps.setVisibleRange({from:lo-pad,to:hi+pad});
+          }
+        }catch{}
+      }
     }
 
     // Entry / exit arrow markers
