@@ -1,4 +1,6 @@
 "use client";
+import { PricingModal, ManageSubscription } from "@/components/subscription/pro-gate";
+import { useSubscription } from "@/hooks/useSubscription";
 import { useAuth } from "@/components/auth/auth-provider";
 import { useState, useRef, useEffect } from "react";
 import { useStore } from "@/store";
@@ -160,6 +162,8 @@ function ConfirmBtn({ label, confirmLabel, onConfirm, danger, primary }: Confirm
 
 export default function SettingsPage() {
   const { user, signOut } = useAuth();
+  const { isPro } = useSubscription();
+  const [showUpgrade, setShowUpgrade] = useState<string|null>(null);
   const { trades, setTrades, addTrades, theme, setTheme, simShowLevels, setSimShowLevels, replayShowLevels, setReplayShowLevels } = useStore();
   const { activeAccountId, getActiveTrades, setAccountTrades } = useAccountStore();
   const allTrades = getActiveTrades().length > 0 ? getActiveTrades() : trades;
@@ -172,6 +176,7 @@ export default function SettingsPage() {
   };
 
   const handleExportCSV = () => {
+    if(!isPro){ setShowUpgrade("Export CSV"); return; }
     exportToCSV(allTrades, `traderhub_${new Date().toISOString().slice(0,10)}.csv`);
     showToast(`✓ Exported ${allTrades.length} trades as CSV`);
   };
@@ -231,6 +236,8 @@ export default function SettingsPage() {
   };
 
   return (
+    <>
+    {showUpgrade&&<PricingModal onClose={()=>setShowUpgrade(null)}/>}
     <div style={{ padding:20, overflowY:"auto", height:"100%", maxWidth:700 }}>
 
 
@@ -253,6 +260,10 @@ export default function SettingsPage() {
             </button>
           </div>
         </Row>
+      </Section>
+
+      <Section title="Subscription">
+        <ManageSubscription/>
       </Section>
 
       <Section title="Simulator & Replay">
@@ -373,5 +384,6 @@ export default function SettingsPage() {
         </div>
       )}
     </div>
+    </>
   );
 }

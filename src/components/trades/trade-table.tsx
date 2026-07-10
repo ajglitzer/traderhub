@@ -1,4 +1,6 @@
 "use client";
+import { PricingModal } from "@/components/subscription/pro-gate";
+import { useSubscription } from "@/hooks/useSubscription";
 import { useState, useMemo } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { useStore, getFilteredTrades } from "@/store";
@@ -29,6 +31,8 @@ export function TradeTable() {
   const [showAddTrade, setShowAddTrade] = useState(false);
   const { getActiveTrades, activeAccountId, deleteAccountTrade, updateAccountTrade } = useAccountStore();
   const trades = getActiveTrades();
+  const { isPro } = useSubscription();
+  const [showUpgrade, setShowUpgrade] = useState(false);
   const [search, setSearch] = useState("");
   const [hov, setHov] = useState<string|null>(null);
   const [selectedTrade, setSelectedTrade] = useState<Trade|null>(null);
@@ -62,6 +66,8 @@ export function TradeTable() {
   );
 
   return (
+    <>
+    {showUpgrade&&<PricingModal onClose={()=>setShowUpgrade(false)}/>}
     <div className="flex flex-col h-full">
       {/* Filter bar */}
       <div style={{ display:"flex", alignItems:"center", gap:8, padding:"10px 14px", borderBottom:"1px solid rgba(255,255,255,0.05)", flexWrap:"wrap", flexShrink:0, background:"rgba(0,0,0,0.2)" }}>
@@ -81,7 +87,7 @@ export function TradeTable() {
             {opts.map(([v,l]) => <option key={v} value={v}>{l}</option>)}
           </select>
         ))}
-        <button onClick={()=>exportToCSV(list as Trade[], `traderhub_filtered_${new Date().toISOString().slice(0,10)}.csv`)}
+        <button onClick={()=>{ if(!isPro){setShowUpgrade(true);return;} exportToCSV(list as Trade[], `traderhub_filtered_${new Date().toISOString().slice(0,10)}.csv`)}}
           style={{height:30,padding:"0 12px",borderRadius:8,background:"rgba(0,229,255,0.08)",border:"1px solid rgba(0,229,255,0.2)",color:"#00e5ff",fontSize:11,fontWeight:700,cursor:"pointer",marginLeft:"auto"}}>
           ↓ Export {total.toLocaleString()} filtered
         </button>
@@ -214,5 +220,6 @@ export function TradeTable() {
         </div>
       )}
     </div>
+  </>
   );
 }

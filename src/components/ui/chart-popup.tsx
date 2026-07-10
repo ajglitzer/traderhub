@@ -1,5 +1,7 @@
 "use client";
 import { useState, useEffect, useRef, useCallback, useMemo } from "react";
+import { PricingModal } from "@/components/subscription/pro-gate";
+import { useSubscription } from "@/hooks/useSubscription";
 import { useStore } from "@/store";
 import { useAccountStore } from "@/store/accounts";
 import {
@@ -659,6 +661,8 @@ function CandleIcon({color="#00e5ff"}:{color?:string}) {
 
 export function CandleChartBtn({trade,size=28}:{trade:Record<string,any>;size?:number}) {
   const [open,setOpen]=useState(false);
+  const [showUpgrade,setShowUpgrade]=useState(false);
+  const { isPro, status } = useSubscription();
   const { updateTrade } = useStore();
   const { activeAccountId, updateAccountTrade, getActiveTrades } = useAccountStore();
   const handleSaveLevels=(sl:number|null,tp:number|null)=>{
@@ -673,11 +677,12 @@ export function CandleChartBtn({trade,size=28}:{trade:Record<string,any>;size?:n
   };
   return (
     <>
-      <button onClick={e=>{e.stopPropagation();setOpen(true);}} title="Replay trade chart"
+      <button onClick={e=>{e.stopPropagation(); if(isPro||status==="loading") setOpen(true); else setShowUpgrade(true);}} title="Replay trade chart"
         style={{width:size,height:size,borderRadius:7,background:"rgba(0,229,255,0.06)",border:"1px solid rgba(0,229,255,0.18)",display:"flex",alignItems:"center",justifyContent:"center",cursor:"pointer",flexShrink:0,transition:"all 0.12s"}}
         onMouseEnter={e=>{const el=e.currentTarget as HTMLElement;el.style.background="rgba(0,229,255,0.16)";el.style.borderColor="rgba(0,229,255,0.45)";el.style.boxShadow="0 0 12px rgba(0,229,255,0.25)";}}
         onMouseLeave={e=>{const el=e.currentTarget as HTMLElement;el.style.background="rgba(0,229,255,0.06)";el.style.borderColor="rgba(0,229,255,0.18)";el.style.boxShadow="none";}}
       ><CandleIcon/></button>
+      {showUpgrade&&<PricingModal onClose={()=>setShowUpgrade(false)}/>}
       {open&&(
         <TradeReplayPopup
           ticker={String(trade.ticker||"")}

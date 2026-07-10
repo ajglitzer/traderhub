@@ -1,4 +1,6 @@
 "use client";
+import { PricingModal } from "@/components/subscription/pro-gate";
+import { useSubscription } from "@/hooks/useSubscription";
 import { useState, useRef, useEffect } from "react";
 
 interface Trade {
@@ -84,6 +86,8 @@ One specific, actionable thing to do differently on the next similar trade.`;
 
 export function AIAnalysisBtn({ trade, size = 28 }: { trade: Record<string, any>; size?: number }) {
   const [open, setOpen] = useState(false);
+  const [showUpgrade, setShowUpgrade] = useState(false);
+  const { isPro, status } = useSubscription();
   return (
     <>
       <button
