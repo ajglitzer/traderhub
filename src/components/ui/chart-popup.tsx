@@ -1,6 +1,7 @@
 "use client";
 import { useState, useEffect, useRef, useCallback, useMemo } from "react";
 import { useStore } from "@/store";
+import { useAccountStore } from "@/store/accounts";
 import {
   createChart, IChartApi, ISeriesApi,
   CandlestickSeries, createSeriesMarkers,
@@ -658,10 +659,17 @@ function CandleIcon({color="#00e5ff"}:{color?:string}) {
 
 export function CandleChartBtn({trade,size=28}:{trade:Record<string,any>;size?:number}) {
   const [open,setOpen]=useState(false);
-  const { updateTrade, setTrades, trades } = useStore();
+  const { updateTrade } = useStore();
+  const { activeAccountId, updateAccountTrade, getActiveTrades } = useAccountStore();
   const handleSaveLevels=(sl:number|null,tp:number|null)=>{
     if(!trade.id) return;
-    updateTrade(trade.id,{stopLoss:sl,takeProfit:tp});
+    // Try account store first (most trades live here), fallback to main store
+    const inAccount = getActiveTrades().some((t:any)=>t.id===trade.id);
+    if(inAccount && activeAccountId){
+      updateAccountTrade(activeAccountId, trade.id, {stopLoss:sl, takeProfit:tp});
+    } else {
+      updateTrade(trade.id, {stopLoss:sl, takeProfit:tp});
+    }
   };
   return (
     <>
