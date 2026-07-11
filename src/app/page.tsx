@@ -118,13 +118,15 @@ function Dashboard() {
   const isPos = M.totalNetPnl >= 0;
   const netColor = isPos ? "#00e676" : "#ff1744";
   const pct = M.totalTrades > 0 ? Math.round((M.winCount / M.totalTrades) * 100) : 0;
+  const [isMob, setIsMob] = useState(()=>typeof window!=="undefined"&&window.innerWidth<768);
+  useEffect(()=>{ const h=()=>setIsMob(window.innerWidth<768); window.addEventListener("resize",h); return ()=>window.removeEventListener("resize",h); },[]);
   const recent = useMemo(() => [...closed].sort((a,b) => new Date(b.entryTime||0).getTime() - new Date(a.entryTime||0).getTime()).slice(0,8), [closed]);
   return (
     <div style={{ padding:20, overflowY:"auto", height:"100%", display:"flex", flexDirection:"column", gap:14 }}>
 
       {/* -- HERO -- */}
       <Panel glow={isPos ? "green" : "red"} p={24} style={{minHeight:120, paddingTop:28}}>
-        <div style={{ display:"flex", alignItems:"center", gap:32, flexWrap:"nowrap", overflowX:"auto" }}>
+        <div style={{ display:"flex", alignItems:isMob?"flex-start":"center", gap:isMob?16:32, flexWrap:"wrap", overflowX:"hidden", flexDirection:isMob?"column":"row" }}>
           {/* Big P&L number */}
           <div>
             <div style={{ fontSize:10, color:"#3d4551", textTransform:"uppercase" as const, letterSpacing:"0.1em", marginBottom:6 }}>Net P&L — All Time</div>
@@ -174,13 +176,13 @@ function Dashboard() {
       )}
 
       {/* -- GOALS + STREAK TRACKER -- */}
-      <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:14, marginTop:4 }}>
+      <div style={{ display:"grid", gridTemplateColumns:isMob?"1fr":"1fr 1fr", gap:14, marginTop:4 }}>
         <GoalsWidget trades={closed as Trade[]}/>
         <StreakTracker/>
       </div>
 
       {/* -- SECONDARY METRIC GRID -- */}
-      <div style={{ display:"grid", gridTemplateColumns:"repeat(8,1fr)", gap:10 }}>
+      <div style={{ display:"grid", gridTemplateColumns:isMob?"repeat(2,1fr)":"repeat(8,1fr)", gap:10 }}>
         {([
           ["Max Drawdown",    fmt$(M.maxDrawdown),     "#ff1744",  "red"],
           ["Largest Win",     fmt$(M.largestWin),      "#00e676",  "green"],
@@ -200,7 +202,7 @@ function Dashboard() {
       </div>
 
       {/* -- EQUITY + RECENT TRADES -- */}
-      <div style={{ display:"grid", gridTemplateColumns:"1fr 300px", gap:14 }}>
+      <div style={{ display:"grid", gridTemplateColumns:isMob?"1fr":"1fr 300px", gap:14 }}>
         <Panel glow="cyan">
           <Label>Equity Curve</Label>
           <EquityChart data={equity} height={220}/>
