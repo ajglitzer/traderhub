@@ -218,6 +218,8 @@ export default function SocialPage({ myProfile }: { myProfile: Profile }) {
 
   const [tab, setTab] = useState<"messages"|"friends"|"battles">("messages");
   const [confirmAction, setConfirmAction] = useState<{type:"unfriend"|"block",friend:Profile}|null>(null);
+  const [isMob, setIsMob] = useState(()=>typeof window!=="undefined"&&window.innerWidth<768);
+  useEffect(()=>{ const h=()=>setIsMob(window.innerWidth<768); window.addEventListener("resize",h); return ()=>window.removeEventListener("resize",h); },[]);
   const [blockedIds, setBlockedIds] = useState<string[]>([]);
   const [blockedProfiles, setBlockedProfiles] = useState<Profile[]>([]);
   const [showBlocked, setShowBlocked] = useState(false);
@@ -336,10 +338,10 @@ export default function SocialPage({ myProfile }: { myProfile: Profile }) {
   ];
 
   return (
-    <div style={{display:"flex",height:"100%",overflow:"hidden"}}>
+    <div style={{display:"flex",height:"100%",overflow:"hidden",position:"relative"}}>
 
       {/* Left panel */}
-      <div style={{width:280,borderRight:"1px solid rgba(255,255,255,0.06)",display:"flex",flexDirection:"column",background:"rgba(0,0,0,0.15)",flexShrink:0}}>
+      <div style={{width:isMob?(chatWith?0:"100%"):280,minWidth:isMob?(chatWith?0:"100%"):280,borderRight:"1px solid rgba(255,255,255,0.06)",display:chatWith&&isMob?"none":"flex",flexDirection:"column",background:"rgba(0,0,0,0.15)",flexShrink:0,overflow:"hidden"}}>
         {/* My profile */}
         <div style={{padding:"14px 16px",borderBottom:"1px solid rgba(255,255,255,0.06)",display:"flex",alignItems:"center",gap:10}}>
           <Avatar profile={myProfile} size={36}/>
