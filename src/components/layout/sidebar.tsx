@@ -34,11 +34,13 @@ const MOBILE_NAV = [
 ];
 
 export function Sidebar() {
-  const { sidebarOpen, setSidebarOpen, activeTab, setActiveTab, communityBadge } = useStore();
+  const { sidebarOpen, setSidebarOpen, activeTab, setActiveTab, communityBadge, mobilePinnedIds, setMobilePinnedIds } = useStore();
   const { user, loading } = useAuth();
   const [localUser, setLocalUser] = useState<boolean>(false);
   const [isMobile, setIsMobile] = useState(() => typeof window !== "undefined" ? window.innerWidth < 768 : false);
   const [showMobileMenu, setShowMobileMenu] = useState(false);
+  const [editingTabs, setEditingTabs] = useState(false);
+  const [dragIdx, setDragIdx] = useState<number|null>(null);
 
   useEffect(() => {
     const check = () => setIsMobile(window.innerWidth < 768);
@@ -59,40 +61,90 @@ export function Sidebar() {
 
   // Mobile: bottom nav + full-screen drawer
   if (isMobile) {
+    const pinnedNavItems = mobilePinnedIds
+      .map(pid => NAV.find(n => n.id === pid))
+      .filter(Boolean) as {id:string;label:string;icon:string}[];
+
+    const togglePin = (id:string) => {
+      if(mobilePinnedIds.includes(id)){
+        if(mobilePinnedIds.length > 1) setMobilePinnedIds(mobilePinnedIds.filter(p=>p!==id));
+      } else {
+        if(mobilePinnedIds.length < 4) setMobilePinnedIds([...mobilePinnedIds, id]);
+      }
+    };
+
+    const onDragStart = (i:number) => setDragIdx(i);
+    const onDragOver = (e:React.DragEvent, i:number) => {
+      e.preventDefault();
+      if(dragIdx===null||dragIdx===i) return;
+      const arr = [...mobilePinnedIds];
+      const [moved] = arr.splice(dragIdx,1);
+      arr.splice(i,0,moved);
+      setMobilePinnedIds(arr);
+      setDragIdx(i);
+    };
+    const onDragEnd = () => setDragIdx(null);
+
     return (
       <>
-        {/* Full-screen drawer for "More" */}
         {showMobileMenu && (
-          <div onClick={() => setShowMobileMenu(false)} style={{
+          <div onClick={()=>{setShowMobileMenu(false);setEditingTabs(false);}} style={{
             position:"fixed", inset:0, zIndex:999,
             background:"rgba(0,0,0,0.7)", backdropFilter:"blur(8px)",
           }}>
-            <div onClick={e => e.stopPropagation()} style={{
-              position:"absolute", bottom:70, left:0, right:0,
+            <div onClick={e=>e.stopPropagation()} style={{
+              position:"absolute", bottom:62, left:0, right:0,
               background:"linear-gradient(180deg,#0d1219,#060a0f)",
               borderTop:"1px solid rgba(255,255,255,0.08)",
               borderRadius:"20px 20px 0 0",
-              padding:"16px 16px 8px",
-              maxHeight:"70vh", overflowY:"auto",
+              padding:"16px 16px 12px",
+              maxHeight:"75vh", overflowY:"auto",
             }}>
-              <div style={{width:40,height:4,borderRadius:2,background:"rgba(255,255,255,0.15)",margin:"0 auto 16px"}}/>
+              <div style={{width:40,height:4,borderRadius:2,background:"rgba(255,255,255,0.15)",margin:"0 auto 14px"}}/>
+
+              {/* Edit tabs header */}
+              <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:12}}>
+                <span style={{fontSize:11,color:"#4b5563",fontWeight:700,textTransform:"uppercase",letterSpacing:"0.08em"}}>
+                  {editingTabs?"Tap to pin/unpin · Drag in nav to reorder":"All Tabs"}
+                </span>
+                <button onClick={()=>setEditingTabs(p=>!p)} style={{
+                  height:26,padding:"0 12px",borderRadius:20,border:"1px solid",
+                  borderColor:editingTabs?"rgba(0,229,255,0.4)":"rgba(255,255,255,0.1)",
+                  background:editingTabs?"rgba(0,229,255,0.1)":"rgba(255,255,255,0.04)",
+                  color:editingTabs?"#00e5ff":"#6b7280",cursor:"pointer",fontSize:11,fontWeight:700,
+                }}>
+                  {editingTabs?"✓ Done":"✏️ Edit Tabs"}
+                </button>
+              </div>
+
               <div style={{display:"grid",gridTemplateColumns:"repeat(4,1fr)",gap:8}}>
-                {NAV.filter(n=>!["dashboard","trades","analytics","social"].includes(n.id)).map(({id,label,icon})=>{
+                {NAV.map(({id,label,icon})=>{
                   const active = activeTab === id;
+                  const pinned = mobilePinnedIds.includes(id);
                   return (
-                    <button key={id} onClick={()=>{setActiveTab(id);setShowMobileMenu(false);}} style={{
-                      display:"flex",flexDirection:"column",alignItems:"center",gap:6,
-                      padding:"14px 8px",borderRadius:12,border:"1px solid",
-                      borderColor:active?"rgba(0,229,255,0.3)":"rgba(255,255,255,0.06)",
-                      background:active?"rgba(0,229,255,0.1)":"rgba(255,255,255,0.03)",
-                      color:active?"#00e5ff":"#6b7280",cursor:"pointer",
+                    <button key={id} onClick={()=>{
+                      if(editingTabs){togglePin(id);}
+                      else{setActiveTab(id);setShowMobileMenu(false);}
+                    }} style={{
+                      display:"flex",flexDirection:"column",alignItems:"center",gap:5,
+                      padding:"12px 6px",borderRadius:12,border:"1px solid",position:"relative",
+                      borderColor:active?"rgba(0,229,255,0.3)":pinned&&editingTabs?"rgba(0,229,255,0.2)":"rgba(255,255,255,0.06)",
+                      background:active?"rgba(0,229,255,0.1)":pinned&&editingTabs?"rgba(0,229,255,0.05)":"rgba(255,255,255,0.03)",
+                      color:active?"#00e5ff":pinned&&editingTabs?"rgba(0,229,255,0.7)":"#6b7280",cursor:"pointer",
                     }}>
-                      <span style={{fontSize:20}}>{icon}</span>
-                      <span style={{fontSize:10,fontWeight:600,textAlign:"center"}}>{label}</span>
+                      {editingTabs&&(
+                        <div style={{position:"absolute",top:4,right:4,width:14,height:14,borderRadius:"50%",
+                          background:pinned?"#00e5ff":"rgba(255,255,255,0.1)",
+                          display:"flex",alignItems:"center",justifyContent:"center",fontSize:8,color:pinned?"#000":"#4b5563",
+                        }}>{pinned?"✓":""}</div>
+                      )}
+                      <span style={{fontSize:18}}>{icon}</span>
+                      <span style={{fontSize:9,fontWeight:600,textAlign:"center",lineHeight:1.2}}>{label}</span>
                     </button>
                   );
                 })}
               </div>
+              {editingTabs&&<div style={{fontSize:10,color:"#374151",textAlign:"center",marginTop:10}}>Pin up to 4 tabs • Drag bottom nav icons to reorder</div>}
             </div>
           </div>
         )}
@@ -106,33 +158,43 @@ export function Sidebar() {
           display:"flex", alignItems:"center",
           paddingBottom:"env(safe-area-inset-bottom)",
         }}>
-          {MOBILE_NAV.map(({id,label,icon})=>{
-            const active = id === "more" ? showMobileMenu : activeTab === id;
+          {pinnedNavItems.map(({id,label,icon},i)=>{
+            const active = activeTab === id;
             const badge = id === "social" && activeTab !== "social" ? communityBadge : 0;
             return (
-              <button key={id} onClick={()=>{
-                if(id==="more"){setShowMobileMenu(p=>!p);}
-                else{setActiveTab(id);setShowMobileMenu(false);}
-              }} style={{
-                flex:1, display:"flex", flexDirection:"column", alignItems:"center",
-                justifyContent:"center", gap:3, padding:"8px 0",
-                background:"none", border:"none",
-                color:active?"#00e5ff":"#4b5563",
-                cursor:"pointer", position:"relative",
-              }}>
+              <button key={id}
+                draggable
+                onDragStart={()=>onDragStart(i)}
+                onDragOver={e=>onDragOver(e,i)}
+                onDragEnd={onDragEnd}
+                onClick={()=>{setActiveTab(id);setShowMobileMenu(false);}}
+                style={{
+                  flex:1,display:"flex",flexDirection:"column",alignItems:"center",
+                  justifyContent:"center",gap:3,padding:"8px 0",
+                  background:dragIdx===i?"rgba(0,229,255,0.05)":"none",
+                  border:"none",color:active?"#00e5ff":"#4b5563",
+                  cursor:"grab",position:"relative",
+                  opacity:dragIdx===i?0.5:1,transition:"opacity 0.15s",
+                }}>
                 <span style={{fontSize:18,filter:active?"drop-shadow(0 0 6px rgba(0,229,255,0.7))":"none",position:"relative"}}>
                   {icon}
-                  {badge > 0 && (
-                    <span style={{position:"absolute",top:-4,right:-6,width:8,height:8,borderRadius:"50%",background:"#00e5ff",boxShadow:"0 0 6px rgba(0,229,255,0.8)"}}/>
-                  )}
+                  {badge>0&&<span style={{position:"absolute",top:-4,right:-6,width:8,height:8,borderRadius:"50%",background:"#00e5ff"}}/>}
                 </span>
                 <span style={{fontSize:9,fontWeight:active?700:400}}>{label}</span>
-                {active && id !== "more" && (
-                  <div style={{position:"absolute",bottom:0,left:"50%",transform:"translateX(-50%)",width:20,height:2,borderRadius:1,background:"#00e5ff"}}/>
-                )}
+                {active&&<div style={{position:"absolute",bottom:0,left:"50%",transform:"translateX(-50%)",width:20,height:2,borderRadius:1,background:"#00e5ff"}}/>}
               </button>
             );
           })}
+          {/* More button — always last */}
+          <button onClick={()=>{setShowMobileMenu(p=>!p);setEditingTabs(false);}} style={{
+            flex:1,display:"flex",flexDirection:"column",alignItems:"center",
+            justifyContent:"center",gap:3,padding:"8px 0",
+            background:"none",border:"none",
+            color:showMobileMenu?"#00e5ff":"#4b5563",cursor:"pointer",
+          }}>
+            <span style={{fontSize:18}}>⋯</span>
+            <span style={{fontSize:9}}>More</span>
+          </button>
         </nav>
       </>
     );

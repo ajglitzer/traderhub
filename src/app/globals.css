@@ -219,3 +219,10 @@ input, select, textarea, button { font-family: inherit; }
     display: none !important;
   }
 }
+
+/* Mobile bottom nav padding */
+@media (max-width: 767px) {
+  .main-content {
+    padding-bottom: calc(62px + env(safe-area-inset-bottom)) !important;
+  }
+}

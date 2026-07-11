@@ -240,3 +240,41 @@ export async function upsertLeaderboardEntry(userId: string, username: string, a
     }, { onConflict: "user_id,account_name" });
   } catch {}
 }
+
+// ── Block / Unfriend ──────────────────────────────────────────────────────────
+
+export async function unfriendUser(myId: string, friendId: string): Promise<void> {
+  try {
+    await sb().from("friend_requests")
+      .delete()
+      .or(`and(from_id.eq.${myId},to_id.eq.${friendId}),and(from_id.eq.${friendId},to_id.eq.${myId})`);
+  } catch {}
+}
+
+export async function blockUser(myId: string, targetId: string): Promise<void> {
+  try {
+    // Unfriend first
+    await unfriendUser(myId, targetId);
+    // Then insert block record
+    await sb().from("blocks").upsert(
+      { blocker_id: myId, blocked_id: targetId },
+      { onConflict: "blocker_id,blocked_id" }
+    );
+  } catch {}
+}
+
+export async function unblockUser(myId: string, targetId: string): Promise<void> {
+  try {
+    await sb().from("blocks")
+      .delete()
+      .eq("blocker_id", myId)
+      .eq("blocked_id", targetId);
+  } catch {}
+}
+
+export async function getBlockedUsers(myId: string): Promise<string[]> {
+  try {
+    const { data } = await sb().from("blocks").select("blocked_id").eq("blocker_id", myId);
+    return (data || []).map((r: any) => r.blocked_id);
+  } catch { return []; }
+}

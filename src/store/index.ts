@@ -41,6 +41,7 @@ interface Store {
 
   // Simulator settings
   simShowLevels: boolean; setSimShowLevels: (v:boolean)=>void;
+  mobilePinnedIds: string[]; setMobilePinnedIds: (ids:string[])=>void;
   replayShowLevels: boolean; setReplayShowLevels: (v:boolean)=>void;
 
   // Init
@@ -61,6 +62,7 @@ export const useStore = create<Store>()(
         theme: "dark", setTheme: (t)=>{ set({theme:t}); if(typeof document!=="undefined") document.documentElement.setAttribute("data-theme",t); },
         communityBadge: 0, setCommunityBadge: (v)=>set({communityBadge:v}),
         simShowLevels: true, setSimShowLevels: (v)=>set({simShowLevels:v}),
+        mobilePinnedIds: ["dashboard","trades","analytics","social"], setMobilePinnedIds: (ids)=>set({mobilePinnedIds:ids}),
         replayShowLevels: true, setReplayShowLevels: (v)=>set({replayShowLevels:v}),
 
         filters: DEFAULT_FILTERS,
@@ -127,7 +129,7 @@ export const useStore = create<Store>()(
       }),
       {
         name:"tv-ui-store",
-        partialize:(s)=>({sidebarOpen:s.sidebarOpen,activeTab:s.activeTab,theme:s.theme,goals:s.goals,playbook:s.playbook,allTags:s.allTags,simShowLevels:s.simShowLevels,replayShowLevels:s.replayShowLevels}),
+        partialize:(s)=>({sidebarOpen:s.sidebarOpen,activeTab:s.activeTab,theme:s.theme,goals:s.goals,playbook:s.playbook,allTags:s.allTags,simShowLevels:s.simShowLevels,replayShowLevels:s.replayShowLevels,mobilePinnedIds:s.mobilePinnedIds}),
       }
     )
   )

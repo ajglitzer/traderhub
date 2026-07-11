@@ -5,6 +5,7 @@ import { createClient } from "@/lib/supabase";
 import {
   Profile, Message, FriendRequest, Battle, BattleTrade,
   getFriends, getFriendRequests, sendFriendRequest, respondToFriendRequest,
+  unfriendUser, blockUser, unblockUser, getBlockedUsers,
   getConversations, getMessages, sendMessage, markMessagesRead, getUnreadCount,
   getBattles, sendBattleRequest, respondToBattle, submitBattleTrades, finalizeBattle,
   searchProfiles, getMyProfile,
@@ -216,6 +217,10 @@ export default function SocialPage({ myProfile }: { myProfile: Profile }) {
   const trades = getActiveTrades();
 
   const [tab, setTab] = useState<"messages"|"friends"|"battles">("messages");
+  const [confirmAction, setConfirmAction] = useState<{type:"unfriend"|"block",friend:Profile}|null>(null);
+  const [blockedIds, setBlockedIds] = useState<string[]>([]);
+  const [blockedProfiles, setBlockedProfiles] = useState<Profile[]>([]);
+  const [showBlocked, setShowBlocked] = useState(false);
   const [friends, setFriends] = useState<Profile[]>([]);
   const [requests, setRequests] = useState<FriendRequest[]>([]);
   const [convos, setConvos] = useState<{profile:Profile;lastMessage:Message;unread:number}[]>([]);
@@ -238,6 +243,7 @@ export default function SocialPage({ myProfile }: { myProfile: Profile }) {
       getUnreadCount(user.id),
     ]);
     setFriends(f); setRequests(r); setConvos(c); setBattles(b); setUnread(u);
+    if(user) { const bids = await getBlockedUsers(user.id); setBlockedIds(bids); const bprofs = await Promise.all(bids.map(async(bid:string)=>{ try{ const r=await supabase.from("profiles").select("*").eq("id",bid).single(); return r.data; }catch{ return null; } })); setBlockedProfiles(bprofs.filter(Boolean) as Profile[]); }
     // Update sidebar badge when not on community tab
     const pendingR = r.filter((req:FriendRequest)=>req.to_id===user.id&&req.status==="pending");
     const total = u + pendingR.length;
@@ -303,6 +309,9 @@ export default function SocialPage({ myProfile }: { myProfile: Profile }) {
   };
 
   const addFriend = async(toId:string)=>{ if(!user) return; await sendFriendRequest(user.id, toId); setSearchRes([]); setSearchQ(""); load(); };
+  const handleUnfriend = async(fid:string)=>{ if(!user) return; await unfriendUser(user.id,fid); setConfirmAction(null); load(); };
+  const handleUnblock = async(fid:string)=>{ if(!user) return; await unblockUser(user.id,fid); load(); };
+  const handleBlock = async(fid:string)=>{ if(!user) return; await blockUser(user.id,fid); setConfirmAction(null); load(); };
 
   const respondReq = async(id:string,status:"accepted"|"declined")=>{ await respondToFriendRequest(id,status); load(); };
 
@@ -404,6 +413,22 @@ export default function SocialPage({ myProfile }: { myProfile: Profile }) {
               </>
             )}
 
+            {/* Blocked users section */}
+            {blockedIds.length > 0 && (
+              <div style={{marginTop:8}}>
+                <button onClick={()=>setShowBlocked(p=>!p)} style={{display:"flex",alignItems:"center",gap:6,fontSize:9,color:"#4b5563",textTransform:"uppercase",letterSpacing:"0.08em",background:"none",border:"none",cursor:"pointer",padding:0,marginBottom:6}}>
+                  <span>{showBlocked?"▾":"▸"}</span> Blocked Users ({blockedIds.length})
+                </button>
+                {showBlocked && blockedProfiles.map(b=>(
+                  <div key={b.id} style={{display:"flex",alignItems:"center",gap:8,padding:"7px 10px",background:"rgba(255,23,68,0.04)",borderRadius:9,border:"1px solid rgba(255,23,68,0.1)",marginBottom:4}}>
+                    <Avatar profile={b} size={26}/>
+                    <div style={{flex:1,fontSize:11,color:"#6b7280"}}>@{b.username}</div>
+                    <button onClick={()=>handleUnblock(b.id)} style={{height:24,padding:"0 10px",borderRadius:6,border:"1px solid rgba(0,229,255,0.2)",background:"rgba(0,229,255,0.06)",color:"#00e5ff",cursor:"pointer",fontSize:10,fontWeight:700}}>Unblock</button>
+                  </div>
+                ))}
+              </div>
+            )}
+
             {/* Friends list */}
             <div style={{fontSize:9,color:"#4b5563",textTransform:"uppercase",letterSpacing:"0.08em",marginTop:4}}>Friends ({friends.length})</div>
             {friends.map(f=>(
@@ -414,6 +439,8 @@ export default function SocialPage({ myProfile }: { myProfile: Profile }) {
                 </div>
                 <button onClick={()=>openChat(f)} style={{height:26,padding:"0 8px",borderRadius:7,background:"rgba(0,229,255,0.08)",border:"1px solid rgba(0,229,255,0.15)",color:"#00e5ff",cursor:"pointer",fontSize:11}}>Chat</button>
                 <button onClick={()=>startBattle(f.id,prompt("Symbol (NQ/ES/MGC)?","NQ")||"NQ")} style={{height:26,padding:"0 8px",borderRadius:7,background:"rgba(213,0,249,0.08)",border:"1px solid rgba(213,0,249,0.2)",color:"#d500f9",cursor:"pointer",fontSize:11}}>⚔️</button>
+                <button onClick={()=>setConfirmAction({type:"unfriend",friend:f})} title="Unfriend" style={{height:26,width:26,borderRadius:7,background:"rgba(249,115,22,0.08)",border:"1px solid rgba(249,115,22,0.25)",color:"#f97316",cursor:"pointer",fontSize:12,display:"flex",alignItems:"center",justifyContent:"center"}}>✕</button>
+                <button onClick={()=>setConfirmAction({type:"block",friend:f})} title="Block" style={{height:26,width:26,borderRadius:7,background:"rgba(255,23,68,0.08)",border:"1px solid rgba(255,23,68,0.25)",color:"#ff1744",cursor:"pointer",fontSize:12,display:"flex",alignItems:"center",justifyContent:"center"}}>🚫</button>
               </div>
             ))}
           </div>
