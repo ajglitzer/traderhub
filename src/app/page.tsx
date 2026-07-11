@@ -125,45 +125,60 @@ function Dashboard() {
     <div style={{ padding:20, overflowY:"auto", height:"100%", display:"flex", flexDirection:"column", gap:14 }}>
 
       {/* -- HERO -- */}
-      <Panel glow={isPos ? "green" : "red"} p={24} style={{minHeight:120, paddingTop:28}}>
-        <div style={{ display:"flex", alignItems:isMob?"flex-start":"center", gap:isMob?16:32, flexWrap:"wrap", overflowX:"hidden", flexDirection:isMob?"column":"row" }}>
-          {/* Big P&L number */}
-          <div>
-            <div style={{ fontSize:10, color:"#3d4551", textTransform:"uppercase" as const, letterSpacing:"0.1em", marginBottom:6 }}>Net P&L — All Time</div>
-            <div style={{ fontSize:40, fontWeight:900, fontFamily:"monospace", color:netColor, letterSpacing:"-0.05em", lineHeight:1.1,
-              textShadow:`0 0 40px ${netColor}60, 0 0 80px ${netColor}20` }}>
-              {isPos ? "+" : ""}{fmt$(M.totalNetPnl)}
+      <Panel glow={isPos ? "green" : "red"} p={isMob?16:24} style={{paddingTop:isMob?16:28}}>
+        {isMob ? (
+          /* Mobile hero — compact stacked layout */
+          <div style={{display:"flex",flexDirection:"column",gap:10}}>
+            <div style={{fontSize:9,color:"#3d4551",textTransform:"uppercase" as const,letterSpacing:"0.1em"}}>Net P&L — All Time</div>
+            <div style={{fontSize:36,fontWeight:900,fontFamily:"monospace",color:netColor,letterSpacing:"-0.05em",lineHeight:1,
+              textShadow:`0 0 30px ${netColor}50`}}>{isPos?"+":""}{fmt$(M.totalNetPnl)}</div>
+            <div style={{display:"flex",alignItems:"center",gap:10}}>
+              <span style={{fontSize:11,color:"#4b5563"}}>{M.totalTrades} trades</span>
+              <span style={{fontSize:11,color:"#00e676",fontWeight:700}}>▲ {M.winCount} ({pct}%)</span>
+              <span style={{fontSize:11,color:"#ff1744",fontWeight:700}}>▼ {M.lossCount}</span>
             </div>
-            <div style={{ fontSize:11, color:"#4b5563", marginTop:6 }}>{M.totalTrades} closed trades · {M.winCount}W {M.lossCount}L</div>
-          </div>
-
-          <div style={{ width:1, height:60, background:"rgba(255,255,255,0.06)", alignSelf:"center" }}/>
-
-          {/* Win bar */}
-          <div style={{ minWidth:170 }}>
-            <div style={{ display:"flex", justifyContent:"space-between", marginBottom:7 }}>
-              <span style={{ fontSize:11, color:"#00e676", fontWeight:700, fontFamily:"monospace" }}>▲ {M.winCount} WINS {pct}%</span>
-              <span style={{ fontSize:11, color:"#ff1744", fontWeight:700, fontFamily:"monospace" }}>▼ {M.lossCount}</span>
+            <div style={{height:5,borderRadius:3,background:"rgba(255,255,255,0.05)",overflow:"hidden"}}>
+              <div style={{height:"100%",width:`${pct}%`,borderRadius:3,background:"linear-gradient(90deg,#00e676,#00b050)",transition:"width 0.8s ease"}}/>
             </div>
-            <div style={{ height:6, borderRadius:3, background:"rgba(255,255,255,0.05)", overflow:"hidden", boxShadow:"inset 0 1px 2px rgba(0,0,0,0.4)" }}>
-              <div style={{ height:"100%", width:`${pct}%`, borderRadius:3,
-                background:"linear-gradient(90deg, #00e676, #00b050)",
-                boxShadow:"0 0 10px rgba(0,230,118,0.5)", transition:"width 0.8s ease" }}/>
+            <div style={{display:"grid",gridTemplateColumns:"repeat(3,1fr)",gap:8,marginTop:4}}>
+              <Stat label="Profit Factor" value={M.profitFactor===Infinity?"∞":fmtN(M.profitFactor)} color="#00e5ff"/>
+              <Stat label="Avg Win" value={fmt$(M.avgWin)} color="#00e676"/>
+              <Stat label="Avg Loss" value={fmt$(M.avgLoss)} color="#ff1744"/>
             </div>
           </div>
-
-          <div style={{ width:1, height:60, background:"rgba(255,255,255,0.06)", alignSelf:"center" }}/>
-
-          {/* Quick stats */}
-          <div style={{ display:"flex", gap:28, flexWrap:"wrap" }}>
-            <Stat label="Profit Factor" value={M.profitFactor===Infinity?"∞":fmtN(M.profitFactor)} color="#00e5ff" sub="win÷loss"/>
-            <Stat label="Avg Win" value={fmt$(M.avgWin)} color="#00e676"/>
-            <Stat label="Avg Loss" value={fmt$(M.avgLoss)} color="#ff1744"/>
-            <Stat label="Expectancy" value={fmt$(M.expectancy)} color={M.expectancy>=0?"#00e676":"#ff1744"} sub="per trade"/>
-            <Stat label="Sharpe" value={fmtN(M.sharpeRatio)} color="#d500f9" sub="annualized"/>
+        ) : (
+          /* Desktop hero */
+          <div style={{ display:"flex", alignItems:"center", gap:32, flexWrap:"nowrap", overflowX:"auto" }}>
+            <div>
+              <div style={{ fontSize:10, color:"#3d4551", textTransform:"uppercase" as const, letterSpacing:"0.1em", marginBottom:6 }}>Net P&L — All Time</div>
+              <div style={{ fontSize:40, fontWeight:900, fontFamily:"monospace", color:netColor, letterSpacing:"-0.05em", lineHeight:1.1,
+                textShadow:`0 0 40px ${netColor}60, 0 0 80px ${netColor}20` }}>
+                {isPos ? "+" : ""}{fmt$(M.totalNetPnl)}
+              </div>
+              <div style={{ fontSize:11, color:"#4b5563", marginTop:6 }}>{M.totalTrades} closed trades · {M.winCount}W {M.lossCount}L</div>
+            </div>
+            <div style={{ width:1, height:60, background:"rgba(255,255,255,0.06)", alignSelf:"center" }}/>
+            <div style={{ minWidth:170 }}>
+              <div style={{ display:"flex", justifyContent:"space-between", marginBottom:7 }}>
+                <span style={{ fontSize:11, color:"#00e676", fontWeight:700, fontFamily:"monospace" }}>▲ {M.winCount} WINS {pct}%</span>
+                <span style={{ fontSize:11, color:"#ff1744", fontWeight:700, fontFamily:"monospace" }}>▼ {M.lossCount}</span>
+              </div>
+              <div style={{ height:6, borderRadius:3, background:"rgba(255,255,255,0.05)", overflow:"hidden", boxShadow:"inset 0 1px 2px rgba(0,0,0,0.4)" }}>
+                <div style={{ height:"100%", width:`${pct}%`, borderRadius:3,
+                  background:"linear-gradient(90deg, #00e676, #00b050)",
+                  boxShadow:"0 0 10px rgba(0,230,118,0.5)", transition:"width 0.8s ease" }}/>
+              </div>
+            </div>
+            <div style={{ width:1, height:60, background:"rgba(255,255,255,0.06)", alignSelf:"center" }}/>
+            <div style={{ display:"flex", gap:28, flexWrap:"wrap" }}>
+              <Stat label="Profit Factor" value={M.profitFactor===Infinity?"∞":fmtN(M.profitFactor)} color="#00e5ff" sub="win÷loss"/>
+              <Stat label="Avg Win" value={fmt$(M.avgWin)} color="#00e676"/>
+              <Stat label="Avg Loss" value={fmt$(M.avgLoss)} color="#ff1744"/>
+              <Stat label="Expectancy" value={fmt$(M.expectancy)} color={M.expectancy>=0?"#00e676":"#ff1744"} sub="per trade"/>
+              <Stat label="Sharpe" value={fmtN(M.sharpeRatio)} color="#d500f9" sub="annualized"/>
+            </div>
           </div>
-        </div>
-
+        )}
       </Panel>
 
       {!closed.length && (
