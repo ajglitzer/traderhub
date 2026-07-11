@@ -17,9 +17,28 @@ const IMPACT_BG:    Record<string,string> = { High:"rgba(255,23,68,0.1)", Medium
 
 async function fetchCalendar(): Promise<CalEvent[]> {
   try {
-    const r = await fetch("/api/calendar");
-    if (!r.ok) throw new Error("fetch failed");
-    return await r.json();
+    const urls = [
+      "https://nfs.faireconomy.media/ff_calendar_thisweek.json",
+      "https://nfs.faireconomy.media/ff_calendar_nextweek.json",
+    ];
+    const results = await Promise.allSettled(
+      urls.map(url => fetch(url).then(r => r.ok ? r.json() : []).catch(() => []))
+    );
+    let events: any[] = [];
+    for (const r of results) {
+      if (r.status === "fulfilled" && Array.isArray(r.value)) events = events.concat(r.value);
+    }
+    return events.map((e: any) => ({
+      title: e.title || "",
+      country: e.country || "",
+      date: e.date ? e.date.slice(0, 10) : "",
+      time: e.time || "",
+      impact: ((e.impact || "").toLowerCase().includes("high") ? "High" : (e.impact || "").toLowerCase().includes("medium") ? "Medium" : "Low") as "High"|"Medium"|"Low",
+      forecast: e.forecast || "",
+      previous: e.previous || "",
+      actual: e.actual || "",
+    })).filter((e: any) => e.title && e.date)
+      .sort((a: any, b: any) => new Date(`${a.date}T${a.time||"00:00"}`).getTime() - new Date(`${b.date}T${b.time||"00:00"}`).getTime());
   } catch { return []; }
 }
 
