@@ -1,6 +1,8 @@
 "use client";
 import { createContext, useContext, useState, useEffect, ReactNode } from "react";
 import { User } from "@supabase/supabase-js";
+import { loadFromCloud } from "@/store/accounts";
+import { useAccountStore } from "@/store/accounts";
 
 interface AuthCtx {
   user: User | null;
@@ -19,48 +21,59 @@ const hasSupabase = SUPABASE_URL.length > 0 && !SUPABASE_URL.includes("placehold
 
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [user,    setUser]    = useState<User | null>(null);
-  const [loading, setLoading] = useState(hasSupabase); // only load if supabase configured
+  const [loading, setLoading] = useState(hasSupabase);
 
   useEffect(() => {
-    if (!hasSupabase) return; // no supabase - stay not loading
-
+    if (!hasSupabase) return;
     let mounted = true;
 
     import("@/lib/supabase").then(({ createClient }) => {
       const supabase = createClient();
 
-      // Get existing session
       supabase.auth.getSession().then(({ data, error }) => {
         if (!mounted) return;
         if (error) console.error("[Auth] getSession error:", error.message);
         const sessionUser = data?.session?.user ?? null;
         setUser(sessionUser);
         setLoading(false);
-        if (sessionUser) localStorage.setItem("th_current_user_id", sessionUser.id);
+        if (sessionUser) {
+          localStorage.setItem("th_current_user_id", sessionUser.id);
+          // Load cloud trades
+          loadFromCloud().then(trades => {
+            if (!mounted || trades.length === 0) return;
+            const store = useAccountStore.getState();
+            const activeId = store.activeAccountId;
+            if (activeId) store.setAccountTrades(activeId, trades);
+          });
+        }
       }).catch(err => {
         if (!mounted) return;
         console.error("[Auth] getSession failed:", err);
         setLoading(false);
       });
 
-      // Listen for changes
       const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
         if (!mounted) return;
         const newUser = session?.user ?? null;
         setUser(newUser);
         setLoading(false);
-        // Scope accounts store to this user
         if (newUser) {
           localStorage.setItem("th_current_user_id", newUser.id);
+          // Load cloud trades on login
+          if (_event === "SIGNED_IN") {
+            loadFromCloud().then(trades => {
+              if (!mounted || trades.length === 0) return;
+              const store = useAccountStore.getState();
+              const activeId = store.activeAccountId;
+              if (activeId) store.setAccountTrades(activeId, trades);
+            });
+          }
         } else {
           localStorage.removeItem("th_current_user_id");
         }
       });
 
-      return () => {
-        mounted = false;
-        subscription.unsubscribe();
-      };
+      return () => { mounted = false; subscription.unsubscribe(); };
     });
 
     return () => { mounted = false; };

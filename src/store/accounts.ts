@@ -1,5 +1,33 @@
 import { create } from "zustand";
 import { persist } from "zustand/middleware";
+
+async function syncToCloud(trades: any[]) {
+  try {
+    await fetch("/api/sync", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ trades }),
+    });
+  } catch {}
+}
+
+export async function loadFromCloud(): Promise<any[]> {
+  try {
+    const r = await fetch("/api/sync");
+    const d = await r.json();
+    return Array.isArray(d.trades) ? d.trades : [];
+  } catch { return []; }
+}
+
+export async function deleteFromCloud(id: string) {
+  try {
+    await fetch("/api/sync", {
+      method: "DELETE",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ id }),
+    });
+  } catch {}
+}
 import { Trade } from "@/types/trade";
 import { loadTrades, saveTrades } from "@/lib/persistence";
 
