@@ -224,6 +224,7 @@ export default function SocialPage({ myProfile }: { myProfile: Profile }) {
   const [blockedProfiles, setBlockedProfiles] = useState<Profile[]>([]);
   const [showBlocked, setShowBlocked] = useState(false);
   const [friendMenu, setFriendMenu] = useState<string|null>(null);
+  const [friendActionTarget, setFriendActionTarget] = useState<Profile|null>(null);
   const [friends, setFriends] = useState<Profile[]>([]);
   const [requests, setRequests] = useState<FriendRequest[]>([]);
   const [convos, setConvos] = useState<{profile:Profile;lastMessage:Message;unread:number}[]>([]);
@@ -442,17 +443,7 @@ export default function SocialPage({ myProfile }: { myProfile: Profile }) {
                 </div>
                 <button onClick={()=>openChat(f)} style={{height:26,padding:"0 8px",borderRadius:7,background:"rgba(0,229,255,0.08)",border:"1px solid rgba(0,229,255,0.15)",color:"#00e5ff",cursor:"pointer",fontSize:11}}>Chat</button>
                 <button onClick={()=>startBattle(f.id,prompt("Symbol (NQ/ES/MGC)?","NQ")||"NQ")} style={{height:26,padding:"0 8px",borderRadius:7,background:"rgba(213,0,249,0.08)",border:"1px solid rgba(213,0,249,0.2)",color:"#d500f9",cursor:"pointer",fontSize:11}}>⚔️</button>
-                <button onClick={()=>setFriendMenu(friendMenu===f.id?null:f.id)} style={{height:26,width:26,borderRadius:7,background:"rgba(255,255,255,0.05)",border:"1px solid rgba(255,255,255,0.08)",color:"#9ca3af",cursor:"pointer",fontSize:16,display:"flex",alignItems:"center",justifyContent:"center"}}>⋯</button>
-                {friendMenu===f.id&&(
-                  <div onClick={e=>e.stopPropagation()} style={{position:"absolute",right:8,top:"calc(100% + 4px)",zIndex:200,background:"#0e1117",border:"1px solid rgba(255,255,255,0.1)",borderRadius:10,overflow:"hidden",minWidth:140,boxShadow:"0 8px 24px rgba(0,0,0,0.6)"}}>
-                    <button onClick={()=>{setFriendMenu(null);setConfirmAction({type:"unfriend",friend:f});}} style={{width:"100%",padding:"10px 14px",background:"none",border:"none",borderBottom:"1px solid rgba(255,255,255,0.06)",color:"#f97316",cursor:"pointer",fontSize:12,textAlign:"left" as const,display:"flex",alignItems:"center",gap:8}}>
-                      <span>👋</span> Unfriend
-                    </button>
-                    <button onClick={()=>{setFriendMenu(null);setConfirmAction({type:"block",friend:f});}} style={{width:"100%",padding:"10px 14px",background:"none",border:"none",color:"#ff1744",cursor:"pointer",fontSize:12,textAlign:"left" as const,display:"flex",alignItems:"center",gap:8}}>
-                      <span>🚫</span> Block
-                    </button>
-                  </div>
-                )}
+                <button onClick={()=>setFriendActionTarget(f)} style={{height:26,width:26,borderRadius:7,background:"rgba(255,255,255,0.05)",border:"1px solid rgba(255,255,255,0.08)",color:"#9ca3af",cursor:"pointer",fontSize:16,display:"flex",alignItems:"center",justifyContent:"center"}}>⋯</button>
               </div>
             ))}
           </div>
