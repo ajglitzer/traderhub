@@ -1,16 +1,5 @@
 import { NextResponse } from "next/server";
 
-interface FFEvent {
-  title: string;
-  country: string;
-  date: string;
-  time: string;
-  impact: string;
-  forecast: string;
-  previous: string;
-  actual: string;
-}
-
 function normalizeImpact(i: string): "High" | "Medium" | "Low" {
   const l = (i || "").toLowerCase();
   if (l.includes("high") || l === "3") return "High";
@@ -20,26 +9,34 @@ function normalizeImpact(i: string): "High" | "Medium" | "Low" {
 
 export async function GET() {
   try {
-    // ForexFactory free calendar API - no key needed
     const urls = [
       "https://nfs.faireconomy.media/ff_calendar_thisweek.json",
       "https://nfs.faireconomy.media/ff_calendar_nextweek.json",
     ];
 
-    const results = await Promise.allSettled(urls.map(url =>
-      fetch(url, { headers: { "Accept": "application/json", "User-Agent": "Mozilla/5.0" }, signal: AbortSignal.timeout(8000) })
-        .then(r => r.ok ? r.json() : [])
-        .catch(() => [])
-    ));
+    const headers = {
+      "Accept": "application/json",
+      "User-Agent": "Mozilla/5.0 (compatible; TraderHub/1.0)",
+      "Referer": "https://www.forexfactory.com/",
+      "Origin": "https://www.forexfactory.com",
+    };
 
-    let events: FFEvent[] = [];
+    const results = await Promise.allSettled(
+      urls.map(url =>
+        fetch(url, { headers, signal: AbortSignal.timeout(10000) })
+          .then(r => r.ok ? r.json() : [])
+          .catch(() => [])
+      )
+    );
+
+    let events: any[] = [];
     for (const r of results) {
       if (r.status === "fulfilled" && Array.isArray(r.value)) {
         events = events.concat(r.value);
       }
     }
 
-    const normalized = events.map((e: FFEvent) => ({
+    const normalized = events.map((e: any) => ({
       title: e.title || "",
       country: e.country || "",
       date: e.date ? e.date.slice(0, 10) : "",
@@ -50,17 +47,23 @@ export async function GET() {
       actual: e.actual || "",
     })).filter(e => e.title && e.date);
 
-    // Sort by date + time
     normalized.sort((a, b) => {
       const da = new Date(`${a.date}T${a.time || "00:00"}`).getTime();
       const db = new Date(`${b.date}T${b.time || "00:00"}`).getTime();
       return da - db;
     });
 
+    if (normalized.length === 0) {
+      // Fallback: return empty array with proper response so UI shows "no events" not error
+      return NextResponse.json([], {
+        headers: { "Cache-Control": "public, max-age=300" }
+      });
+    }
+
     return NextResponse.json(normalized, {
-      headers: { "Cache-Control": "public, max-age=1800" }, // cache 30min
+      headers: { "Cache-Control": "public, max-age=1800" },
     });
   } catch (e) {
-    return NextResponse.json({ error: String(e) }, { status: 500 });
+    return NextResponse.json([], { status: 200 });
   }
 }
