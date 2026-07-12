@@ -35,9 +35,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         const sessionUser = data?.session?.user ?? null;
         if (sessionUser) {
           localStorage.setItem("th_current_user_id", sessionUser.id);
-          // Set user ID FIRST so the scoped storage adapter reads the right key
-          // then rehydrate both stores from the now-correct scoped key.
-          useAccountStore.persist?.rehydrate?.();
+          loadUserData(sessionUser.id);
           useStore.persist?.rehydrate?.();
           useStore.setState({ trades: loadTrades() });
           loadFromCloud().then(trades => {
@@ -65,7 +63,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           localStorage.setItem("th_current_user_id", newUser.id);
 
           if (_event === "SIGNED_IN") {
-            useAccountStore.persist?.rehydrate?.();
+            loadUserData(newUser.id);
             useStore.persist?.rehydrate?.();
             useStore.setState({ trades: loadTrades() });
             loadFromCloud().then(trades => {

@@ -1,21 +1,20 @@
 import { create } from "zustand";
-import { persist } from "zustand/middleware";
+import { Trade } from "@/types/trade";
 
+// ── Cloud sync (debounced) ────────────────────────────────────────────────────
 let cloudTimer: ReturnType<typeof setTimeout> | null = null;
 function queueCloudSync(trades: any[]) {
   if (typeof window === "undefined") return;
   if (cloudTimer) clearTimeout(cloudTimer);
-  cloudTimer = setTimeout(() => { void syncToCloud(trades); }, 2000);
-}
-
-async function syncToCloud(trades: any[]) {
-  try {
-    await fetch("/api/sync", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ trades }),
-    });
-  } catch {}
+  cloudTimer = setTimeout(async () => {
+    try {
+      await fetch("/api/sync", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ trades }),
+      });
+    } catch {}
+  }, 2000);
 }
 
 export async function loadFromCloud(): Promise<any[]> {
@@ -35,14 +34,13 @@ export async function deleteFromCloud(id: string) {
     });
   } catch {}
 }
-import { Trade } from "@/types/trade";
-import { loadTrades, saveTrades } from "@/lib/persistence";
 
+// ── Types ─────────────────────────────────────────────────────────────────────
 export interface Account {
   id: string;
   name: string;
   startingBalance: number;
-  color: string;         // accent color for the tab
+  color: string;
   broker: string;
   createdAt: string;
 }
@@ -50,14 +48,13 @@ export interface Account {
 interface AccountStore {
   accounts: Account[];
   activeAccountId: string;
+  tradesByAccount: Record<string, Trade[]>;
 
   addAccount: (a: Omit<Account, "id"|"createdAt">) => string;
   updateAccount: (id: string, data: Partial<Account>) => void;
   deleteAccount: (id: string) => void;
   setActiveAccount: (id: string) => void;
 
-  // Per-account trade storage
-  tradesByAccount: Record<string, Trade[]>;
   getActiveTrades: () => Trade[];
   setAccountTrades: (accountId: string, trades: Trade[]) => void;
   addAccountTrades: (accountId: string, newTrades: Trade[]) => void;
@@ -65,7 +62,7 @@ interface AccountStore {
   updateAccountTrade: (accountId: string, tradeId: string, data: Partial<Trade>) => void;
 }
 
-const DEFAULT_ACCOUNT: Account = {
+export const DEFAULT_ACCOUNT: Account = {
   id: "default",
   name: "Main Account",
   startingBalance: 10000,
@@ -74,155 +71,159 @@ const DEFAULT_ACCOUNT: Account = {
   createdAt: new Date().toISOString(),
 };
 
-const COLORS = ["#00e5ff","#00e676","#d500f9","#ffab00","#ff6b35","#f9a8d4","#6ee7b7","#93c5fd"];
+export const COLORS = ["#00e5ff","#00e676","#d500f9","#ffab00","#ff6b35","#f9a8d4","#6ee7b7","#93c5fd"];
 
-export const useAccountStore = create<AccountStore>()(
-  persist(
-    (set, get) => ({
-      accounts: [DEFAULT_ACCOUNT],
-      activeAccountId: "default",
+// ── Storage key (user-scoped) ─────────────────────────────────────────────────
+const STORE_KEY = "th_accts_v3"; // bump version to avoid stale data
 
-      addAccount: (a) => {
-        const id = Date.now().toString();
-        const account: Account = { ...a, id, createdAt: new Date().toISOString() };
-        set(s => ({ accounts: [...s.accounts, account] }));
-        return id;
-      },
+function storageKey(): string {
+  const uid = typeof window !== "undefined"
+    ? (localStorage.getItem("th_current_user_id") || "")
+    : "";
+  return uid ? `${STORE_KEY}__${uid}` : STORE_KEY;
+}
 
-      updateAccount: (id, data) =>
-        set(s => ({ accounts: s.accounts.map(a => a.id === id ? { ...a, ...data } : a) })),
+// ── Manual save — called explicitly after every mutation ──────────────────────
+function saveState(state: Pick<AccountStore, "accounts"|"activeAccountId"|"tradesByAccount">) {
+  try {
+    localStorage.setItem(storageKey(), JSON.stringify({
+      accounts:        state.accounts,
+      activeAccountId: state.activeAccountId,
+      tradesByAccount: state.tradesByAccount,
+    }));
+  } catch {}
+}
 
-      deleteAccount: (id) => {
-        const { accounts, activeAccountId, tradesByAccount } = get();
-        // Never allow deleting the last remaining account
-        if (accounts.length <= 1) return;
-        const remaining = accounts.filter(a => a.id !== id);
-        const newActive = activeAccountId === id ? remaining[0]?.id || remaining[0].id : activeAccountId;
-        const { [id]: _, ...restTrades } = tradesByAccount;
-        set({ accounts: remaining, activeAccountId: newActive, tradesByAccount: restTrades });
-      },
+// ── Public API for auth-provider ──────────────────────────────────────────────
+const FRESH = () => ({
+  accounts: [{ ...DEFAULT_ACCOUNT, createdAt: new Date().toISOString() }],
+  activeAccountId: "default",
+  tradesByAccount: { default: [] } as Record<string, Trade[]>,
+});
 
-      setActiveAccount: (id) => set({ activeAccountId: id }),
+export function loadUserData(userId: string) {
+  if (!userId) { useAccountStore.setState(FRESH()); return; }
+  try {
+    const key = `${STORE_KEY}__${userId}`;
+    const raw = localStorage.getItem(key);
+    if (!raw) { useAccountStore.setState(FRESH()); return; }
+    const d = JSON.parse(raw);
+    useAccountStore.setState({
+      accounts: Array.isArray(d.accounts) && d.accounts.length ? d.accounts : FRESH().accounts,
+      activeAccountId: d.activeAccountId || "default",
+      tradesByAccount: d.tradesByAccount || { default: [] },
+    });
+  } catch { useAccountStore.setState(FRESH()); }
+}
 
-      tradesByAccount: { default: [] },
-
-      getActiveTrades: () => {
-        const { activeAccountId, tradesByAccount } = get();
-        return tradesByAccount[activeAccountId] || [];
-      },
-
-      setAccountTrades: (accountId, trades) => {
-        set(s => ({ tradesByAccount: { ...s.tradesByAccount, [accountId]: trades } }));
-        queueCloudSync(trades);
-      },
-
-      addAccountTrades: (accountId, newTrades) => {
-        const existing = get().tradesByAccount[accountId] || [];
-        // Include price + side + exit so two scalps at the same second aren't
-        // wrongly merged. Old key (ticker|entryTime|qty) silently dropped them.
-        const fp = (t: Partial<Trade>) =>
-          `${t.ticker}|${t.entryTime}|${t.exitTime ?? ""}|${t.side}|${t.quantity}|${t.entryPrice}|${t.exitPrice ?? ""}`;
-        const seen = new Set(existing.map(fp));
-        const fresh: Trade[] = [];
-        for (const t of newTrades) {
-          const k = fp(t);
-          if (seen.has(k)) continue;
-          seen.add(k);          // also dedupe within the incoming batch
-          fresh.push(t);
-        }
-        const merged = [...fresh, ...existing];
-        set(s => ({ tradesByAccount: { ...s.tradesByAccount, [accountId]: merged } }));
-        queueCloudSync(merged);
-      },
-
-      deleteAccountTrade: (accountId, tradeId) => {
-        const trades = (get().tradesByAccount[accountId] || []).filter(t => t.id !== tradeId);
-        set(s => ({ tradesByAccount: { ...s.tradesByAccount, [accountId]: trades } }));
-      },
-
-      updateAccountTrade: (accountId, tradeId, data) => {
-        const trades = (get().tradesByAccount[accountId] || [])
-          .map(t => t.id === tradeId ? { ...t, ...data, updatedAt: new Date().toISOString() } : t);
-        set(s => ({ tradesByAccount: { ...s.tradesByAccount, [accountId]: trades } }));
-      },
-    }),
-    {
-      name: "tv-accounts-store",
-      // User-scoped storage so trades never bleed across accounts.
-      // Hydration runs normally on mount; the auth provider calls
-      // loadUserData() on login to swap in the right user's data.
-      storage: {
-        getItem: (key: string) => {
-          try {
-            const uid = localStorage.getItem("th_current_user_id") || "";
-            const raw = localStorage.getItem(uid ? `${key}__${uid}` : key);
-            return raw ? JSON.parse(raw) : null;
-          } catch { return null; }
-        },
-        setItem: (key: string, value: unknown) => {
-          try {
-            const uid = localStorage.getItem("th_current_user_id") || "";
-            localStorage.setItem(uid ? `${key}__${uid}` : key, JSON.stringify(value));
-          } catch {}
-        },
-        removeItem: (key: string) => {
-          try {
-            const uid = localStorage.getItem("th_current_user_id") || "";
-            localStorage.removeItem(uid ? `${key}__${uid}` : key);
-          } catch {}
-        },
-      },
-    }
-  )
-);
-
-// ── Manual per-user persistence ────────────────────────────────────────────────
-// Must match the persist name + __ separator so both systems read/write the same key.
-const KEY_PREFIX = "tv-accounts-store__";
+export function clearUserData() {
+  useAccountStore.setState(FRESH());
+}
 
 export function saveUserData(userId: string) {
   if (!userId) return;
   try {
     const s = useAccountStore.getState();
-    // Wrap in Zustand persist format {version:0,state:{...}} so rehydrate() can read it too.
-    localStorage.setItem(KEY_PREFIX + userId, JSON.stringify({
-      version: 0,
-      state: {
-        accounts: s.accounts,
-        activeAccountId: s.activeAccountId,
-        tradesByAccount: s.tradesByAccount,
-      },
+    localStorage.setItem(`${STORE_KEY}__${userId}`, JSON.stringify({
+      accounts:        s.accounts,
+      activeAccountId: s.activeAccountId,
+      tradesByAccount: s.tradesByAccount,
     }));
   } catch {}
 }
 
-export function loadUserData(userId: string) {
-  const fresh = {
-    accounts: [{ ...DEFAULT_ACCOUNT, createdAt: new Date().toISOString() }],
-    activeAccountId: "default",
-    tradesByAccount: {} as Record<string, Trade[]>,
-  };
-  if (!userId) { useAccountStore.setState(fresh); return; }
-  try {
-    const raw = localStorage.getItem(KEY_PREFIX + userId);
-    if (!raw) { useAccountStore.setState(fresh); return; }
-    const parsed = JSON.parse(raw);
-    // Support both plain {accounts,...} and Zustand {state:{accounts,...}} format
-    const d = parsed?.state ?? parsed;
-    useAccountStore.setState({
-      accounts: Array.isArray(d.accounts) && d.accounts.length ? d.accounts : fresh.accounts,
-      activeAccountId: d.activeAccountId || "default",
-      tradesByAccount: d.tradesByAccount || {},
-    });
-  } catch { useAccountStore.setState(fresh); }
-}
+// ── Store (no persist middleware — it re-hydrates on every mount and causes ───
+// ── flashing when the user-scoped key isn't set yet at module load time) ──────
+export const useAccountStore = create<AccountStore>()((set, get) => ({
+  ...FRESH(),
 
-export function clearUserData() {
-  useAccountStore.setState({
-    accounts: [{ ...DEFAULT_ACCOUNT, createdAt: new Date().toISOString() }],
-    activeAccountId: "default",
-    tradesByAccount: {},
-  });
-}
+  addAccount: (a) => {
+    const id = Date.now().toString();
+    const account: Account = { ...a, id, createdAt: new Date().toISOString() };
+    set(s => {
+      const next = { ...s, accounts: [...s.accounts, account] };
+      saveState(next);
+      return next;
+    });
+    return id;
+  },
+
+  updateAccount: (id, data) =>
+    set(s => {
+      const next = { ...s, accounts: s.accounts.map(a => a.id === id ? { ...a, ...data } : a) };
+      saveState(next);
+      return next;
+    }),
+
+  deleteAccount: (id) => {
+    const { accounts, activeAccountId, tradesByAccount } = get();
+    if (accounts.length <= 1) return;
+    const remaining = accounts.filter(a => a.id !== id);
+    const newActive = activeAccountId === id ? remaining[0]?.id : activeAccountId;
+    const { [id]: _, ...restTrades } = tradesByAccount;
+    const next = { accounts: remaining, activeAccountId: newActive || "default", tradesByAccount: restTrades };
+    set(next);
+    saveState({ ...get(), ...next });
+  },
+
+  setActiveAccount: (id) => {
+    set({ activeAccountId: id });
+    saveState({ ...get(), activeAccountId: id });
+  },
+
+  getActiveTrades: () => {
+    const { activeAccountId, tradesByAccount } = get();
+    return (tradesByAccount ?? {})[activeAccountId] || [];
+  },
+
+  setAccountTrades: (accountId, trades) => {
+    set(s => {
+      const next = { ...s, tradesByAccount: { ...s.tradesByAccount, [accountId]: trades } };
+      saveState(next);
+      queueCloudSync(trades);
+      return next;
+    });
+  },
+
+  addAccountTrades: (accountId, newTrades) => {
+    const existing = get().tradesByAccount[accountId] || [];
+    const fp = (t: Partial<Trade>) =>
+      `${t.ticker}|${t.entryTime}|${t.exitTime ?? ""}|${t.side}|${t.quantity}|${t.entryPrice}|${t.exitPrice ?? ""}`;
+    const seen = new Set(existing.map(fp));
+    const fresh: Trade[] = [];
+    for (const t of newTrades) {
+      const k = fp(t);
+      if (seen.has(k)) continue;
+      seen.add(k);
+      fresh.push(t);
+    }
+    const merged = [...fresh, ...existing];
+    set(s => {
+      const next = { ...s, tradesByAccount: { ...s.tradesByAccount, [accountId]: merged } };
+      saveState(next);
+      queueCloudSync(merged);
+      return next;
+    });
+  },
+
+  deleteAccountTrade: (accountId, tradeId) => {
+    const trades = (get().tradesByAccount[accountId] || []).filter(t => t.id !== tradeId);
+    set(s => {
+      const next = { ...s, tradesByAccount: { ...s.tradesByAccount, [accountId]: trades } };
+      saveState(next);
+      return next;
+    });
+  },
+
+  updateAccountTrade: (accountId, tradeId, data) => {
+    const trades = (get().tradesByAccount[accountId] || [])
+      .map(t => t.id === tradeId ? { ...t, ...data, updatedAt: new Date().toISOString() } : t);
+    set(s => {
+      const next = { ...s, tradesByAccount: { ...s.tradesByAccount, [accountId]: trades } };
+      saveState(next);
+      return next;
+    });
+  },
+}));
 
 export { COLORS as ACCOUNT_COLORS };
