@@ -2,6 +2,7 @@
 import { upsertLeaderboardEntry, getGlobalLeaderboard } from "@/lib/social";
 import { useState, useEffect, useRef, useCallback } from "react";
 import { useStore } from "@/store";
+import { scopedKey } from "@/lib/user-storage";
 
 // -- Types ---------------------------------------------------------------------
 interface Candle { o:number; h:number; l:number; c:number; }
@@ -15,14 +16,14 @@ interface SimAccount {
   createdAt: string;
 }
 
-const LS_KEY = "th_sim_accounts";
+const LS_KEY_BASE = "th_sim_accounts";
 const LB_KEY  = "th_sim_leaderboard";
 
 function loadAccounts(): SimAccount[] {
-  try { return JSON.parse(localStorage.getItem(LS_KEY) || "[]"); } catch { return []; }
+  try { return JSON.parse(localStorage.getItem(scopedKey(LS_KEY_BASE)) || "[]"); } catch { return []; }
 }
 function saveAccounts(accs: SimAccount[], userId?: string, username?: string) {
-  localStorage.setItem(LS_KEY, JSON.stringify(accs));
+  localStorage.setItem(scopedKey(LS_KEY_BASE), JSON.stringify(accs));
   const lb = accs.map(a => ({ name:a.name, balance:a.balance, startBalance:a.startBalance, trades:a.trades.length, wins:a.trades.filter(t=>t.pnl>0).length }));
   lb.sort((a,b) => b.balance - a.balance);
   localStorage.setItem(LB_KEY, JSON.stringify(lb));

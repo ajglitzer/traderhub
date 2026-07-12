@@ -1,4 +1,5 @@
 "use client";
+import { scopedKey } from "@/lib/user-storage";
 import { useState, useEffect } from "react";
 import { useAccountStore } from "@/store/accounts";
 
@@ -12,14 +13,14 @@ interface DayLog {
   notes: string;
 }
 
-const LS_KEY = "tv_lifestyle_logs";
+const LS_KEY_BASE = "tv_lifestyle_logs";
 
 function loadLogs(): DayLog[] {
   if (typeof window === "undefined") return [];
-  try { return JSON.parse(localStorage.getItem(LS_KEY) || "[]"); } catch { return []; }
+  try { return JSON.parse(localStorage.getItem(scopedKey(LS_KEY_BASE)) || "[]"); } catch { return []; }
 }
 function saveLogs(logs: DayLog[]) {
-  localStorage.setItem(LS_KEY, JSON.stringify(logs));
+  localStorage.setItem(scopedKey(LS_KEY_BASE), JSON.stringify(logs));
 }
 
 const TODAY = () => new Date().toISOString().slice(0, 10);

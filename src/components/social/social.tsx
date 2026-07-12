@@ -1,4 +1,5 @@
 "use client";
+import { scopedKey } from "@/lib/user-storage";
 import React from "react";
 import { useState, useEffect, useRef, useCallback } from "react";
 import { useAuth } from "@/components/auth/auth-provider";
@@ -238,11 +239,11 @@ export default function SocialPage({ myProfile }: { myProfile: Profile }) {
   const [activeBattle, setActiveBattle] = useState<Battle|null>(null);
   const removedIds = React.useRef<Set<string>>(new Set<string>());
   React.useEffect(()=>{
-    try{ const saved=JSON.parse(localStorage.getItem("th_removed_friends")||"[]"); removedIds.current=new Set(saved); }catch{}
+    try{ const saved=JSON.parse(localStorage.getItem(scopedKey("th_removed_friends"))||"[]"); removedIds.current=new Set(saved); }catch{}
   },[]);
   const addRemovedId = (id:string)=>{
     removedIds.current.add(id);
-    try{ localStorage.setItem("th_removed_friends", JSON.stringify([...removedIds.current])); }catch{}
+    try{ localStorage.setItem(scopedKey("th_removed_friends"), JSON.stringify([...removedIds.current])); }catch{}
   };
   const [unread, setUnread] = useState(0);
   const msgEndRef = useRef<HTMLDivElement>(null);
@@ -307,7 +308,7 @@ export default function SocialPage({ myProfile }: { myProfile: Profile }) {
     if(!searchQ.trim()) return;
     try {
       // Try Supabase first
-      const r = await searchProfiles(searchQ);
+      const r = await searchProfiles(searchQ, user?.id);
       const filtered = r.filter(p=>p.id!==user?.id);
       if (filtered.length > 0) { setSearchRes(filtered); return; }
     } catch {}

@@ -129,6 +129,31 @@ export const useStore = create<Store>()(
       }),
       {
         name:"tv-ui-store",
+        storage: {
+          getItem: (key: string) => {
+            try {
+              const uid = localStorage.getItem("th_current_user_id") || "";
+              const k = uid ? `${key}__${uid}` : key;
+              const raw = localStorage.getItem(k);
+              return raw ? JSON.parse(raw) : null;
+            } catch { return null; }
+          },
+          setItem: (key: string, value: unknown) => {
+            try {
+              const uid = localStorage.getItem("th_current_user_id") || "";
+              const k = uid ? `${key}__${uid}` : key;
+              localStorage.setItem(k, JSON.stringify(value));
+            } catch {}
+          },
+          removeItem: (key: string) => {
+            try {
+              const uid = localStorage.getItem("th_current_user_id") || "";
+              const k = uid ? `${key}__${uid}` : key;
+              localStorage.removeItem(k);
+            } catch {}
+          },
+        },
+        skipHydration: true,
         partialize:(s)=>({sidebarOpen:s.sidebarOpen,activeTab:s.activeTab,theme:s.theme,goals:s.goals,playbook:s.playbook,allTags:s.allTags,simShowLevels:s.simShowLevels,replayShowLevels:s.replayShowLevels,mobilePinnedIds:s.mobilePinnedIds}),
       }
     )

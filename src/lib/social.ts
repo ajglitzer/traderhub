@@ -76,23 +76,48 @@ export async function createProfile(userId: string, username: string, displayNam
   return data;
 }
 
-export async function searchProfiles(query: string): Promise<Profile[]> {
-  const { data } = await sb().from("profiles").select("*")
-    .ilike("username", `%${query}%`).limit(10);
-  return data || [];
+export async function searchProfiles(query: string, myId?: string): Promise<Profile[]> {
+  const { data } = await sb().from("profiles")
+    .select("*")
+    .ilike("username", `%${query}%`)
+    .limit(10);
+  let results = (data || []) as Profile[];
+  // Filter out yourself and anyone in a block relationship with you
+  if (myId) {
+    const { data: bl } = await sb().from("blocks").select("blocker_id,blocked_id")
+      .or(`blocker_id.eq.${myId},blocked_id.eq.${myId}`);
+    const blocked = new Set<string>();
+    (bl || []).forEach((b: any) => { blocked.add(b.blocked_id); blocked.add(b.blocker_id); });
+    blocked.delete(myId);
+    results = results.filter(p => p.id !== myId && !blocked.has(p.id));
+  }
+  return results;
 }
 
-// -- Friends -------------------------------------------------------------------
 export async function sendFriendRequest(fromId: string, toId: string): Promise<void> {
+  // Can't friend someone you've blocked or who blocked you
+  const { data: bl } = await sb().from("blocks").select("blocker_id")
+    .or(`and(blocker_id.eq.${fromId},blocked_id.eq.${toId}),and(blocker_id.eq.${toId},blocked_id.eq.${fromId})`);
+  if (bl && bl.length > 0) return;
   await sb().from("friend_requests").insert({ from_id: fromId, to_id: toId });
 }
 
 export async function getFriendRequests(userId: string): Promise<FriendRequest[]> {
-  const { data } = await sb().from("friend_requests")
-    .select("*, from_profile:profiles!friend_requests_from_id_fkey(*), to_profile:profiles!friend_requests_to_id_fkey(*)")
-    .or(`from_id.eq.${userId},to_id.eq.${userId}`)
-    .order("created_at", { ascending: false });
-  return (data || []) as FriendRequest[];
+  const [{ data }, { data: bl }] = await Promise.all([
+    sb().from("friend_requests")
+      .select("*, from_profile:profiles!friend_requests_from_id_fkey(*), to_profile:profiles!friend_requests_to_id_fkey(*)")
+      .or(`from_id.eq.${userId},to_id.eq.${userId}`)
+      .order("created_at", { ascending: false }),
+    sb().from("blocks").select("blocker_id,blocked_id")
+      .or(`blocker_id.eq.${userId},blocked_id.eq.${userId}`),
+  ]);
+  const blocked = new Set<string>();
+  (bl || []).forEach((b: any) => { blocked.add(b.blocked_id); blocked.add(b.blocker_id); });
+  blocked.delete(userId);
+  return ((data || []) as FriendRequest[]).filter(r => {
+    const other = r.from_id === userId ? r.to_id : r.from_id;
+    return !blocked.has(other);
+  });
 }
 
 export async function respondToFriendRequest(id: string, status: "accepted" | "declined"): Promise<void> {
@@ -116,18 +141,25 @@ export async function getFriends(userId: string): Promise<Profile[]> {
 
 // -- Messages ------------------------------------------------------------------
 export async function getMessages(userId: string, otherId: string): Promise<Message[]> {
+  // Block check — don't return messages from blocked users
+  const { data: bl } = await sb().from("blocks").select("blocker_id,blocked_id")
+    .or(`and(blocker_id.eq.${userId},blocked_id.eq.${otherId}),and(blocker_id.eq.${otherId},blocked_id.eq.${userId})`);
+  if (bl && bl.length > 0) return [];
+
   const { data } = await sb().from("messages")
-    .select("*, from_profile:profiles!messages_from_id_fkey(*)")
+    .select("*")
     .or(`and(from_id.eq.${userId},to_id.eq.${otherId}),and(from_id.eq.${otherId},to_id.eq.${userId})`)
     .order("created_at", { ascending: true });
   return (data || []) as Message[];
 }
 
 export async function sendMessage(fromId: string, toId: string, content: string, type: Message["type"] = "text", metadata?: Record<string,any>): Promise<void> {
-  const { filterMessage } = await import("@/lib/profanity");
-  const check = filterMessage(content);
-  if (!check.ok) throw new Error(check.reason || "Message not allowed");
-  await sb().from("messages").insert({ from_id: fromId, to_id: toId, content, type, metadata: metadata || null });
+  // Refuse to send if either party has blocked the other
+  const { data: bl } = await sb().from("blocks").select("blocker_id")
+    .or(`and(blocker_id.eq.${fromId},blocked_id.eq.${toId}),and(blocker_id.eq.${toId},blocked_id.eq.${fromId})`);
+  if (bl && bl.length > 0) return;
+
+  await sb().from("messages").insert({ from_id: fromId, to_id: toId, content, type, metadata });
 }
 
 export async function markMessagesRead(userId: string, fromId: string): Promise<void> {
@@ -135,10 +167,12 @@ export async function markMessagesRead(userId: string, fromId: string): Promise<
 }
 
 export async function getUnreadCount(userId: string): Promise<number> {
-  const { count } = await sb().from("messages").select("*", { count: "exact", head: true }).eq("to_id", userId).eq("read", false);
-  return count || 0;
+  const [{ data }, allowed] = await Promise.all([
+    sb().from("messages").select("from_id").eq("to_id", userId).eq("read", false),
+    getAllowedIds(userId),
+  ]);
+  return (data || []).filter((m: any) => allowed.has(m.from_id)).length;
 }
-
 
 // Returns set of user IDs the user is still allowed to see (friends, not blocked)
 async function getAllowedIds(userId: string): Promise<Set<string>> {
@@ -184,6 +218,9 @@ export async function getConversations(userId: string): Promise<{profile: Profil
 
 // -- Battles -------------------------------------------------------------------
 export async function sendBattleRequest(challengerId: string, opponentId: string, symbol: string): Promise<string> {
+  const { data: bl } = await sb().from("blocks").select("blocker_id")
+    .or(`and(blocker_id.eq.${challengerId},blocked_id.eq.${opponentId}),and(blocker_id.eq.${opponentId},blocked_id.eq.${challengerId})`);
+  if (bl && bl.length > 0) return "";
   const { data } = await sb().from("battles").insert({ challenger_id: challengerId, opponent_id: opponentId, symbol }).select().single();
   return data?.id;
 }

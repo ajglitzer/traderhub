@@ -205,13 +205,16 @@ export default function SettingsPage() {
     setTrades([]);
     setAccountTrades(activeAccountId, []);
 
-    // Save playbook before clearing so it survives
+    // Only clear THIS user's data — never touch other accounts
+    const uid = (() => { try { return localStorage.getItem("th_current_user_id") || ""; } catch { return ""; } })();
+    const uiKey = uid ? `tv-ui-store__${uid}` : "tv-ui-store";
+
+    // Save playbook/goals/tags before clearing so they survive
     let savedUIStore: string | null = null;
     try {
-      const uiStore = localStorage.getItem("tv-ui-store");
+      const uiStore = localStorage.getItem(uiKey);
       if (uiStore) {
         const parsed = JSON.parse(uiStore);
-        // Keep only playbook, goals, tags - wipe trades
         savedUIStore = JSON.stringify({
           ...parsed,
           state: { ...parsed.state, trades: [] }
@@ -223,14 +226,20 @@ export default function SettingsPage() {
     for (let i = 0; i < localStorage.length; i++) {
       const key = localStorage.key(i);
       if (!key) continue;
-      if (key.startsWith("traderhub") || key.startsWith("tv-accounts-store") || key === "traderhub_trades_v1") {
-        keysToRemove.push(key);
-      }
+      // Only remove keys belonging to the current user
+      const isTradeKey =
+        key.startsWith("traderhub") ||
+        key.startsWith("tv-accounts-store") ||
+        key.startsWith("th_accounts_v2_");
+      if (!isTradeKey) continue;
+      // If we have a user id, only kill their keys
+      if (uid && !key.includes(uid)) continue;
+      keysToRemove.push(key);
     }
     keysToRemove.forEach(k => localStorage.removeItem(k));
 
     // Restore UI store with playbook intact
-    if (savedUIStore) localStorage.setItem("tv-ui-store", savedUIStore);
+    if (savedUIStore) localStorage.setItem(uiKey, savedUIStore);
 
     showToast("✓ All trade data cleared — reloading...");
     setTimeout(() => { window.location.href = window.location.origin; }, 700);

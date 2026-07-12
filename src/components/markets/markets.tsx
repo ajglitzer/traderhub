@@ -1,4 +1,5 @@
 "use client";
+import { getScoped, setScoped } from "@/lib/user-storage";
 import { useState, useEffect, useRef } from "react";
 
 // Symbol list for the quote strip
@@ -39,15 +40,15 @@ export default function MarketsPage() {
   const [loaded, setLoaded] = useState(false);
   const [custom, setCustom] = useState("");
   const [customList, setCustomList] = useState<{sym:string;label:string;name:string}[]>(() => {
-    try { return JSON.parse(localStorage.getItem("th_markets_custom") || "[]"); } catch { return []; }
+    return getScoped("th_markets_custom", []);
   });
   const [hidden, setHidden] = useState<string[]>(() => {
-    try { return JSON.parse(localStorage.getItem("th_markets_hidden") || "[]"); } catch { return []; }
+    return getScoped("th_markets_hidden", []);
   });
 
   // Persist on change
-  useEffect(() => { try { localStorage.setItem("th_markets_custom", JSON.stringify(customList)); } catch {} }, [customList]);
-  useEffect(() => { try { localStorage.setItem("th_markets_hidden", JSON.stringify(hidden)); } catch {} }, [hidden]);
+  useEffect(() => { setScoped("th_markets_custom", customList); }, [customList]);
+  useEffect(() => { setScoped("th_markets_hidden", hidden); }, [hidden]);
   const [editMode, setEditMode] = useState(false);
 
   const tf = TIMEFRAMES[tfIdx];

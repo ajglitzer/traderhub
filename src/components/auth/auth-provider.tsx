@@ -4,6 +4,7 @@ import { User } from "@supabase/supabase-js";
 import { loadFromCloud, useAccountStore, loadUserData, clearUserData } from "@/store/accounts";
 import { useStore } from "@/store";
 import { loadTrades } from "@/lib/persistence";
+import { clearAllUserScoped } from "@/lib/user-storage";
 
 interface AuthCtx {
   user: User | null;
@@ -35,6 +36,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         if (sessionUser) {
           localStorage.setItem("th_current_user_id", sessionUser.id);
           loadUserData(sessionUser.id);
+          useStore.persist?.rehydrate?.();
           useStore.setState({ trades: loadTrades() });
           loadFromCloud().then(trades => {
             if (!mounted || trades.length === 0) return;
@@ -62,6 +64,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
           if (_event === "SIGNED_IN") {
             loadUserData(newUser.id);
+            useStore.persist?.rehydrate?.();
             useStore.setState({ trades: loadTrades() });
             loadFromCloud().then(trades => {
               if (!mounted || trades.length === 0) return;
@@ -71,6 +74,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
             });
           }
         } else {
+          clearAllUserScoped();
           localStorage.removeItem("th_current_user_id");
           clearUserData();
           useStore.setState({ trades: [] });
@@ -89,6 +93,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     if (!hasSupabase) return;
     const { createClient } = await import("@/lib/supabase");
     const supabase = createClient();
+    clearAllUserScoped();
     localStorage.removeItem("th_current_user_id");
     clearUserData();
     useStore.setState({ trades: [] });

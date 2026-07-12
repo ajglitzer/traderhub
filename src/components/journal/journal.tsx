@@ -1,4 +1,5 @@
 "use client";
+import { getScoped, setScoped, scopedKey } from "@/lib/user-storage";
 import { useState, useEffect } from "react";
 import { useStore } from "@/store";
 import { format } from "date-fns";
@@ -20,7 +21,7 @@ const MOODS = [
 
 export default function JournalPage() {
   const [entries, setEntries] = useState<JournalEntry[]>(() => {
-    try { return JSON.parse(localStorage.getItem("tv_journal") || "[]"); } catch { return []; }
+    return getScoped("tv_journal", []);
   });
   const [content, setContent] = useState("");
   const [mood, setMood] = useState("ok");
@@ -31,7 +32,7 @@ export default function JournalPage() {
   const mounted = typeof window !== "undefined";
   useEffect(() => {
     if (!mounted) return;
-    localStorage.setItem("tv_journal", JSON.stringify(entries));
+    setScoped("tv_journal", entries);
   }, [entries, mounted]);
 
   const save = () => {
@@ -156,11 +157,11 @@ function DailyPrompts() {
   const today = new Date().toISOString().slice(0,10);
 
   useEffect(() => {
-    try { const s = localStorage.getItem(`th_journal_prompts_${today}`); if (s) setAnswers(JSON.parse(s)); } catch {}
+    try { const s = localStorage.getItem(scopedKey(`th_journal_prompts_${today}`)); if (s) setAnswers(JSON.parse(s)); } catch {}
   }, [today]);
 
   const save = () => {
-    localStorage.setItem(`th_journal_prompts_${today}`, JSON.stringify(answers));
+    localStorage.setItem(scopedKey(`th_journal_prompts_${today}`), JSON.stringify(answers));
     setSaved(true); setTimeout(() => setSaved(false), 2000);
   };
 

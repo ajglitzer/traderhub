@@ -1,4 +1,5 @@
 "use client";
+import { scopedKey } from "@/lib/user-storage";
 import { useState, useEffect, useRef } from "react";
 import { useAccountStore } from "@/store/accounts";
 import { Trade } from "@/types/trade";
@@ -205,11 +206,11 @@ function JournalPrompts({ trades }: { trades: import("@/types/trade").Trade[] })
   const prompts = PROMPTS.slice(0, trades.length > 0 ? 4 : 2);
 
   useEffect(() => {
-    try { const s = localStorage.getItem(`th_journal_prompts_${today}`); if (s) setAnswers(JSON.parse(s)); } catch {}
+    try { const s = localStorage.getItem(scopedKey(`th_journal_prompts_${today}`)); if (s) setAnswers(JSON.parse(s)); } catch {}
   }, [today]);
 
   const save = () => {
-    localStorage.setItem(`th_journal_prompts_${today}`, JSON.stringify(answers));
+    localStorage.setItem(scopedKey(`th_journal_prompts_${today}`), JSON.stringify(answers));
     setSaved(true); setTimeout(() => setSaved(false), 2000);
   };
 
