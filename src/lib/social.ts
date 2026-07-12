@@ -100,12 +100,18 @@ export async function respondToFriendRequest(id: string, status: "accepted" | "d
 }
 
 export async function getFriends(userId: string): Promise<Profile[]> {
-  const { data } = await sb().from("friend_requests")
-    .select("*, from_profile:profiles!friend_requests_from_id_fkey(*), to_profile:profiles!friend_requests_to_id_fkey(*)")
-    .or(`from_id.eq.${userId},to_id.eq.${userId}`)
-    .eq("status", "accepted");
+  const [{ data }, { data: blocked }] = await Promise.all([
+    sb().from("friend_requests")
+      .select("*, from_profile:profiles!friend_requests_from_id_fkey(*), to_profile:profiles!friend_requests_to_id_fkey(*)")
+      .or(`from_id.eq.${userId},to_id.eq.${userId}`)
+      .eq("status", "accepted"),
+    sb().from("blocks").select("blocked_id,blocker_id").or(`blocker_id.eq.${userId},blocked_id.eq.${userId}`),
+  ]);
   if (!data) return [];
-  return data.map((r: any) => r.from_id === userId ? r.to_profile : r.from_profile).filter(Boolean);
+  const blockedIds = new Set((blocked||[]).flatMap((b:any)=>[b.blocked_id,b.blocker_id]).filter((id:string)=>id!==userId));
+  return data
+    .map((r: any) => r.from_id === userId ? r.to_profile : r.from_profile)
+    .filter((p: any) => p && !blockedIds.has(p.id));
 }
 
 // -- Messages ------------------------------------------------------------------
