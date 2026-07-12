@@ -1,6 +1,13 @@
 import { create } from "zustand";
 import { persist } from "zustand/middleware";
 
+let cloudTimer: ReturnType<typeof setTimeout> | null = null;
+function queueCloudSync(trades: any[]) {
+  if (typeof window === "undefined") return;
+  if (cloudTimer) clearTimeout(cloudTimer);
+  cloudTimer = setTimeout(() => { void syncToCloud(trades); }, 2000);
+}
+
 async function syncToCloud(trades: any[]) {
   try {
     await fetch("/api/sync", {
@@ -104,8 +111,10 @@ export const useAccountStore = create<AccountStore>()(
         return tradesByAccount[activeAccountId] || [];
       },
 
-      setAccountTrades: (accountId, trades) =>
-        set(s => ({ tradesByAccount: { ...s.tradesByAccount, [accountId]: trades } })),
+      setAccountTrades: (accountId, trades) => {
+        set(s => ({ tradesByAccount: { ...s.tradesByAccount, [accountId]: trades } }));
+        queueCloudSync(trades);
+      },
 
       addAccountTrades: (accountId, newTrades) => {
         const existing = get().tradesByAccount[accountId] || [];
@@ -123,6 +132,7 @@ export const useAccountStore = create<AccountStore>()(
         }
         const merged = [...fresh, ...existing];
         set(s => ({ tradesByAccount: { ...s.tradesByAccount, [accountId]: merged } }));
+        queueCloudSync(merged);
       },
 
       deleteAccountTrade: (accountId, tradeId) => {
@@ -205,44 +215,6 @@ export function clearUserData() {
     accounts: [{ ...DEFAULT_ACCOUNT, createdAt: new Date().toISOString() }],
     activeAccountId: "default",
     tradesByAccount: {},
-  });
-}
-
-// Auto-save on state change (debounced).
-// NOTE: zustand's plain subscribe() passes ONE arg — a (state, prev) signature
-// leaves prev undefined and throws at module load, taking down the whole app.
-if (typeof window !== "undefined") {
-  let saveTimer: ReturnType<typeof setTimeout> | null = null;
-  let syncTimer: ReturnType<typeof setTimeout> | null = null;
-  let lastTrades: unknown = undefined;
-
-  useAccountStore.subscribe((state) => {
-    try {
-      const uid = localStorage.getItem("th_current_user_id");
-      if (!uid || !state) return;
-
-      // Debounced localStorage write
-      if (saveTimer) clearTimeout(saveTimer);
-      saveTimer = setTimeout(() => saveUserData(uid), 400);
-
-      // Only sync to cloud when trades actually changed (not UI state)
-      const trades = state.tradesByAccount;
-      if (trades !== lastTrades) {
-        lastTrades = trades;
-        if (syncTimer) clearTimeout(syncTimer);
-        syncTimer = setTimeout(() => {
-          const list = state.tradesByAccount?.[state.activeAccountId] || [];
-          if (list.length) syncToCloud(list);
-        }, 2000);
-      }
-    } catch {}
-  });
-
-  window.addEventListener("beforeunload", () => {
-    try {
-      const uid = localStorage.getItem("th_current_user_id");
-      if (uid) saveUserData(uid);
-    } catch {}
   });
 }
 
