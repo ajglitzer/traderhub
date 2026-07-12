@@ -1,5 +1,5 @@
 "use client";
-import { createContext, useContext, useState, useEffect, ReactNode } from "react";
+import React, { createContext, useContext, useState, useEffect, ReactNode } from "react";
 import { User } from "@supabase/supabase-js";
 import { loadFromCloud, useAccountStore } from "@/store/accounts";
 
@@ -21,6 +21,7 @@ const hasSupabase = SUPABASE_URL.length > 0 && !SUPABASE_URL.includes("placehold
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [user,    setUser]    = useState<User | null>(null);
   const [loading, setLoading] = useState(hasSupabase);
+  const prevUserId = React.useRef<string|null>(null);
 
   useEffect(() => {
     if (!hasSupabase) return;
@@ -33,6 +34,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         if (!mounted) return;
         if (error) console.error("[Auth] getSession error:", error.message);
         const sessionUser = data?.session?.user ?? null;
+        prevUserId.current = sessionUser?.id ?? null;
         setUser(sessionUser);
         setLoading(false);
         if (sessionUser) {
@@ -64,11 +66,17 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
         if (!mounted) return;
         const newUser = session?.user ?? null;
+        prevUserId.current = newUser?.id ?? null;
         setUser(newUser);
         setLoading(false);
         if (newUser) {
           localStorage.setItem("th_current_user_id", newUser.id);
           if (_event === "SIGNED_IN") {
+            // If switching to a different user, reload page so store re-initializes
+            if (prevUserId.current && prevUserId.current !== newUser.id) {
+              window.location.reload();
+              return;
+            }
             // Directly load this user's data from localStorage
             const scopedKey = `tv-accounts-store-\${newUser.id}`;
             try {
@@ -91,7 +99,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           }
         } else {
           localStorage.removeItem("th_current_user_id");
-          // Reset store on logout
+          // Reset store on logout and clear unscoped key
+          try { localStorage.removeItem("tv-accounts-store"); } catch {}
           useAccountStore.setState({ accounts:[{id:"default",name:"Main Account",startingBalance:10000,color:"#00e5ff",broker:"TraderHub",createdAt:new Date().toISOString()}], activeAccountId:"default", tradesByAccount:{} });
         }
       });
