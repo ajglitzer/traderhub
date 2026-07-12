@@ -319,7 +319,7 @@ export default function SocialPage({ myProfile }: { myProfile: Profile }) {
     setConfirmAction(null);
     // Clear chat and battle if it was with this person
     if(chatWith?.id===fid) setChatWith(null);
-    if(activeBattle && (activeBattle as any).opponent_id===fid) setActiveBattle(null);
+    if(activeBattle && (activeBattle.challenger_id===fid||activeBattle.opponent_id===fid)) setActiveBattle(null);
     setConvos(prev=>prev.filter(c=>c.profile.id!==fid));
     load(); 
   };
@@ -329,7 +329,7 @@ export default function SocialPage({ myProfile }: { myProfile: Profile }) {
     await blockUser(user.id,fid);
     setConfirmAction(null);
     if(chatWith?.id===fid) setChatWith(null);
-    if(activeBattle && (activeBattle as any).opponent_id===fid) setActiveBattle(null);
+    if(activeBattle && (activeBattle.challenger_id===fid||activeBattle.opponent_id===fid)) setActiveBattle(null);
     setConvos(prev=>prev.filter(c=>c.profile.id!==fid));
     load(); 
   };
