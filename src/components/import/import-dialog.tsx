@@ -7,6 +7,8 @@ import { calculateTradePnl } from "@/lib/calculations";
 import { Trade } from "@/types/trade";
 import { fmt$ } from "@/lib/utils";
 
+const MAX_IMPORT = 10000;  // guard: a 1M-row CSV would freeze the browser
+
 export function ImportDialog() {
   const { importOpen, setImportOpen, addTrades } = useStore();
   const { activeAccountId, addAccountTrades } = useAccountStore();
@@ -104,8 +106,9 @@ export function ImportDialog() {
         favorite: false, reviewLater: false, screenshots: [], customFields: {},
       };
     });
-    addTrades(enriched);
-    addAccountTrades(activeAccountId, enriched);
+    const capped = enriched.slice(0, MAX_IMPORT);
+    addTrades(capped);
+    addAccountTrades(activeAccountId, capped);
 
     // If user specified prior PnL (trades not in this export), add a synthetic entry
     const prior = parseFloat(priorPnl) || 0;

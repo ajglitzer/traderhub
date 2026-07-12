@@ -1,4 +1,5 @@
 "use client";
+import { boldOnly } from "@/lib/safe-markdown";
 import { PricingModal } from "@/components/subscription/pro-gate";
 import { useSubscription } from "@/hooks/useSubscription";
 import { useState, useRef, useEffect } from "react";
@@ -198,7 +199,7 @@ function AIAnalysisPopup({ trade, onClose }: Props) {
           <div key={i} style={{ display: "flex", gap: 8, marginBottom: 4, paddingLeft: 4 }}>
             <span style={{ color: "#d500f9", flexShrink: 0, marginTop: 1 }}>▸</span>
             <span style={{ fontSize: 13, color: "#c9d1d9", lineHeight: 1.6 }}
-              dangerouslySetInnerHTML={{ __html: line.slice(2).replace(/\*\*(.*?)\*\*/g, '<strong style="color:#f0f6fc">$1</strong>') }}
+              dangerouslySetInnerHTML={{ __html: boldOnly(line.slice(2)) }}
             />
           </div>
         );
@@ -206,7 +207,7 @@ function AIAnalysisPopup({ trade, onClose }: Props) {
       if (line.trim() === "") return <div key={i} style={{ height: 6 }} />;
       return (
         <p key={i} style={{ fontSize: 13, color: "#c9d1d9", lineHeight: 1.7, marginBottom: 4 }}
-          dangerouslySetInnerHTML={{ __html: line.replace(/\*\*(.*?)\*\*/g, '<strong style="color:#f0f6fc">$1</strong>') }}
+          dangerouslySetInnerHTML={{ __html: boldOnly(line) }}
         />
       );
     });

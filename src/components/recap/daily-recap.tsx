@@ -1,4 +1,5 @@
 "use client";
+import { boldOnly } from "@/lib/safe-markdown";
 import { scopedKey } from "@/lib/user-storage";
 import { useState, useEffect, useRef } from "react";
 import { useAccountStore } from "@/store/accounts";
@@ -94,9 +95,9 @@ export default function DailyRecapPage() {
 
   const renderMd = (md:string) => md.split("\n").map((line,i)=>{
     if(line.startsWith("## ")) return <div key={i} style={{fontSize:12,fontWeight:800,color:"#d500f9",textTransform:"uppercase" as const,letterSpacing:"0.08em",marginTop:18,marginBottom:6}}>{line.slice(3)}</div>;
-    if(line.startsWith("- ")||line.startsWith("• ")) return <div key={i} style={{display:"flex",gap:8,marginBottom:4}}><span style={{color:"#d500f9",flexShrink:0}}>▸</span><span style={{fontSize:13,color:"#c9d1d9",lineHeight:1.6}} dangerouslySetInnerHTML={{__html:line.slice(2).replace(/\*\*(.*?)\*\*/g,"<strong style='color:#f0f6fc'>$1</strong>")}}/></div>;
+    if(line.startsWith("- ")||line.startsWith("• ")) return <div key={i} style={{display:"flex",gap:8,marginBottom:4}}><span style={{color:"#d500f9",flexShrink:0}}>▸</span><span style={{fontSize:13,color:"#c9d1d9",lineHeight:1.6}} dangerouslySetInnerHTML={{__html: boldOnly(line.slice(2))}}/></div>;
     if(line.trim()==="") return <div key={i} style={{height:6}}/>;
-    return <p key={i} style={{fontSize:13,color:"#c9d1d9",lineHeight:1.7,marginBottom:4}} dangerouslySetInnerHTML={{__html:line.replace(/\*\*(.*?)\*\*/g,"<strong style='color:#f0f6fc'>$1</strong>")}}/>;
+    return <p key={i} style={{fontSize:13,color:"#c9d1d9",lineHeight:1.7,marginBottom:4}} dangerouslySetInnerHTML={{__html: boldOnly(line)}}/>;
   });
 
   return (

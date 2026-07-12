@@ -348,7 +348,7 @@ export default function SocialPage({ myProfile }: { myProfile: Profile }) {
     setBattles(prev=>prev.filter(b=>b.challenger_id!==fid&&b.opponent_id!==fid));
   };
 
-  const respondReq = async(id:string,status:"accepted"|"declined")=>{ await respondToFriendRequest(id,status); load(); };
+  const respondReq = async(id:string,status:"accepted"|"declined")=>{ await respondToFriendRequest(id, status, user?.id); load(); };
 
   const startBattle = async(opponentId:string,symbol:string)=>{
     if(!user) return;
@@ -504,8 +504,8 @@ export default function SocialPage({ myProfile }: { myProfile: Profile }) {
                     </div>
                     {b.status==="pending"&&!isChallenger&&(
                       <div style={{display:"flex",gap:4}}>
-                        <button onClick={e=>{e.stopPropagation();respondToBattle(b.id, true).then(load);}} style={{height:24,padding:"0 8px",borderRadius:6,background:"rgba(0,230,118,0.1)",border:"1px solid rgba(0,230,118,0.2)",color:"#00e676",cursor:"pointer",fontSize:10,fontWeight:700}}>Accept</button>
-                        <button onClick={e=>{e.stopPropagation();respondToBattle(b.id,false).then(load);}} style={{height:24,padding:"0 8px",borderRadius:6,background:"rgba(255,23,68,0.08)",border:"1px solid rgba(255,23,68,0.15)",color:"#f87171",cursor:"pointer",fontSize:10}}>Decline</button>
+                        <button onClick={e=>{e.stopPropagation();respondToBattle(b.id, true, user?.id).then(load);}} style={{height:24,padding:"0 8px",borderRadius:6,background:"rgba(0,230,118,0.1)",border:"1px solid rgba(0,230,118,0.2)",color:"#00e676",cursor:"pointer",fontSize:10,fontWeight:700}}>Accept</button>
+                        <button onClick={e=>{e.stopPropagation();respondToBattle(b.id, false, user?.id).then(load);}} style={{height:24,padding:"0 8px",borderRadius:6,background:"rgba(255,23,68,0.08)",border:"1px solid rgba(255,23,68,0.15)",color:"#f87171",cursor:"pointer",fontSize:10}}>Decline</button>
                       </div>
                     )}
                   </div>
@@ -614,8 +614,8 @@ export default function SocialPage({ myProfile }: { myProfile: Profile }) {
                           <div style={{fontSize:12,color:"#c9d1d9"}}>{msg.content}</div>
                           {!mine&&battles.find(b=>b.id===msg.metadata?.battle_id&&b.status==="pending")&&(
                             <div style={{display:"flex",gap:6,marginTop:8}}>
-                              <button onClick={()=>{ respondToBattle(msg.metadata!.battle_id, true).then(()=>{load();setTab("battles");}); }} style={{flex:1,height:28,borderRadius:7,background:"rgba(0,230,118,0.1)",border:"1px solid rgba(0,230,118,0.2)",color:"#00e676",cursor:"pointer",fontSize:11,fontWeight:700}}>Accept</button>
-                              <button onClick={()=>respondToBattle(msg.metadata!.battle_id, false).then(load)} style={{flex:1,height:28,borderRadius:7,background:"rgba(255,23,68,0.06)",border:"1px solid rgba(255,23,68,0.15)",color:"#f87171",cursor:"pointer",fontSize:11}}>Decline</button>
+                              <button onClick={()=>{ respondToBattle(msg.metadata!.battle_id, true, user?.id).then(()=>{load();setTab("battles");}); }} style={{flex:1,height:28,borderRadius:7,background:"rgba(0,230,118,0.1)",border:"1px solid rgba(0,230,118,0.2)",color:"#00e676",cursor:"pointer",fontSize:11,fontWeight:700}}>Accept</button>
+                              <button onClick={()=>respondToBattle(msg.metadata!.battle_id, false, user?.id).then(load)} style={{flex:1,height:28,borderRadius:7,background:"rgba(255,23,68,0.06)",border:"1px solid rgba(255,23,68,0.15)",color:"#f87171",cursor:"pointer",fontSize:11}}>Decline</button>
                             </div>
                           )}
                         </div>
@@ -637,7 +637,7 @@ export default function SocialPage({ myProfile }: { myProfile: Profile }) {
 
             <div style={{padding:"10px 16px",borderTop:"1px solid rgba(255,255,255,0.06)",display:"flex",gap:8,background:"rgba(0,0,0,0.2)"}}>
               <input value={msgInput} onChange={e=>setMsgInput(e.target.value)} onKeyDown={e=>e.key==="Enter"&&!e.shiftKey&&send()}
-                placeholder="Message..." style={{flex:1,height:38,padding:"0 14px",background:"rgba(255,255,255,0.05)",border:"1px solid rgba(255,255,255,0.09)",borderRadius:10,color:"#f0f6fc",fontSize:13,outline:"none"}}/>
+                maxLength={2000} placeholder="Message..." style={{flex:1,height:38,padding:"0 14px",background:"rgba(255,255,255,0.05)",border:"1px solid rgba(255,255,255,0.09)",borderRadius:10,color:"#f0f6fc",fontSize:13,outline:"none"}}/>
               <button onClick={send} disabled={!msgInput.trim()} style={{height:38,padding:"0 16px",borderRadius:10,border:"none",background:msgInput.trim()?"linear-gradient(135deg,#00e5ff,#0088bb)":"rgba(255,255,255,0.05)",color:msgInput.trim()?"#000":"#374151",cursor:msgInput.trim()?"pointer":"default",fontSize:13,fontWeight:700}}>Send</button>
             </div>
           </>

@@ -1,6 +1,16 @@
 import { NextRequest, NextResponse } from "next/server";
+import { requirePro, rateLimit } from "@/lib/api-guard";
 
 export async function GET(req: NextRequest) {
+  // Chart Replay is a Pro feature — enforce it here, not just in the UI
+  const guard = await requirePro();
+  if (!guard.ok) {
+    return NextResponse.json({ error: guard.error }, { status: guard.status });
+  }
+  if (!rateLimit(guard.userId, 60, 60_000)) {
+    return NextResponse.json({ error: "Too many requests" }, { status: 429 });
+  }
+
   const { searchParams } = new URL(req.url);
   const sym  = searchParams.get("sym");
   const from = searchParams.get("from");

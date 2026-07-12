@@ -1,4 +1,5 @@
 import { NextRequest } from "next/server";
+import { requirePro, rateLimit } from "@/lib/api-guard";
 
 const SYSTEM = "You are a professional trading coach. Be direct, specific, and honest. Give real actionable feedback.";
 
@@ -12,8 +13,30 @@ const GROQ_MODELS = [
 
 export async function POST(req: NextRequest) {
   try {
+    // Server-side Pro gate — the UI check alone can be bypassed with curl
+    const guard = await requirePro();
+    if (!guard.ok) {
+      return new Response(JSON.stringify({ error: guard.error }), {
+        status: guard.status,
+        headers: { "Content-Type": "application/json" },
+      });
+    }
+
+    // Throttle so one user can't drain the Groq quota
+    if (!rateLimit(guard.userId, 20, 60_000)) {
+      return new Response(JSON.stringify({ error: "Too many requests — slow down." }), {
+        status: 429,
+        headers: { "Content-Type": "application/json" },
+      });
+    }
+
     const { prompt } = await req.json();
     if (!prompt) return new Response(JSON.stringify({ error: "No prompt" }), { status: 400 });
+
+    // Cap prompt size — prevents token-bomb requests
+    if (typeof prompt !== "string" || prompt.length > 20000) {
+      return new Response(JSON.stringify({ error: "Prompt too large" }), { status: 413 });
+    }
 
     const groqKey      = (process.env.GROQ_API_KEY      || "").trim();
     const anthropicKey = (process.env.ANTHROPIC_API_KEY || "").trim();

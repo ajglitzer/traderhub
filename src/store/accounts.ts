@@ -109,8 +109,18 @@ export const useAccountStore = create<AccountStore>()(
 
       addAccountTrades: (accountId, newTrades) => {
         const existing = get().tradesByAccount[accountId] || [];
-        const seen = new Set(existing.map(t => `${t.ticker}|${t.entryTime}|${t.quantity}`));
-        const fresh = newTrades.filter(t => !seen.has(`${t.ticker}|${t.entryTime}|${t.quantity}`));
+        // Include price + side + exit so two scalps at the same second aren't
+        // wrongly merged. Old key (ticker|entryTime|qty) silently dropped them.
+        const fp = (t: Partial<Trade>) =>
+          `${t.ticker}|${t.entryTime}|${t.exitTime ?? ""}|${t.side}|${t.quantity}|${t.entryPrice}|${t.exitPrice ?? ""}`;
+        const seen = new Set(existing.map(fp));
+        const fresh: Trade[] = [];
+        for (const t of newTrades) {
+          const k = fp(t);
+          if (seen.has(k)) continue;
+          seen.add(k);          // also dedupe within the incoming batch
+          fresh.push(t);
+        }
         const merged = [...fresh, ...existing];
         set(s => ({ tradesByAccount: { ...s.tradesByAccount, [accountId]: merged } }));
       },

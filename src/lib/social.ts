@@ -120,8 +120,12 @@ export async function getFriendRequests(userId: string): Promise<FriendRequest[]
   });
 }
 
-export async function respondToFriendRequest(id: string, status: "accepted" | "declined"): Promise<void> {
-  await sb().from("friend_requests").update({ status }).eq("id", id);
+export async function respondToFriendRequest(id: string, status: "accepted" | "declined", myId?: string): Promise<void> {
+  // Only the RECIPIENT may accept/decline. Without the to_id scope, anyone
+  // could respond to someone else's request by guessing the row id.
+  let q = sb().from("friend_requests").update({ status }).eq("id", id);
+  if (myId) q = q.eq("to_id", myId);
+  await q;
 }
 
 export async function getFriends(userId: string): Promise<Profile[]> {
@@ -153,13 +157,28 @@ export async function getMessages(userId: string, otherId: string): Promise<Mess
   return (data || []) as Message[];
 }
 
+// Client-side send throttle — stops accidental/malicious message floods
+const sendTimes: number[] = [];
+function canSend(): boolean {
+  const now = Date.now();
+  while (sendTimes.length && now - sendTimes[0] > 10_000) sendTimes.shift();
+  if (sendTimes.length >= 15) return false;   // max 15 msgs / 10s
+  sendTimes.push(now);
+  return true;
+}
+
 export async function sendMessage(fromId: string, toId: string, content: string, type: Message["type"] = "text", metadata?: Record<string,any>): Promise<void> {
+  const text = String(content ?? "").trim();
+  if (!text) return;
+  if (text.length > 2000) return;   // cap message size
+  if (!canSend()) return;           // throttle
+
   // Refuse to send if either party has blocked the other
   const { data: bl } = await sb().from("blocks").select("blocker_id")
     .or(`and(blocker_id.eq.${fromId},blocked_id.eq.${toId}),and(blocker_id.eq.${toId},blocked_id.eq.${fromId})`);
   if (bl && bl.length > 0) return;
 
-  await sb().from("messages").insert({ from_id: fromId, to_id: toId, content, type, metadata });
+  await sb().from("messages").insert({ from_id: fromId, to_id: toId, content: text, type, metadata });
 }
 
 export async function markMessagesRead(userId: string, fromId: string): Promise<void> {
@@ -260,20 +279,56 @@ export async function getBattles(userId: string): Promise<Battle[]> {
   });
 }
 
-export async function respondToBattle(battleId: string, accept: boolean): Promise<void> {
-  await sb().from("battles").update({ status: accept ? "active" : "declined" }).eq("id", battleId);
+export async function respondToBattle(battleId: string, accept: boolean, myId?: string): Promise<void> {
+  // Only the OPPONENT (the one challenged) may accept/decline.
+  let q = sb().from("battles").update({ status: accept ? "active" : "declined" }).eq("id", battleId);
+  if (myId) q = q.eq("opponent_id", myId);
+  await q;
 }
 
 export async function submitBattleTrades(battleId: string, userId: string, challengerId: string, trades: BattleTrade[]): Promise<void> {
-  const score = trades.reduce((a,t) => a + t.pnl, 0);
-  const field = userId === challengerId ? { challenger_trades: trades, challenger_score: score } : { opponent_trades: trades, opponent_score: score };
-  await sb().from("battles").update(field).eq("id", battleId);
+  // Bound the submission — the score is computed client-side, so without this
+  // a tampered client could post an arbitrary winning score.
+  const clean = (Array.isArray(trades) ? trades : [])
+    .slice(0, 100)
+    .filter(t => t && Number.isFinite(t.pnl))
+    .map(t => ({ ...t, pnl: Math.max(-100_000, Math.min(t.pnl, 100_000)) }));
+
+  const score = clean.reduce((a, t) => a + t.pnl, 0);
+
+  // Only write to YOUR side of the battle, never the opponent's
+  const isChallenger = userId === challengerId;
+  const field = isChallenger
+    ? { challenger_trades: clean, challenger_score: score }
+    : { opponent_trades: clean, opponent_score: score };
+
+  // Scope the update so you can only touch a battle you're actually in
+  await sb().from("battles")
+    .update(field)
+    .eq("id", battleId)
+    .or(`challenger_id.eq.${userId},opponent_id.eq.${userId}`);
 }
 
 export async function finalizeBattle(battle: Battle): Promise<void> {
-  if (battle.challenger_score === null || battle.opponent_score === null) return;
-  const winnerId = battle.challenger_score >= battle.opponent_score ? battle.challenger_id : battle.opponent_id;
-  await sb().from("battles").update({ status: "completed", winner_id: winnerId, completed_at: new Date().toISOString() }).eq("id", battle.id);
+  // Re-read the battle from the DB — never trust the client-supplied object.
+  // Otherwise a tampered client could pass fake scores and declare itself winner.
+  const { data: fresh } = await sb().from("battles")
+    .select("id,challenger_id,opponent_id,challenger_score,opponent_score,status")
+    .eq("id", battle.id)
+    .single();
+
+  if (!fresh) return;
+  if (fresh.status === "completed") return;                       // already settled
+  if (fresh.challenger_score === null || fresh.opponent_score === null) return;
+
+  const winnerId = fresh.challenger_score >= fresh.opponent_score
+    ? fresh.challenger_id
+    : fresh.opponent_id;
+
+  await sb().from("battles")
+    .update({ status: "completed", winner_id: winnerId, completed_at: new Date().toISOString() })
+    .eq("id", fresh.id)
+    .neq("status", "completed");                                  // idempotent
 }
 
 // -- localStorage fallback for when Supabase auth not used --------------------
@@ -304,7 +359,15 @@ export async function getProfileByUsername(username: string): Promise<Profile | 
 }
 
 export async function updateProfile(userId: string, data: Partial<Profile>): Promise<void> {
-  try { await sb().from("profiles").update(data).eq("id", userId); } catch {}
+  try {
+    // Whitelist editable fields — never pass the raw client object to .update().
+    // Otherwise a crafted payload could try to set id, username, or other columns.
+    const safe: Record<string, any> = {};
+    if (typeof data.display_name === "string") safe.display_name = data.display_name.slice(0, 40);
+    if (typeof data.bio === "string")          safe.bio = data.bio.slice(0, 200);
+    if (Object.keys(safe).length === 0) return;
+    await sb().from("profiles").update(safe).eq("id", userId);
+  } catch {}
 }
 
 export async function getPublicStats(userId: string): Promise<{ trades: number; winRate: number; totalPnl: number; bestTrade: number; streak: number } | null> {
@@ -326,9 +389,25 @@ export async function getGlobalLeaderboard(): Promise<any[]> {
 
 export async function upsertLeaderboardEntry(userId: string, username: string, accountName: string, balance: number, startBalance: number, totalTrades: number, wins: number): Promise<void> {
   try {
+    // Sanity-check values — the client can be tampered with via DevTools.
+    // These bounds make an obviously-fake entry impossible to submit.
+    const finite = (n: number) => Number.isFinite(n) ? n : 0;
+    const bal   = Math.max(0, Math.min(finite(balance), 100_000_000));
+    const start = Math.max(1, Math.min(finite(startBalance), 10_000_000));
+    const total = Math.max(0, Math.min(Math.floor(finite(totalTrades)), 100_000));
+    const w     = Math.max(0, Math.min(Math.floor(finite(wins)), total)); // wins can't exceed trades
+
+    // A run with no trades can't have a changed balance
+    if (total === 0 && bal !== start) return;
+
     await sb().from("sim_leaderboard").upsert({
-      user_id: userId, username, account_name: accountName,
-      balance, start_balance: startBalance, total_trades: totalTrades, wins,
+      user_id: userId,
+      username: String(username).slice(0, 30),
+      account_name: String(accountName).slice(0, 40),
+      balance: bal,
+      start_balance: start,
+      total_trades: total,
+      wins: w,
       updated_at: new Date().toISOString(),
     }, { onConflict: "user_id,account_name" });
   } catch {}

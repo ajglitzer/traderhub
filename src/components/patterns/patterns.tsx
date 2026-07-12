@@ -1,4 +1,5 @@
 "use client";
+import { boldOnly } from "@/lib/safe-markdown";
 import { useState, useRef, useEffect, useMemo } from "react";
 import { useAccountStore } from "@/store/accounts";
 import { Trade } from "@/types/trade";
@@ -139,13 +140,13 @@ function renderMd(md: string) {
       <div key={i} style={{display:"flex",gap:8,marginBottom:5,paddingLeft:4}}>
         <span style={{color:"#00e5ff",flexShrink:0,marginTop:2}}>▸</span>
         <span style={{fontSize:13,color:"#c9d1d9",lineHeight:1.65}}
-          dangerouslySetInnerHTML={{__html:line.slice(2).replace(/\*\*(.*?)\*\*/g,"<strong style='color:#f0f6fc'>$1</strong>")}}/>
+          dangerouslySetInnerHTML={{__html: boldOnly(line.slice(2))}}/>
       </div>
     );
     if (line.trim() === "") return <div key={i} style={{height:6}}/>;
     return (
       <p key={i} style={{fontSize:13,color:"#c9d1d9",lineHeight:1.7,marginBottom:4}}
-        dangerouslySetInnerHTML={{__html:line.replace(/\*\*(.*?)\*\*/g,"<strong style='color:#f0f6fc'>$1</strong>")}}/>
+        dangerouslySetInnerHTML={{__html: boldOnly(line)}}/>
     );
   });
 }
