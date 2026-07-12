@@ -139,17 +139,40 @@ export async function getUnreadCount(userId: string): Promise<number> {
   return count || 0;
 }
 
+
+// Returns set of user IDs the user is still allowed to see (friends, not blocked)
+async function getAllowedIds(userId: string): Promise<Set<string>> {
+  const [{ data: fr }, { data: bl }] = await Promise.all([
+    sb().from("friend_requests").select("from_id,to_id")
+      .or(`from_id.eq.${userId},to_id.eq.${userId}`)
+      .eq("status", "accepted"),
+    sb().from("blocks").select("blocker_id,blocked_id")
+      .or(`blocker_id.eq.${userId},blocked_id.eq.${userId}`),
+  ]);
+  const friends = new Set<string>();
+  (fr || []).forEach((r: any) => friends.add(r.from_id === userId ? r.to_id : r.from_id));
+  (bl || []).forEach((b: any) => {
+    friends.delete(b.blocked_id);
+    friends.delete(b.blocker_id);
+  });
+  return friends;
+}
+
 export async function getConversations(userId: string): Promise<{profile: Profile; lastMessage: Message; unread: number}[]> {
-  const { data } = await sb().from("messages")
-    .select("*, from_profile:profiles!messages_from_id_fkey(*)")
-    .or(`from_id.eq.${userId},to_id.eq.${userId}`)
-    .order("created_at", { ascending: false });
+  const [{ data }, allowed] = await Promise.all([
+    sb().from("messages")
+      .select("*, from_profile:profiles!messages_from_id_fkey(*)")
+      .or(`from_id.eq.${userId},to_id.eq.${userId}`)
+      .order("created_at", { ascending: false }),
+    getAllowedIds(userId),
+  ]);
   if (!data) return [];
   const seen = new Set<string>();
   const convos: {profile: Profile; lastMessage: Message; unread: number}[] = [];
   for (const msg of data as Message[]) {
     const otherId = msg.from_id === userId ? msg.to_id : msg.from_id;
     if (seen.has(otherId)) continue;
+    if (!allowed.has(otherId)) continue;   // not a friend anymore — hide
     seen.add(otherId);
     const { data: profile } = await sb().from("profiles").select("*").eq("id", otherId).single();
     if (!profile) continue;
@@ -166,11 +189,17 @@ export async function sendBattleRequest(challengerId: string, opponentId: string
 }
 
 export async function getBattles(userId: string): Promise<Battle[]> {
-  const { data } = await sb().from("battles")
-    .select("*, challenger_profile:profiles!battles_challenger_id_fkey(*), opponent_profile:profiles!battles_opponent_id_fkey(*)")
-    .or(`challenger_id.eq.${userId},opponent_id.eq.${userId}`)
-    .order("created_at", { ascending: false });
-  return (data || []) as Battle[];
+  const [{ data }, allowed] = await Promise.all([
+    sb().from("battles")
+      .select("*, challenger_profile:profiles!battles_challenger_id_fkey(*), opponent_profile:profiles!battles_opponent_id_fkey(*)")
+      .or(`challenger_id.eq.${userId},opponent_id.eq.${userId}`)
+      .order("created_at", { ascending: false }),
+    getAllowedIds(userId),
+  ]);
+  return ((data || []) as Battle[]).filter(b => {
+    const otherId = b.challenger_id === userId ? b.opponent_id : b.challenger_id;
+    return allowed.has(otherId);
+  });
 }
 
 export async function respondToBattle(battleId: string, accept: boolean): Promise<void> {
