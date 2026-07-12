@@ -1,8 +1,7 @@
 "use client";
 import { createContext, useContext, useState, useEffect, ReactNode } from "react";
 import { User } from "@supabase/supabase-js";
-import { loadFromCloud } from "@/store/accounts";
-import { useAccountStore } from "@/store/accounts";
+import { loadFromCloud, useAccountStore } from "@/store/accounts";
 
 interface AuthCtx {
   user: User | null;
@@ -38,7 +37,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         setLoading(false);
         if (sessionUser) {
           localStorage.setItem("th_current_user_id", sessionUser.id);
-          // Load cloud trades
+          // Re-hydrate store with this user's data
+          if (useAccountStore.persist?.rehydrate) {
+            useAccountStore.persist.rehydrate();
+          }
           loadFromCloud().then(trades => {
             if (!mounted || trades.length === 0) return;
             const store = useAccountStore.getState();
@@ -59,8 +61,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         setLoading(false);
         if (newUser) {
           localStorage.setItem("th_current_user_id", newUser.id);
-          // Load cloud trades on login
           if (_event === "SIGNED_IN") {
+            // Re-hydrate store with new user's localStorage data
+            if (useAccountStore.persist?.rehydrate) {
+              useAccountStore.persist.rehydrate();
+            }
+            // Then load cloud trades
             loadFromCloud().then(trades => {
               if (!mounted || trades.length === 0) return;
               const store = useAccountStore.getState();
@@ -70,6 +76,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           }
         } else {
           localStorage.removeItem("th_current_user_id");
+          // Clear in-memory store on logout so next user starts fresh
+          if (useAccountStore.persist?.rehydrate) {
+            setTimeout(()=>useAccountStore.persist.rehydrate(), 100);
+          }
         }
       });
 
