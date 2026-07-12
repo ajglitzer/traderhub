@@ -226,11 +226,13 @@ export default function SettingsPage() {
     for (let i = 0; i < localStorage.length; i++) {
       const key = localStorage.key(i);
       if (!key) continue;
-      // Only remove keys belonging to the current user
+      // Remove ALL trade/account keys for this user (check every key we've ever used)
       const isTradeKey =
         key.startsWith("traderhub") ||
         key.startsWith("tv-accounts-store") ||
-        key.startsWith("th_accounts_v2_");
+        key.startsWith("th_accounts_v2_") ||
+        key.startsWith("th_accounts_v2__") ||
+        key.startsWith("th_accts_v3__");
       if (!isTradeKey) continue;
       // If we have a user id, only kill their keys
       if (uid && !key.includes(uid)) continue;

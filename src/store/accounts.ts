@@ -165,18 +165,39 @@ export function loadUserData(userId: string) {
   const fresh = {
     accounts: [{ ...DEFAULT_ACCOUNT, createdAt: new Date().toISOString() }],
     activeAccountId: "default",
-    tradesByAccount: {} as Record<string, Trade[]>,
+    tradesByAccount: { default: [] } as Record<string, Trade[]>,
   };
   if (!userId) { useAccountStore.setState(fresh); return; }
   try {
-    const raw = localStorage.getItem(KEY_PREFIX + userId);
+    // Check every key we've ever used (across versions) so data isn't lost on version changes
+    const candidates = [
+      KEY_PREFIX + userId,                      // th_accounts_v2_{uid} — v137 primary
+      `th_accts_v3__${userId}`,                 // v150
+      `tv-accounts-store__${userId}`,           // v138-v149
+      `th_accounts_v2__${userId}`,              // double-underscore variant
+    ];
+    let raw: string | null = null;
+    let foundKey = KEY_PREFIX + userId;
+    for (const k of candidates) {
+      const v = localStorage.getItem(k);
+      if (v) { raw = v; foundKey = k; break; }
+    }
     if (!raw) { useAccountStore.setState(fresh); return; }
-    const d = JSON.parse(raw);
-    useAccountStore.setState({
+    const parsed = JSON.parse(raw);
+    // Support both plain {accounts,...} and Zustand {state:{accounts,...}} format
+    const d = parsed?.state ?? parsed;
+    const state = {
       accounts: Array.isArray(d.accounts) && d.accounts.length ? d.accounts : fresh.accounts,
       activeAccountId: d.activeAccountId || "default",
-      tradesByAccount: d.tradesByAccount || {},
-    });
+      tradesByAccount: d.tradesByAccount && Object.keys(d.tradesByAccount).length
+        ? d.tradesByAccount
+        : { default: [] },
+    };
+    useAccountStore.setState(state);
+    // Migrate to canonical key if found elsewhere
+    if (foundKey !== KEY_PREFIX + userId) {
+      localStorage.setItem(KEY_PREFIX + userId, JSON.stringify(state));
+    }
   } catch { useAccountStore.setState(fresh); }
 }
 
@@ -194,21 +215,23 @@ if (typeof window !== "undefined") {
   let syncTimer: ReturnType<typeof setTimeout> | null = null;
 
   useAccountStore.subscribe((state, prev) => {
-    const uid = localStorage.getItem("th_current_user_id");
-    if (!uid) return;
+    try {
+      const uid = localStorage.getItem("th_current_user_id");
+      if (!uid) return;
 
-    // Debounce localStorage write
-    if (saveTimer) clearTimeout(saveTimer);
-    saveTimer = setTimeout(() => saveUserData(uid), 400);
+      // Debounce localStorage write
+      if (saveTimer) clearTimeout(saveTimer);
+      saveTimer = setTimeout(() => saveUserData(uid), 300);
 
-    // Only sync to cloud when trades actually changed (not UI state)
-    if (state.tradesByAccount !== prev.tradesByAccount) {
-      if (syncTimer) clearTimeout(syncTimer);
-      syncTimer = setTimeout(() => {
-        const trades = state.tradesByAccount[state.activeAccountId] || [];
-        if (trades.length) syncToCloud(trades);
-      }, 2000);
-    }
+      // Only sync to cloud when trades actually changed
+      if (state.tradesByAccount !== prev?.tradesByAccount) {
+        if (syncTimer) clearTimeout(syncTimer);
+        syncTimer = setTimeout(() => {
+          const trades = state.tradesByAccount?.[state.activeAccountId] || [];
+          if (trades.length) syncToCloud(trades);
+        }, 2000);
+      }
+    } catch {}
   });
 
   // Flush pending save before the tab closes

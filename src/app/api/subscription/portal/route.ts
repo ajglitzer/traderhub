@@ -3,7 +3,11 @@ import Stripe from "stripe";
 import { createServerClient } from "@supabase/ssr";
 import { cookies } from "next/headers";
 
-const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, { apiVersion: "2026-06-24.dahlia" });
+function getStripe() {
+  const key = process.env.STRIPE_SECRET_KEY;
+  if (!key) throw new Error("Stripe not configured");
+  return new Stripe(key, { apiVersion: "2026-06-24.dahlia" });
+}
 
 export async function POST(req: NextRequest) {
   try {
@@ -27,7 +31,7 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "No subscription found" }, { status: 404 });
 
     const origin = req.headers.get("origin") || "https://traderhub-nine.vercel.app";
-    const session = await stripe.billingPortal.sessions.create({
+    const session = await getStripe().billingPortal.sessions.create({
       customer: sub.stripe_customer_id,
       return_url: origin,
     });
