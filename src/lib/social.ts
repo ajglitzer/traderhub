@@ -251,9 +251,9 @@ export async function upsertLeaderboardEntry(userId: string, username: string, a
 
 export async function unfriendUser(myId: string, friendId: string): Promise<void> {
   try {
-    await sb().from("friend_requests")
-      .delete()
-      .or(`and(from_id.eq.${myId},to_id.eq.${friendId}),and(from_id.eq.${friendId},to_id.eq.${myId})`);
+    // Delete both directions separately — .or() with nested and() is unreliable
+    await sb().from("friend_requests").delete().eq("from_id", myId).eq("to_id", friendId);
+    await sb().from("friend_requests").delete().eq("from_id", friendId).eq("to_id", myId);
   } catch {}
 }
 

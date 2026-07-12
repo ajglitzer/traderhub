@@ -1,4 +1,5 @@
 "use client";
+import React from "react";
 import { useState, useEffect, useRef, useCallback } from "react";
 import { useAuth } from "@/components/auth/auth-provider";
 import { createClient } from "@/lib/supabase";
@@ -235,6 +236,7 @@ export default function SocialPage({ myProfile }: { myProfile: Profile }) {
   const [searchQ, setSearchQ] = useState("");
   const [searchRes, setSearchRes] = useState<Profile[]>([]);
   const [activeBattle, setActiveBattle] = useState<Battle|null>(null);
+  const removedIds = React.useRef<Set<string>>(new Set());
   const [unread, setUnread] = useState(0);
   const msgEndRef = useRef<HTMLDivElement>(null);
   const supabase = createClient();
@@ -246,7 +248,8 @@ export default function SocialPage({ myProfile }: { myProfile: Profile }) {
       getConversations(user.id), getBattles(user.id),
       getUnreadCount(user.id),
     ]);
-    setFriends(f); setRequests(r); setConvos(c); setBattles(b); setUnread(u);
+    const rid = removedIds.current;
+    setFriends(f.filter((x:any)=>!rid.has(x.id))); setRequests(r); setConvos(c.filter((x:any)=>!rid.has(x.profile.id))); setBattles(b.filter((x:any)=>!rid.has(x.challenger_id)&&!rid.has(x.opponent_id))); setUnread(u);
     if(user) { const bids = await getBlockedUsers(user.id); setBlockedIds(bids); const bprofs = await Promise.all(bids.map(async(bid:string)=>{ try{ const r=await supabase.from("profiles").select("*").eq("id",bid).single(); return r.data; }catch{ return null; } })); setBlockedProfiles(bprofs.filter(Boolean) as Profile[]); }
     // Update sidebar badge when not on community tab
     const pendingR = r.filter((req:FriendRequest)=>req.to_id===user.id&&req.status==="pending");
@@ -314,7 +317,8 @@ export default function SocialPage({ myProfile }: { myProfile: Profile }) {
 
   const addFriend = async(toId:string)=>{ if(!user) return; await sendFriendRequest(user.id, toId); setSearchRes([]); setSearchQ(""); load(); };
   const handleUnfriend = async(fid:string)=>{ 
-    if(!user) return; 
+    if(!user) return;
+    removedIds.current.add(fid);
     await unfriendUser(user.id,fid);
     setConfirmAction(null);
     setChatWith(p=>p?.id===fid?null:p);
@@ -325,7 +329,8 @@ export default function SocialPage({ myProfile }: { myProfile: Profile }) {
   };
   const handleUnblock = async(fid:string)=>{ if(!user) return; await unblockUser(user.id,fid); load(); };
   const handleBlock = async(fid:string)=>{ 
-    if(!user) return; 
+    if(!user) return;
+    removedIds.current.add(fid);
     await blockUser(user.id,fid);
     setConfirmAction(null);
     setChatWith(p=>p?.id===fid?null:p);
