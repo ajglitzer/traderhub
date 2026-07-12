@@ -188,6 +188,12 @@ export function clearUserData() {
   });
 }
 
+// Bootstrap hydration — load whatever user is already signed in
+if (typeof window !== "undefined") {
+  const uid = (() => { try { return localStorage.getItem("th_current_user_id") || ""; } catch { return ""; } })();
+  if (uid) loadUserData(uid);
+}
+
 // Auto-save on state change (debounced — was firing on every keystroke)
 if (typeof window !== "undefined") {
   let saveTimer: ReturnType<typeof setTimeout> | null = null;

@@ -28,6 +28,8 @@ const ACHIP: Record<string,string> = {
 
 export function TradeTable() {
   const { filters, setFilters, resetFilters, page, setPage } = useStore();
+  const safeFilters = filters ?? {};
+  const safePage = page ?? 1;
   const [showAddTrade, setShowAddTrade] = useState(false);
   const { getActiveTrades, activeAccountId, deleteAccountTrade, updateAccountTrade } = useAccountStore();
   const trades = getActiveTrades();
@@ -38,9 +40,13 @@ export function TradeTable() {
   const [selectedTrade, setSelectedTrade] = useState<Trade|null>(null);
 
   const { trades:list, total, totalPages } = useMemo(() => {
-    const f = search ? {...filters, ticker:search} : filters;
-    return getFilteredTrades(trades, f, page, 50);
-  }, [trades, filters, page, search]);
+    try {
+      const f = search ? {...safeFilters, ticker:search} : safeFilters;
+      return getFilteredTrades(trades ?? [], f as any, safePage, 50);
+    } catch {
+      return { trades: [], total: 0, totalPages: 1 };
+    }
+  }, [trades, safeFilters, safePage, search]);
 
   const sort = (col: string) => {
     if (filters.sortBy === col) setFilters({ sortDir: filters.sortDir === "desc" ? "asc" : "desc" });
