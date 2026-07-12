@@ -178,9 +178,31 @@ export function clearUserData() {
   });
 }
 
-// Auto-save on every state change
+// Auto-save on state change (debounced — was firing on every keystroke)
 if (typeof window !== "undefined") {
-  useAccountStore.subscribe(() => {
+  let saveTimer: ReturnType<typeof setTimeout> | null = null;
+  let syncTimer: ReturnType<typeof setTimeout> | null = null;
+
+  useAccountStore.subscribe((state, prev) => {
+    const uid = localStorage.getItem("th_current_user_id");
+    if (!uid) return;
+
+    // Debounce localStorage write
+    if (saveTimer) clearTimeout(saveTimer);
+    saveTimer = setTimeout(() => saveUserData(uid), 400);
+
+    // Only sync to cloud when trades actually changed (not UI state)
+    if (state.tradesByAccount !== prev.tradesByAccount) {
+      if (syncTimer) clearTimeout(syncTimer);
+      syncTimer = setTimeout(() => {
+        const trades = state.tradesByAccount[state.activeAccountId] || [];
+        if (trades.length) syncToCloud(trades);
+      }, 2000);
+    }
+  });
+
+  // Flush pending save before the tab closes
+  window.addEventListener("beforeunload", () => {
     const uid = localStorage.getItem("th_current_user_id");
     if (uid) saveUserData(uid);
   });

@@ -13,7 +13,7 @@ function buildAnalysisPrompt(trades: Trade[]): string {
   const totalPnl = closed.reduce((a,t)=>a+t.netPnl!,0);
   const wins = closed.filter(t=>t.netPnl!>0);
   const losses = closed.filter(t=>t.netPnl!<0);
-  const wr = (wins.length/closed.length*100).toFixed(1);
+  const wr = closed.length ? (wins.length/closed.length*100).toFixed(1) : "0.0";
 
   // By hour of day
   const byHour: Record<number,{pnl:number;count:number}> = {};

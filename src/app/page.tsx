@@ -6,6 +6,7 @@ import SocialPage from "@/components/social/social";
 import { getMyProfile, Profile } from "@/lib/social";
 import { useEffect, useMemo, useState } from "react";
 import { useStore } from "@/store";
+import { invalidateSubscription } from "@/hooks/useSubscription";
 import { useAccountStore } from "@/store/accounts";
 import { calculateMetrics, buildEquityCurve } from "@/lib/calculations";
 import { EquityChart } from "@/components/charts/equity-chart";
@@ -303,6 +304,12 @@ function SocialPageWrapper({ userId }: { userId: string }) {
 export default function Page() {
   const { activeTab, init } = useStore();
   const { user, loading } = useAuth();
+  useEffect(() => {
+    if (typeof window !== "undefined" && window.location.search.includes("subscribed=1")) {
+      invalidateSubscription();
+      window.history.replaceState({}, "", window.location.pathname);
+    }
+  }, []);
   // Also check localStorage user (fallback when no Supabase)
   const [localUser, setLocalUser] = useState<{id:string;email:string}|null>(null);
   useEffect(() => {

@@ -195,25 +195,46 @@ async function getAllowedIds(userId: string): Promise<Set<string>> {
 export async function getConversations(userId: string): Promise<{profile: Profile; lastMessage: Message; unread: number}[]> {
   const [{ data }, allowed] = await Promise.all([
     sb().from("messages")
-      .select("*, from_profile:profiles!messages_from_id_fkey(*)")
+      .select("*")
       .or(`from_id.eq.${userId},to_id.eq.${userId}`)
       .order("created_at", { ascending: false }),
     getAllowedIds(userId),
   ]);
   if (!data) return [];
+
+  // Collect distinct counterparties (most recent message first) — no queries in loop
   const seen = new Set<string>();
-  const convos: {profile: Profile; lastMessage: Message; unread: number}[] = [];
+  const lastMsgByUser = new Map<string, Message>();
+  const unreadByUser = new Map<string, number>();
+
   for (const msg of data as Message[]) {
     const otherId = msg.from_id === userId ? msg.to_id : msg.from_id;
-    if (seen.has(otherId)) continue;
-    if (!allowed.has(otherId)) continue;   // not a friend anymore — hide
-    seen.add(otherId);
-    const { data: profile } = await sb().from("profiles").select("*").eq("id", otherId).single();
-    if (!profile) continue;
-    const { count } = await sb().from("messages").select("*",{count:"exact",head:true}).eq("to_id",userId).eq("from_id",otherId).eq("read",false);
-    convos.push({ profile, lastMessage: msg as Message, unread: count || 0 });
+    if (!allowed.has(otherId)) continue;
+    if (!seen.has(otherId)) {
+      seen.add(otherId);
+      lastMsgByUser.set(otherId, msg);
+    }
+    // Count unread in the same pass instead of a query per user
+    if (msg.to_id === userId && !msg.read) {
+      unreadByUser.set(otherId, (unreadByUser.get(otherId) || 0) + 1);
+    }
   }
-  return convos;
+
+  const ids = [...seen];
+  if (ids.length === 0) return [];
+
+  // ONE query for all profiles instead of one per conversation
+  const { data: profiles } = await sb().from("profiles").select("*").in("id", ids);
+  const profileMap = new Map((profiles || []).map((p: any) => [p.id, p]));
+
+  return ids
+    .map(id => {
+      const profile = profileMap.get(id);
+      const lastMessage = lastMsgByUser.get(id);
+      if (!profile || !lastMessage) return null;
+      return { profile: profile as Profile, lastMessage, unread: unreadByUser.get(id) || 0 };
+    })
+    .filter(Boolean) as {profile: Profile; lastMessage: Message; unread: number}[];
 }
 
 // -- Battles -------------------------------------------------------------------
