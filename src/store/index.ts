@@ -153,8 +153,7 @@ export const useStore = create<Store>()(
             } catch {}
           },
         },
-        skipHydration: true,
-        partialize:(s)=>({sidebarOpen:s.sidebarOpen,activeTab:s.activeTab,theme:s.theme,goals:s.goals,playbook:s.playbook,allTags:s.allTags,simShowLevels:s.simShowLevels,replayShowLevels:s.replayShowLevels,mobilePinnedIds:s.mobilePinnedIds}),
+          partialize:(s)=>({sidebarOpen:s.sidebarOpen,activeTab:s.activeTab,theme:s.theme,goals:s.goals,playbook:s.playbook,allTags:s.allTags,simShowLevels:s.simShowLevels,replayShowLevels:s.replayShowLevels,mobilePinnedIds:s.mobilePinnedIds}),
       }
     )
   )
@@ -174,11 +173,4 @@ export function getFilteredTrades(trades:Trade[], filters:Record<string,string>,
   const total=list.length;
   const start=(page-1)*limit;
   return {trades:list.slice(start,start+limit),total,totalPages:Math.ceil(total/limit)};
-}
-
-// Bootstrap hydration — without this the store stays un-hydrated when
-// Supabase auth is absent or slow, leaving `filters`/`page` undefined
-// and crashing pages that read them during render.
-if (typeof window !== "undefined") {
-  useStore.persist?.rehydrate?.();
 }

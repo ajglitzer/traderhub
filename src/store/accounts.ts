@@ -138,10 +138,30 @@ export const useAccountStore = create<AccountStore>()(
     }),
     {
       name: "tv-accounts-store",
-      // Storage is user-scoped via saveUserData/loadUserData in auth-provider.
-      // We disable auto-persist here and handle it manually to avoid the
-      // race where Zustand hydrates before we know who the user is.
-      skipHydration: true,
+      // User-scoped storage so trades never bleed across accounts.
+      // Hydration runs normally on mount; the auth provider calls
+      // loadUserData() on login to swap in the right user's data.
+      storage: {
+        getItem: (key: string) => {
+          try {
+            const uid = localStorage.getItem("th_current_user_id") || "";
+            const raw = localStorage.getItem(uid ? `${key}__${uid}` : key);
+            return raw ? JSON.parse(raw) : null;
+          } catch { return null; }
+        },
+        setItem: (key: string, value: unknown) => {
+          try {
+            const uid = localStorage.getItem("th_current_user_id") || "";
+            localStorage.setItem(uid ? `${key}__${uid}` : key, JSON.stringify(value));
+          } catch {}
+        },
+        removeItem: (key: string) => {
+          try {
+            const uid = localStorage.getItem("th_current_user_id") || "";
+            localStorage.removeItem(uid ? `${key}__${uid}` : key);
+          } catch {}
+        },
+      },
     }
   )
 );
@@ -186,12 +206,6 @@ export function clearUserData() {
     activeAccountId: "default",
     tradesByAccount: {},
   });
-}
-
-// Bootstrap hydration — load whatever user is already signed in
-if (typeof window !== "undefined") {
-  const uid = (() => { try { return localStorage.getItem("th_current_user_id") || ""; } catch { return ""; } })();
-  if (uid) loadUserData(uid);
 }
 
 // Auto-save on state change (debounced — was firing on every keystroke)

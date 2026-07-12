@@ -35,6 +35,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         const sessionUser = data?.session?.user ?? null;
         if (sessionUser) {
           localStorage.setItem("th_current_user_id", sessionUser.id);
+          useAccountStore.persist?.rehydrate?.();
           loadUserData(sessionUser.id);
           useStore.persist?.rehydrate?.();
           useStore.setState({ trades: loadTrades() });
@@ -63,6 +64,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           localStorage.setItem("th_current_user_id", newUser.id);
 
           if (_event === "SIGNED_IN") {
+            useAccountStore.persist?.rehydrate?.();
             loadUserData(newUser.id);
             useStore.persist?.rehydrate?.();
             useStore.setState({ trades: loadTrades() });
