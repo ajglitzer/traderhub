@@ -552,6 +552,7 @@ export default function SocialPage({ myProfile }: { myProfile: Profile }) {
               </div>
               <button onClick={shareLastTrade} title="Share your last trade" style={{height:28,padding:"0 10px",borderRadius:8,background:"rgba(0,229,255,0.08)",border:"1px solid rgba(0,229,255,0.15)",color:"#00e5ff",cursor:"pointer",fontSize:11,fontWeight:700}}>📊 Share Trade</button>
               <button onClick={()=>startBattle(chatWith.id,prompt("Symbol (NQ/ES/MGC)?","NQ")||"NQ")} style={{height:28,padding:"0 10px",borderRadius:8,background:"rgba(213,0,249,0.08)",border:"1px solid rgba(213,0,249,0.2)",color:"#d500f9",cursor:"pointer",fontSize:11,fontWeight:700}}>⚔️ Battle</button>
+              <button onClick={()=>setFriendActionTarget(chatWith)} style={{width:28,height:28,borderRadius:8,background:"rgba(255,255,255,0.05)",border:"1px solid rgba(255,255,255,0.08)",color:"#9ca3af",cursor:"pointer",fontSize:16,display:"flex",alignItems:"center",justifyContent:"center"}}>⋯</button>
               <button onClick={()=>setChatWith(null)} style={{width:28,height:28,borderRadius:8,background:"rgba(255,255,255,0.05)",border:"1px solid rgba(255,255,255,0.08)",color:"#4b5563",cursor:"pointer",fontSize:17,display:"flex",alignItems:"center",justifyContent:"center"}}>×</button>
             </div>
 
