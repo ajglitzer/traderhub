@@ -551,9 +551,9 @@ export default function SocialPage({ myProfile }: { myProfile: Profile }) {
                 <div style={{fontSize:13,fontWeight:800,color:"#f0f6fc"}}>@{chatWith.username}</div>
                 <div style={{fontSize:10,color:"#4b5563"}}>{chatWith.display_name}</div>
               </div>
-              <button onClick={shareLastTrade} title="Share your last trade" style={{height:28,padding:"0 10px",borderRadius:8,background:"rgba(0,229,255,0.08)",border:"1px solid rgba(0,229,255,0.15)",color:"#00e5ff",cursor:"pointer",fontSize:11,fontWeight:700}}>📊 Share Trade</button>
-              <button onClick={()=>startBattle(chatWith.id,prompt("Symbol (NQ/ES/MGC)?","NQ")||"NQ")} style={{height:28,padding:"0 10px",borderRadius:8,background:"rgba(213,0,249,0.08)",border:"1px solid rgba(213,0,249,0.2)",color:"#d500f9",cursor:"pointer",fontSize:11,fontWeight:700}}>⚔️ Battle</button>
-              <button onClick={()=>setFriendActionTarget(chatWith)} style={{width:28,height:28,borderRadius:8,background:"rgba(255,255,255,0.05)",border:"1px solid rgba(255,255,255,0.08)",color:"#9ca3af",cursor:"pointer",fontSize:16,display:"flex",alignItems:"center",justifyContent:"center"}}>⋯</button>
+              <button onClick={shareLastTrade} title="Share your last trade" style={{height:28,padding:"0 10px",borderRadius:8,background:"rgba(0,229,255,0.08)",border:"1px solid rgba(0,229,255,0.15)",color:"#00e5ff",cursor:"pointer",fontSize:11,fontWeight:700,display:isMob?"none":"flex"}}>📊 Share Trade</button>
+              <button onClick={()=>startBattle(chatWith.id,prompt("Symbol (NQ/ES/MGC)?","NQ")||"NQ")} style={{height:28,padding:"0 10px",borderRadius:8,background:"rgba(213,0,249,0.08)",border:"1px solid rgba(213,0,249,0.2)",color:"#d500f9",cursor:"pointer",fontSize:11,fontWeight:700,display:isMob?"none":"flex"}}>⚔️ Battle</button>
+              <button onClick={()=>setFriendActionTarget(chatWith)} title="More options" style={{width:32,height:32,borderRadius:8,background:"rgba(255,255,255,0.05)",border:"1px solid rgba(255,255,255,0.08)",color:"#9ca3af",cursor:"pointer",fontSize:18,display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0}}>⋯</button>
               <button onClick={()=>setChatWith(null)} style={{width:28,height:28,borderRadius:8,background:"rgba(255,255,255,0.05)",border:"1px solid rgba(255,255,255,0.08)",color:"#4b5563",cursor:"pointer",fontSize:17,display:"flex",alignItems:"center",justifyContent:"center"}}>×</button>
             </div>
 
@@ -619,42 +619,6 @@ export default function SocialPage({ myProfile }: { myProfile: Profile }) {
       </div>
     </div>
 
-    {friendActionTarget&&(
-      <div onClick={()=>setFriendActionTarget(null)} style={{position:"fixed",inset:0,zIndex:99999,background:"rgba(0,0,0,0.75)",backdropFilter:"blur(8px)",display:"flex",alignItems:"flex-end",justifyContent:"center"}}>
-        <div onClick={e=>e.stopPropagation()} style={{background:"#0e1117",border:"1px solid rgba(255,255,255,0.1)",borderRadius:"20px 20px 0 0",padding:"20px 20px 40px",width:"100%",maxWidth:500}}>
-          <div style={{width:36,height:4,borderRadius:2,background:"rgba(255,255,255,0.15)",margin:"0 auto 18px"}}/>
-          <div style={{display:"flex",alignItems:"center",gap:12,marginBottom:20}}>
-            <Avatar profile={friendActionTarget} size={40}/>
-            <div>
-              <div style={{fontSize:15,fontWeight:800,color:"#f0f6fc"}}>@{friendActionTarget.username}</div>
-              <div style={{fontSize:11,color:"#4b5563"}}>What would you like to do?</div>
-            </div>
-          </div>
-          <button onClick={()=>{const t=friendActionTarget;setFriendActionTarget(null);setConfirmAction({type:"unfriend",friend:t});}} style={{width:"100%",padding:"15px 18px",background:"rgba(249,115,22,0.08)",border:"1px solid rgba(249,115,22,0.2)",borderRadius:13,color:"#f97316",cursor:"pointer",fontSize:14,fontWeight:700,display:"flex",alignItems:"center",gap:12,marginBottom:10,textAlign:"left" as const}}>
-            <span style={{fontSize:22}}>👋</span>
-            <div><div>Unfriend</div><div style={{fontSize:11,fontWeight:400,opacity:0.7}}>Remove from friends list</div></div>
-          </button>
-          <button onClick={()=>{const t=friendActionTarget;setFriendActionTarget(null);setConfirmAction({type:"block",friend:t});}} style={{width:"100%",padding:"15px 18px",background:"rgba(255,23,68,0.08)",border:"1px solid rgba(255,23,68,0.2)",borderRadius:13,color:"#ff1744",cursor:"pointer",fontSize:14,fontWeight:700,display:"flex",alignItems:"center",gap:12,marginBottom:14,textAlign:"left" as const}}>
-            <span style={{fontSize:22}}>🚫</span>
-            <div><div>Block</div><div style={{fontSize:11,fontWeight:400,opacity:0.7}}>They won't be able to contact you</div></div>
-          </button>
-          <button onClick={()=>setFriendActionTarget(null)} style={{width:"100%",padding:"12px",background:"none",border:"1px solid rgba(255,255,255,0.07)",borderRadius:13,color:"#4b5563",cursor:"pointer",fontSize:13}}>Cancel</button>
-        </div>
-      </div>
-    )}
-    {confirmAction&&(
-      <div onClick={()=>setConfirmAction(null)} style={{position:"fixed",inset:0,zIndex:99999,background:"rgba(0,0,0,0.85)",backdropFilter:"blur(10px)",display:"flex",alignItems:"center",justifyContent:"center",padding:20}}>
-        <div onClick={e=>e.stopPropagation()} style={{background:"#0e1117",border:"1px solid rgba(255,255,255,0.1)",borderRadius:18,padding:32,width:"100%",maxWidth:320,textAlign:"center"}}>
-          <div style={{fontSize:40,marginBottom:12}}>{confirmAction.type==="block"?"🚫":"👋"}</div>
-          <div style={{fontSize:16,fontWeight:800,color:"#f0f6fc",marginBottom:8}}>{confirmAction.type==="block"?"Block":"Unfriend"} @{confirmAction.friend.username}?</div>
-          <div style={{fontSize:12,color:"#4b5563",marginBottom:24,lineHeight:1.6}}>{confirmAction.type==="block"?"They won't be able to message you.":"You'll be removed from each other's friends lists."}</div>
-          <div style={{display:"flex",gap:10}}>
-            <button onClick={()=>setConfirmAction(null)} style={{flex:1,padding:"12px",borderRadius:10,border:"1px solid rgba(255,255,255,0.1)",background:"rgba(255,255,255,0.04)",color:"#6b7280",cursor:"pointer",fontSize:13}}>Cancel</button>
-            <button onClick={()=>confirmAction.type==="block"?handleBlock(confirmAction.friend.id):handleUnfriend(confirmAction.friend.id)} style={{flex:1,padding:"12px",borderRadius:10,border:"none",background:confirmAction.type==="block"?"#ff1744":"#f97316",color:"#fff",cursor:"pointer",fontSize:13,fontWeight:700}}>{confirmAction.type==="block"?"Block":"Unfriend"}</button>
-          </div>
-        </div>
-      </div>
-    )}
 
     {/* Friend action bottom sheet */}
     {friendActionTarget&&(
