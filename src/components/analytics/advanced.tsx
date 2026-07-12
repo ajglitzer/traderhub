@@ -1,4 +1,10 @@
 "use client";
+
+// Safe number formatter — prevents the site-crashing undefined.toFixed() error
+function sf(n: unknown, d = 2): string {
+  const v = typeof n === "number" ? n : parseFloat(String(n ?? ""));
+  return Number.isFinite(v) ? v.toFixed(d) : "0";
+}
 import { useMemo } from "react";
 import { useAccountStore } from "@/store/accounts";
 import { calculateMetrics } from "@/lib/calculations";
@@ -188,7 +194,7 @@ export default function AdvancedAnalyticsPage() {
           ):(
             <div>
               <div style={{display:"flex",gap:20,marginBottom:14}}>
-                <div><div style={{fontSize:9,color:"#4b5563",textTransform:"uppercase" as const,letterSpacing:"0.08em",marginBottom:3}}>Avg Slippage</div><div style={{fontSize:18,fontWeight:800,fontFamily:"monospace",color:"#ffab00"}}>{M.avgSlippage.toFixed(4)} pts</div></div>
+                <div><div style={{fontSize:9,color:"#4b5563",textTransform:"uppercase" as const,letterSpacing:"0.08em",marginBottom:3}}>Avg Slippage</div><div style={{fontSize:18,fontWeight:800,fontFamily:"monospace",color:"#ffab00"}}>{sf(M.avgSlippage, 4)} pts</div></div>
                 <div><div style={{fontSize:9,color:"#4b5563",textTransform:"uppercase" as const,letterSpacing:"0.08em",marginBottom:3}}>Trades Tracked</div><div style={{fontSize:18,fontWeight:800,fontFamily:"monospace",color:"#c9d1d9"}}>{slippageData.length}</div></div>
                 <div><div style={{fontSize:9,color:"#4b5563",textTransform:"uppercase" as const,letterSpacing:"0.08em",marginBottom:3}}>Max Slippage</div><div style={{fontSize:18,fontWeight:800,fontFamily:"monospace",color:"#ff1744"}}>{slippageData.length?Math.max(...slippageData.map(d=>d.slippage)).toFixed(4):0} pts</div></div>
               </div>

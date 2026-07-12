@@ -1,4 +1,10 @@
 "use client";
+
+// Safe number formatter — prevents the site-crashing undefined.toFixed() error
+function sf(n: unknown, d = 2): string {
+  const v = typeof n === "number" ? n : parseFloat(String(n ?? ""));
+  return Number.isFinite(v) ? v.toFixed(d) : "0";
+}
 import { useAuth } from "@/components/auth/auth-provider";
 import { AuthPage } from "@/components/auth/auth-page";
 import { UsernameSetup, UsernameSetupLocal } from "@/components/auth/username-setup";

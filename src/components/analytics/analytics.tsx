@@ -1,4 +1,10 @@
 "use client";
+
+// Safe number formatter — prevents the site-crashing undefined.toFixed() error
+function sf(n: unknown, d = 2): string {
+  const v = typeof n === "number" ? n : parseFloat(String(n ?? ""));
+  return Number.isFinite(v) ? v.toFixed(d) : "0";
+}
 import { useMemo, useState } from "react";
 import { useAccountStore } from "@/store/accounts";
 import { calculateMetrics, buildEquityCurve, runMonteCarlo } from "@/lib/calculations";
