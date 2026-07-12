@@ -154,6 +154,14 @@ export const useStore = create<Store>()(
           },
         },
           partialize:(s)=>({sidebarOpen:s.sidebarOpen,activeTab:s.activeTab,theme:s.theme,goals:s.goals,playbook:s.playbook,allTags:s.allTags,simShowLevels:s.simShowLevels,replayShowLevels:s.replayShowLevels,mobilePinnedIds:s.mobilePinnedIds}),
+          // `trades` is NOT persisted (see partialize). Without this merge,
+          // rehydrate() would replace state with only the persisted keys and
+          // wipe `trades` to undefined — crashing every page that reads it.
+          merge: (persisted, current) => ({
+            ...current,
+            ...(persisted as object),
+            trades: current.trades ?? [],
+          }),
       }
     )
   )

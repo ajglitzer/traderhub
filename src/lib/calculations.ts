@@ -110,7 +110,9 @@ export function calculateTradePnl(trade: Partial<Trade>): {
 }
 
 export function calculateMetrics(trades: Trade[]): TradeMetrics {
-  const cl = trades.filter((t) => t.status === "CLOSED" && t.netPnl !== null);
+  // Guard: `trades` can be undefined mid-hydration — .filter() would throw
+  // before we ever reach the safe-default return below.
+  const cl = (Array.isArray(trades) ? trades : []).filter((t) => t && t.status === "CLOSED" && t.netPnl !== null);
   if (!cl.length) return {
     totalTrades:0,totalNetPnl:0,winRate:0,avgWin:0,avgLoss:0,
     profitFactor:0,sharpeRatio:0,expectancy:0,maxDrawdown:0,
@@ -175,8 +177,8 @@ export function calculateMetrics(trades: Trade[]): TradeMetrics {
 }
 
 export function buildEquityCurve(trades: Trade[]): EquityPoint[] {
-  const sorted = [...trades]
-    .filter((t) => t.status==="CLOSED" && t.netPnl!==null)
+  const sorted = [...(Array.isArray(trades) ? trades : [])]
+    .filter((t) => t && t.status==="CLOSED" && t.netPnl!==null)
     .sort((a,b) => new Date(a.exitTime||a.entryTime).getTime()-new Date(b.exitTime||b.entryTime).getTime());
   let eq=0, peak=0;
   return sorted.map((t) => {
