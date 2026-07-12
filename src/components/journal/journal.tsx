@@ -2,6 +2,7 @@
 import { getScoped, setScoped, scopedKey } from "@/lib/user-storage";
 import { useState, useEffect } from "react";
 import { useStore } from "@/store";
+import { useAccountStore } from "@/store/accounts";
 import { format } from "date-fns";
 
 interface JournalEntry {
@@ -27,7 +28,8 @@ export default function JournalPage() {
   const [mood, setMood] = useState("ok");
   const [view, setView] = useState<"write"|"history">("write");
 
-  const { trades } = useStore();
+  const { getActiveTrades } = useAccountStore();
+  const trades = getActiveTrades() ?? [];
 
   const mounted = typeof window !== "undefined";
   useEffect(() => {

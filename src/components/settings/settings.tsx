@@ -164,9 +164,9 @@ export default function SettingsPage() {
   const { user, signOut } = useAuth();
   const { isPro } = useSubscription();
   const [showUpgrade, setShowUpgrade] = useState<string|null>(null);
-  const { trades, setTrades, addTrades, theme, setTheme, simShowLevels, setSimShowLevels, replayShowLevels, setReplayShowLevels } = useStore();
+  const { setTrades, addTrades, theme, setTheme, simShowLevels, setSimShowLevels, replayShowLevels, setReplayShowLevels } = useStore();
   const { activeAccountId, getActiveTrades, setAccountTrades } = useAccountStore();
-  const allTrades = getActiveTrades().length > 0 ? getActiveTrades() : trades;
+  const allTrades = getActiveTrades() ?? [];
   const [toast, setToast] = useState<{msg:string;type:"ok"|"err"}|null>(null);
   const jsonInputRef = useRef<HTMLInputElement>(null);
 
@@ -179,12 +179,12 @@ export default function SettingsPage() {
     if(!isPro){ setShowUpgrade("Export CSV"); return; }
     // isPro confirmed
     exportToCSV(allTrades, `traderhub_${new Date().toISOString().slice(0,10)}.csv`);
-    showToast(`✓ Exported ${allTrades.length} trades as CSV`);
+    showToast(`✓ Exported ${allTrades.length} allTrades as CSV`);
   };
 
   const handleExportJSON = () => {
     exportToJSON(allTrades, `traderhub_backup_${new Date().toISOString().slice(0,10)}.json`);
-    showToast(`✓ Exported ${allTrades.length} trades as JSON backup`);
+    showToast(`✓ Exported ${allTrades.length} allTrades as JSON backup`);
   };
 
   const handleImportJSON = async (file: File) => {
@@ -194,7 +194,7 @@ export default function SettingsPage() {
       const existing = getActiveTrades();
       const merged = [...(imported as Trade[]), ...existing];
       setAccountTrades(activeAccountId, merged);
-      showToast(`✓ Restored ${imported.length} trades from backup`);
+      showToast(`✓ Restored ${imported.length} allTrades from backup`);
     } catch(e) {
       showToast(`Error: ${String(e)}`, "err");
     }
@@ -217,7 +217,7 @@ export default function SettingsPage() {
         const parsed = JSON.parse(uiStore);
         savedUIStore = JSON.stringify({
           ...parsed,
-          state: { ...parsed.state, trades: [] }
+          state: { ...parsed.state, allTrades: [] }
         });
       }
     } catch {}
@@ -308,7 +308,7 @@ export default function SettingsPage() {
       </Section>
 
       <Section title="Export Data">
-        <Row label="Export as CSV" desc={`Download all ${trades.length} trades as a spreadsheet (Excel-compatible)`}>
+        <Row label="Export as CSV" desc={`Download all ${allTrades.length} trades as a spreadsheet (Excel-compatible)`}>
           <ConfirmBtn label="Export CSV" confirmLabel="Click to confirm export" onConfirm={handleExportCSV} primary />
         </Row>
         <Row label="Export as JSON backup" desc="Full backup including all fields — can be restored later">
@@ -331,17 +331,17 @@ export default function SettingsPage() {
       </Section>
 
       <Section title="Danger Zone">
-        <Row label="Remove all closed trades" desc={`Delete ${trades.filter(t=>t.status==="CLOSED").length} closed trades, keep ${trades.filter(t=>t.status==="OPEN").length} open positions`}>
+        <Row label="Remove all closed allTrades" desc={`Delete ${allTrades.filter((t:any)=>t.status==="CLOSED").length} closed trades, keep ${allTrades.filter((t:any)=>t.status==="OPEN").length} open positions`}>
           <ConfirmBtn
-            label="Remove closed trades"
+            label="Remove closed allTrades"
             confirmLabel="Click again to confirm"
-            onConfirm={() => { setTrades(trades.filter(t=>t.status==="OPEN")); showToast(`✓ Removed closed trades`); }}
+            onConfirm={() => { setAccountTrades(activeAccountId, allTrades.filter((t:any)=>t.status==="OPEN")); showToast(`✓ Removed closed allTrades`); }}
             danger
           />
         </Row>
-        <Row label="Clear ALL trades" desc="Permanently delete all trades and data. Cannot be undone.">
+        <Row label="Clear ALL allTrades" desc="Permanently delete all allTrades and data. Cannot be undone.">
           <ConfirmBtn
-            label={`Clear all ${trades.length} trades`}
+            label={`Clear all ${allTrades.length} trades`}
             confirmLabel="Permanently delete everything?"
             onConfirm={() => { handleClearAll(); }}
             danger

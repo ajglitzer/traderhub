@@ -108,11 +108,12 @@ function getStoredUsername(): string | undefined {
 }
 
 function Dashboard() {
-  const { trades: storeTrades, setImportOpen } = useStore();
+  const { setImportOpen } = useStore();
   const { getActiveTrades } = useAccountStore();
-  const acctTrades = getActiveTrades();
-  // Use whichever store has more trades (migration safety)
-  const trades = acctTrades.length >= storeTrades.length ? acctTrades : storeTrades;
+  // Single source of truth for trades — the accounts store.
+  // Never fall back to the main store's stale `trades` field; that caused
+  // cleared trades to reappear whenever the main store had more entries.
+  const trades = getActiveTrades() ?? [];
   const closed = useMemo(() => trades.filter(t => t.status === "CLOSED" && t.netPnl !== null), [trades]);
   const M = useMemo(() => calculateMetrics(closed as Trade[]), [closed]);
   const equity = useMemo(() => buildEquityCurve(closed as Trade[]), [closed]);
