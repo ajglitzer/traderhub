@@ -37,10 +37,17 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         setLoading(false);
         if (sessionUser) {
           localStorage.setItem("th_current_user_id", sessionUser.id);
-          // Re-hydrate store with this user's data
-          if (useAccountStore.persist?.rehydrate) {
-            useAccountStore.persist.rehydrate();
-          }
+          // Load this user's scoped data
+          const scopedKey2 = `tv-accounts-store-\${sessionUser.id}`;
+          try {
+            const saved2 = localStorage.getItem(scopedKey2);
+            if (saved2) {
+              const parsed2 = JSON.parse(saved2);
+              if (parsed2?.state) useAccountStore.setState(parsed2.state);
+            } else {
+              useAccountStore.setState({ accounts:[{id:"default",name:"Main Account",startingBalance:10000,color:"#00e5ff",broker:"TraderHub",createdAt:new Date().toISOString()}], activeAccountId:"default", tradesByAccount:{} });
+            }
+          } catch {}
           loadFromCloud().then(trades => {
             if (!mounted || trades.length === 0) return;
             const store = useAccountStore.getState();
@@ -62,10 +69,18 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         if (newUser) {
           localStorage.setItem("th_current_user_id", newUser.id);
           if (_event === "SIGNED_IN") {
-            // Re-hydrate store with new user's localStorage data
-            if (useAccountStore.persist?.rehydrate) {
-              useAccountStore.persist.rehydrate();
-            }
+            // Directly load this user's data from localStorage
+            const scopedKey = `tv-accounts-store-\${newUser.id}`;
+            try {
+              const saved = localStorage.getItem(scopedKey);
+              if (saved) {
+                const parsed = JSON.parse(saved);
+                if (parsed?.state) useAccountStore.setState(parsed.state);
+              } else {
+                // New user — reset to clean defaults
+                useAccountStore.setState({ accounts:[{id:"default",name:"Main Account",startingBalance:10000,color:"#00e5ff",broker:"TraderHub",createdAt:new Date().toISOString()}], activeAccountId:"default", tradesByAccount:{} });
+              }
+            } catch {}
             // Then load cloud trades
             loadFromCloud().then(trades => {
               if (!mounted || trades.length === 0) return;
@@ -76,10 +91,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           }
         } else {
           localStorage.removeItem("th_current_user_id");
-          // Clear in-memory store on logout so next user starts fresh
-          if (useAccountStore.persist?.rehydrate) {
-            setTimeout(()=>useAccountStore.persist.rehydrate(), 100);
-          }
+          // Reset store on logout
+          useAccountStore.setState({ accounts:[{id:"default",name:"Main Account",startingBalance:10000,color:"#00e5ff",broker:"TraderHub",createdAt:new Date().toISOString()}], activeAccountId:"default", tradesByAccount:{} });
         }
       });
 
