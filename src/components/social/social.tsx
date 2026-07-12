@@ -313,9 +313,26 @@ export default function SocialPage({ myProfile }: { myProfile: Profile }) {
   };
 
   const addFriend = async(toId:string)=>{ if(!user) return; await sendFriendRequest(user.id, toId); setSearchRes([]); setSearchQ(""); load(); };
-  const handleUnfriend = async(fid:string)=>{ if(!user) return; await unfriendUser(user.id,fid); setConfirmAction(null); load(); };
+  const handleUnfriend = async(fid:string)=>{ 
+    if(!user) return; 
+    await unfriendUser(user.id,fid);
+    setConfirmAction(null);
+    // Clear chat and battle if it was with this person
+    if(chatWith?.id===fid) setChatWith(null);
+    if(activeBattle && (activeBattle as any).opponent_id===fid) setActiveBattle(null);
+    setConvos(prev=>prev.filter(c=>c.profile.id!==fid));
+    load(); 
+  };
   const handleUnblock = async(fid:string)=>{ if(!user) return; await unblockUser(user.id,fid); load(); };
-  const handleBlock = async(fid:string)=>{ if(!user) return; await blockUser(user.id,fid); setConfirmAction(null); load(); };
+  const handleBlock = async(fid:string)=>{ 
+    if(!user) return; 
+    await blockUser(user.id,fid);
+    setConfirmAction(null);
+    if(chatWith?.id===fid) setChatWith(null);
+    if(activeBattle && (activeBattle as any).opponent_id===fid) setActiveBattle(null);
+    setConvos(prev=>prev.filter(c=>c.profile.id!==fid));
+    load(); 
+  };
 
   const respondReq = async(id:string,status:"accepted"|"declined")=>{ await respondToFriendRequest(id,status); load(); };
 
@@ -368,17 +385,20 @@ export default function SocialPage({ myProfile }: { myProfile: Profile }) {
           <div style={{flex:1,overflowY:"auto"}}>
             {convos.length===0&&<div style={{padding:20,fontSize:12,color:"#374151",textAlign:"center"}}>No conversations yet.<br/>Add friends to start chatting.</div>}
             {convos.map(conv=>(
-              <div key={conv.profile.id} onClick={()=>openChat(conv.profile)} style={{
-                display:"flex",alignItems:"center",gap:10,padding:"10px 14px",cursor:"pointer",
+              <div key={conv.profile.id} style={{
+                display:"flex",alignItems:"center",gap:10,padding:"10px 14px",
                 background:chatWith?.id===conv.profile.id?"rgba(0,229,255,0.06)":"transparent",
                 borderBottom:"1px solid rgba(255,255,255,0.04)",
               }}>
-                <Avatar profile={conv.profile} size={34}/>
-                <div style={{flex:1,minWidth:0}}>
-                  <div style={{fontSize:12,fontWeight:700,color:"#f0f6fc"}}>@{conv.profile.username}</div>
-                  <div style={{fontSize:11,color:"#4b5563",overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{conv.lastMessage.content.slice(0,40)}</div>
+                <div onClick={()=>openChat(conv.profile)} style={{display:"flex",alignItems:"center",gap:10,flex:1,minWidth:0,cursor:"pointer"}}>
+                  <Avatar profile={conv.profile} size={34}/>
+                  <div style={{flex:1,minWidth:0}}>
+                    <div style={{fontSize:12,fontWeight:700,color:"#f0f6fc"}}>@{conv.profile.username}</div>
+                    <div style={{fontSize:11,color:"#4b5563",overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{conv.lastMessage.content.slice(0,40)}</div>
+                  </div>
                 </div>
                 {conv.unread>0&&<span style={{width:18,height:18,borderRadius:"50%",background:"#00e5ff",fontSize:10,fontWeight:800,color:"#000",display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0}}>{conv.unread}</span>}
+                <button onClick={e=>{e.stopPropagation();setFriendActionTarget(conv.profile);}} style={{width:28,height:28,borderRadius:7,background:"rgba(255,255,255,0.04)",border:"1px solid rgba(255,255,255,0.07)",color:"#6b7280",cursor:"pointer",fontSize:15,display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0}}>···</button>
               </div>
             ))}
           </div>
