@@ -217,7 +217,7 @@ function Dashboard() {
           ["Avg Hold",        fmtHold(M.avgHoldTime),  "#00e5ff",  "cyan"],
           ["Consec. Wins",    String(M.consecutiveWins ?? 0),"#00e676", "green"],
           ["Consec. Losses",  String(M.consecutiveLosses ?? 0),"#ff1744","red"],
-          ["Avg R",           ((M.avgRMultiple ?? 0)>=0?"+":"")+(M.avgRMultiple ?? 0).toFixed(2)+"R", (M.avgRMultiple ?? 0)>=0?"#00e676":"#ff1744", (M.avgRMultiple ?? 0)>=0?"green":"red"],
+          ["Avg R",           (()=>{ const r=Number.isFinite(M.avgRMultiple)?M.avgRMultiple:null; return r===null?"N/A":(r>=0?"+":"")+r.toFixed(2)+"R"; })(), Number.isFinite(M.avgRMultiple)&&M.avgRMultiple>=0?"#00e676":"#4b5563", Number.isFinite(M.avgRMultiple)&&M.avgRMultiple>=0?"green":undefined],
           ["Total Fees",      fmt$(M.totalFees),       "#4b5563",  undefined],
         ] as [string,string,string,string|undefined][]).map(([l,v,c,g]) => (
           <Panel key={l} p={14} glow={g as any} style={{ cursor:"default" }}>

@@ -177,16 +177,21 @@ export const useAccountStore = create<AccountStore>()(
 );
 
 // ── Manual per-user persistence ────────────────────────────────────────────────
-const KEY_PREFIX = "th_accounts_v2_";
+// Must match the persist name + __ separator so both systems read/write the same key.
+const KEY_PREFIX = "tv-accounts-store__";
 
 export function saveUserData(userId: string) {
   if (!userId) return;
   try {
     const s = useAccountStore.getState();
+    // Wrap in Zustand persist format {version:0,state:{...}} so rehydrate() can read it too.
     localStorage.setItem(KEY_PREFIX + userId, JSON.stringify({
-      accounts: s.accounts,
-      activeAccountId: s.activeAccountId,
-      tradesByAccount: s.tradesByAccount,
+      version: 0,
+      state: {
+        accounts: s.accounts,
+        activeAccountId: s.activeAccountId,
+        tradesByAccount: s.tradesByAccount,
+      },
     }));
   } catch {}
 }
@@ -201,7 +206,9 @@ export function loadUserData(userId: string) {
   try {
     const raw = localStorage.getItem(KEY_PREFIX + userId);
     if (!raw) { useAccountStore.setState(fresh); return; }
-    const d = JSON.parse(raw);
+    const parsed = JSON.parse(raw);
+    // Support both plain {accounts,...} and Zustand {state:{accounts,...}} format
+    const d = parsed?.state ?? parsed;
     useAccountStore.setState({
       accounts: Array.isArray(d.accounts) && d.accounts.length ? d.accounts : fresh.accounts,
       activeAccountId: d.activeAccountId || "default",
