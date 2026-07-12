@@ -318,7 +318,7 @@ export default function SocialPage({ myProfile }: { myProfile: Profile }) {
     await unfriendUser(user.id,fid);
     setConfirmAction(null);
     setChatWith(p=>p?.id===fid?null:p);
-    if(activeBattle && (activeBattle.challenger_id===fid||activeBattle.opponent_id===fid)) setActiveBattle(null);
+    setActiveBattle(prev=>prev&&(prev.challenger_id===fid||prev.opponent_id===fid)?null:prev);
     setFriends(prev=>prev.filter(f=>f.id!==fid));
     setConvos(prev=>prev.filter(cv=>cv.profile.id!==fid));
     setBattles(prev=>prev.filter(b=>b.challenger_id!==fid&&b.opponent_id!==fid));
@@ -329,7 +329,7 @@ export default function SocialPage({ myProfile }: { myProfile: Profile }) {
     await blockUser(user.id,fid);
     setConfirmAction(null);
     setChatWith(p=>p?.id===fid?null:p);
-    if(activeBattle && (activeBattle.challenger_id===fid||activeBattle.opponent_id===fid)) setActiveBattle(null);
+    setActiveBattle(prev=>prev&&(prev.challenger_id===fid||prev.opponent_id===fid)?null:prev);
     setFriends(prev=>prev.filter(f=>f.id!==fid));
     setConvos(prev=>prev.filter(cv=>cv.profile.id!==fid));
     setBattles(prev=>prev.filter(b=>b.challenger_id!==fid&&b.opponent_id!==fid));
