@@ -236,7 +236,14 @@ export default function SocialPage({ myProfile }: { myProfile: Profile }) {
   const [searchQ, setSearchQ] = useState("");
   const [searchRes, setSearchRes] = useState<Profile[]>([]);
   const [activeBattle, setActiveBattle] = useState<Battle|null>(null);
-  const removedIds = React.useRef<Set<string>>(new Set());
+  const removedIds = React.useRef<Set<string>>(new Set<string>());
+  React.useEffect(()=>{
+    try{ const saved=JSON.parse(localStorage.getItem("th_removed_friends")||"[]"); removedIds.current=new Set(saved); }catch{}
+  },[]);
+  const addRemovedId = (id:string)=>{
+    removedIds.current.add(id);
+    try{ localStorage.setItem("th_removed_friends", JSON.stringify([...removedIds.current])); }catch{}
+  };
   const [unread, setUnread] = useState(0);
   const msgEndRef = useRef<HTMLDivElement>(null);
   const supabase = createClient();
@@ -318,7 +325,7 @@ export default function SocialPage({ myProfile }: { myProfile: Profile }) {
   const addFriend = async(toId:string)=>{ if(!user) return; await sendFriendRequest(user.id, toId); setSearchRes([]); setSearchQ(""); load(); };
   const handleUnfriend = async(fid:string)=>{ 
     if(!user) return;
-    removedIds.current.add(fid);
+    addRemovedId(fid);
     await unfriendUser(user.id,fid);
     setConfirmAction(null);
     setChatWith(p=>p?.id===fid?null:p);
@@ -330,7 +337,7 @@ export default function SocialPage({ myProfile }: { myProfile: Profile }) {
   const handleUnblock = async(fid:string)=>{ if(!user) return; await unblockUser(user.id,fid); load(); };
   const handleBlock = async(fid:string)=>{ 
     if(!user) return;
-    removedIds.current.add(fid);
+    addRemovedId(fid);
     await blockUser(user.id,fid);
     setConfirmAction(null);
     setChatWith(p=>p?.id===fid?null:p);

@@ -251,9 +251,12 @@ export async function upsertLeaderboardEntry(userId: string, username: string, a
 
 export async function unfriendUser(myId: string, friendId: string): Promise<void> {
   try {
-    // Delete both directions separately — .or() with nested and() is unreliable
-    await sb().from("friend_requests").delete().eq("from_id", myId).eq("to_id", friendId);
-    await sb().from("friend_requests").delete().eq("from_id", friendId).eq("to_id", myId);
+    // Use server API with service role to guarantee delete bypasses RLS
+    await fetch("/api/social/unfriend", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ friendId }),
+    });
   } catch {}
 }
 
