@@ -128,51 +128,62 @@ export const useAccountStore = create<AccountStore>()(
     }),
     {
       name: "tv-accounts-store",
-      // Use a storage key scoped to the current user so trades don't bleed across accounts
-      storage: {
-        getItem: (key: string) => {
-          try {
-            // Try user-scoped key first
-            let userId = "";
-            try {
-              const u = localStorage.getItem("th_current_user_id");
-              if (u) userId = u;
-              else {
-                // Try Supabase session
-                for (let i = 0; i < localStorage.length; i++) {
-                  const k = localStorage.key(i);
-                  if (k && k.includes("auth-token")) {
-                    const v = localStorage.getItem(k);
-                    if (v) { const j = JSON.parse(v); userId = j?.user?.id || ""; break; }
-                  }
-                }
-              }
-            } catch {}
-            const scopedKey = userId ? `${key}-${userId}` : key;
-            const val = userId ? localStorage.getItem(scopedKey) : localStorage.getItem(key);
-            return val ? JSON.parse(val) : null;
-          } catch { return null; }
-        },
-        setItem: (key: string, value: unknown) => {
-          try {
-            let userId = "";
-            try { userId = localStorage.getItem("th_current_user_id") || ""; } catch {}
-            const scopedKey = userId ? `${key}-${userId}` : key;
-            localStorage.setItem(scopedKey, JSON.stringify(value));
-          } catch {}
-        },
-        removeItem: (key: string) => {
-          try {
-            let userId = "";
-            try { userId = localStorage.getItem("th_current_user_id") || ""; } catch {}
-            const scopedKey = userId ? `${key}-${userId}` : key;
-            localStorage.removeItem(scopedKey);
-            localStorage.removeItem(key);
-          } catch {}
-        },
-      },
+      // Storage is user-scoped via saveUserData/loadUserData in auth-provider.
+      // We disable auto-persist here and handle it manually to avoid the
+      // race where Zustand hydrates before we know who the user is.
+      skipHydration: true,
     }
   )
 );
+
+// ── Manual per-user persistence ────────────────────────────────────────────────
+const KEY_PREFIX = "th_accounts_v2_";
+
+export function saveUserData(userId: string) {
+  if (!userId) return;
+  try {
+    const s = useAccountStore.getState();
+    localStorage.setItem(KEY_PREFIX + userId, JSON.stringify({
+      accounts: s.accounts,
+      activeAccountId: s.activeAccountId,
+      tradesByAccount: s.tradesByAccount,
+    }));
+  } catch {}
+}
+
+export function loadUserData(userId: string) {
+  const fresh = {
+    accounts: [{ ...DEFAULT_ACCOUNT, createdAt: new Date().toISOString() }],
+    activeAccountId: "default",
+    tradesByAccount: {} as Record<string, Trade[]>,
+  };
+  if (!userId) { useAccountStore.setState(fresh); return; }
+  try {
+    const raw = localStorage.getItem(KEY_PREFIX + userId);
+    if (!raw) { useAccountStore.setState(fresh); return; }
+    const d = JSON.parse(raw);
+    useAccountStore.setState({
+      accounts: Array.isArray(d.accounts) && d.accounts.length ? d.accounts : fresh.accounts,
+      activeAccountId: d.activeAccountId || "default",
+      tradesByAccount: d.tradesByAccount || {},
+    });
+  } catch { useAccountStore.setState(fresh); }
+}
+
+export function clearUserData() {
+  useAccountStore.setState({
+    accounts: [{ ...DEFAULT_ACCOUNT, createdAt: new Date().toISOString() }],
+    activeAccountId: "default",
+    tradesByAccount: {},
+  });
+}
+
+// Auto-save on every state change
+if (typeof window !== "undefined") {
+  useAccountStore.subscribe(() => {
+    const uid = localStorage.getItem("th_current_user_id");
+    if (uid) saveUserData(uid);
+  });
+}
 
 export { COLORS as ACCOUNT_COLORS };
