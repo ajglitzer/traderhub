@@ -4,7 +4,13 @@ import { useAccountStore } from "@/store/accounts";
 import { useStore } from "@/store";
 
 export function TradeAlerts() {
-  const { goals } = useStore();
+  const { goals: rawGoals } = useStore();
+  const goals = {
+    ...(rawGoals ?? {}),
+    dailyProfitTarget: rawGoals?.dailyProfitTarget ?? 500,
+    dailyMaxLoss:      rawGoals?.dailyMaxLoss      ?? 250,
+    weeklyProfitTarget:rawGoals?.weeklyProfitTarget?? 2000,
+  };
   const { getActiveTrades } = useAccountStore();
   const trades = getActiveTrades();
   const firedRef = useRef<Set<string>>(new Set());
