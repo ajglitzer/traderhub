@@ -208,33 +208,41 @@ export function clearUserData() {
   });
 }
 
-// Auto-save on state change (debounced — was firing on every keystroke)
+// Auto-save on state change (debounced).
+// NOTE: zustand's plain subscribe() passes ONE arg — a (state, prev) signature
+// leaves prev undefined and throws at module load, taking down the whole app.
 if (typeof window !== "undefined") {
   let saveTimer: ReturnType<typeof setTimeout> | null = null;
   let syncTimer: ReturnType<typeof setTimeout> | null = null;
+  let lastTrades: unknown = undefined;
 
-  useAccountStore.subscribe((state, prev) => {
-    const uid = localStorage.getItem("th_current_user_id");
-    if (!uid) return;
+  useAccountStore.subscribe((state) => {
+    try {
+      const uid = localStorage.getItem("th_current_user_id");
+      if (!uid || !state) return;
 
-    // Debounce localStorage write
-    if (saveTimer) clearTimeout(saveTimer);
-    saveTimer = setTimeout(() => saveUserData(uid), 400);
+      // Debounced localStorage write
+      if (saveTimer) clearTimeout(saveTimer);
+      saveTimer = setTimeout(() => saveUserData(uid), 400);
 
-    // Only sync to cloud when trades actually changed (not UI state)
-    if (state.tradesByAccount !== prev.tradesByAccount) {
-      if (syncTimer) clearTimeout(syncTimer);
-      syncTimer = setTimeout(() => {
-        const trades = state.tradesByAccount[state.activeAccountId] || [];
-        if (trades.length) syncToCloud(trades);
-      }, 2000);
-    }
+      // Only sync to cloud when trades actually changed (not UI state)
+      const trades = state.tradesByAccount;
+      if (trades !== lastTrades) {
+        lastTrades = trades;
+        if (syncTimer) clearTimeout(syncTimer);
+        syncTimer = setTimeout(() => {
+          const list = state.tradesByAccount?.[state.activeAccountId] || [];
+          if (list.length) syncToCloud(list);
+        }, 2000);
+      }
+    } catch {}
   });
 
-  // Flush pending save before the tab closes
   window.addEventListener("beforeunload", () => {
-    const uid = localStorage.getItem("th_current_user_id");
-    if (uid) saveUserData(uid);
+    try {
+      const uid = localStorage.getItem("th_current_user_id");
+      if (uid) saveUserData(uid);
+    } catch {}
   });
 }
 
