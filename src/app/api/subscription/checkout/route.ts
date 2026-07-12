@@ -3,13 +3,7 @@ import Stripe from "stripe";
 import { createServerClient } from "@supabase/ssr";
 import { cookies } from "next/headers";
 
-// Lazily construct — instantiating at module scope crashes the build
-// when STRIPE_SECRET_KEY is absent from the build environment.
-function getStripe() {
-  const key = process.env.STRIPE_SECRET_KEY;
-  if (!key) throw new Error("Stripe is not configured");
-  return new Stripe(key, { apiVersion: "2026-06-24.dahlia" });
-}
+const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, { apiVersion: "2026-06-24.dahlia" });
 
 export async function POST(req: NextRequest) {
   try {
@@ -38,7 +32,7 @@ export async function POST(req: NextRequest) {
     customerId = sub?.stripe_customer_id;
 
     if (!customerId) {
-      const customer = await getStripe().customers.create({
+      const customer = await stripe.customers.create({
         email: user.email,
         metadata: { supabase_user_id: user.id },
       });
@@ -46,7 +40,7 @@ export async function POST(req: NextRequest) {
     }
 
     const origin = req.headers.get("origin") || "https://traderhub-nine.vercel.app";
-    const session = await getStripe().checkout.sessions.create({
+    const session = await stripe.checkout.sessions.create({
       customer: customerId,
       payment_method_types: ["card"],
       mode: "subscription",

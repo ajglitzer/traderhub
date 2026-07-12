@@ -1,10 +1,4 @@
 "use client";
-
-// Safe number formatter — prevents the site-crashing undefined.toFixed() error
-function sf(n: unknown, d = 2): string {
-  const v = typeof n === "number" ? n : parseFloat(String(n ?? ""));
-  return Number.isFinite(v) ? v.toFixed(d) : "0";
-}
 import { PricingModal } from "@/components/subscription/pro-gate";
 import { useSubscription } from "@/hooks/useSubscription";
 import { useState, useMemo } from "react";
@@ -34,8 +28,6 @@ const ACHIP: Record<string,string> = {
 
 export function TradeTable() {
   const { filters, setFilters, resetFilters, page, setPage } = useStore();
-  const safeFilters = filters ?? {};
-  const safePage = page ?? 1;
   const [showAddTrade, setShowAddTrade] = useState(false);
   const { getActiveTrades, activeAccountId, deleteAccountTrade, updateAccountTrade } = useAccountStore();
   const trades = getActiveTrades();
@@ -46,13 +38,9 @@ export function TradeTable() {
   const [selectedTrade, setSelectedTrade] = useState<Trade|null>(null);
 
   const { trades:list, total, totalPages } = useMemo(() => {
-    try {
-      const f = search ? {...safeFilters, ticker:search} : safeFilters;
-      return getFilteredTrades(trades ?? [], f as any, safePage, 50);
-    } catch {
-      return { trades: [], total: 0, totalPages: 1 };
-    }
-  }, [trades, safeFilters, safePage, search]);
+    const f = search ? {...filters, ticker:search} : filters;
+    return getFilteredTrades(trades, f, page, 50);
+  }, [trades, filters, page, search]);
 
   const sort = (col: string) => {
     if (filters.sortBy === col) setFilters({ sortDir: filters.sortDir === "desc" ? "asc" : "desc" });
@@ -173,7 +161,7 @@ export function TradeTable() {
                         <span style={{ fontSize:10, fontWeight:700, color: t.side==="LONG"?"#00e676":"#ff1744" }}>{t.side}</span>
                       </div>
                     </td>
-                    <td style={{ padding:"8px 12px", textAlign:"right", fontFamily:"monospace", fontSize:12, color:"#c9d1d9" }}>{sf(t.entryPrice, 4)}</td>
+                    <td style={{ padding:"8px 12px", textAlign:"right", fontFamily:"monospace", fontSize:12, color:"#c9d1d9" }}>{t.entryPrice.toFixed(4)}</td>
                     <td style={{ padding:"8px 12px", textAlign:"right", fontFamily:"monospace", fontSize:12, color:"#6b7280" }}>{t.exitPrice?.toFixed(4) ?? <span style={{color:"#1f2937"}}>—</span>}</td>
                     <td style={{ padding:"8px 12px", textAlign:"right", fontSize:12, color:"#6b7280" }}>{t.quantity.toLocaleString()}</td>
                     <td style={{ padding:"8px 12px", textAlign:"right", fontFamily:"monospace", fontWeight:800, fontSize:12,
@@ -183,7 +171,7 @@ export function TradeTable() {
                     </td>
                     <td style={{ padding:"8px 12px", textAlign:"right", fontFamily:"monospace", fontSize:11,
                       color:(t.rMultiple??0)>=0?"#00e676":"#ff1744" }}>
-                      {t.rMultiple !== null ? sf(t.rMultiple, 2)+"R" : "—"}
+                      {t.rMultiple !== null ? t.rMultiple.toFixed(2)+"R" : "—"}
                     </td>
                     <td style={{ padding:"8px 12px", textAlign:"right", fontSize:11, color:"#4b5563", fontFamily:"monospace" }}>{fmtHold(t.holdTimeSeconds)}</td>
                     {/* -- CHART BUTTON -- */}

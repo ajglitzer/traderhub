@@ -7,13 +7,7 @@ import { fmt$ } from "@/lib/utils";
 interface Props { trades: Trade[]; }
 
 export function GoalsWidget({ trades }: Props) {
-  const { goals: rawGoals, setGoals } = useStore();
-  const goals = {
-    ...(rawGoals ?? {}),
-    dailyProfitTarget: rawGoals?.dailyProfitTarget ?? 500,
-    dailyMaxLoss:      rawGoals?.dailyMaxLoss      ?? 250,
-    weeklyProfitTarget:rawGoals?.weeklyProfitTarget?? 2000,
-  };
+  const { goals, setGoals } = useStore();
   const [editing, setEditing] = useState(false);
   const [form, setForm] = useState(goals);
 
@@ -77,7 +71,7 @@ export function GoalsWidget({ trades }: Props) {
         {/* Max loss gauge */}
         <div>
           <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 5 }}>
-            <span style={{ fontSize: 11, color: "#6b7280" }}>Max loss used {(Number.isFinite(dayLossPct) ? dayLossPct * 100 : 0).toFixed(0)}%</span>
+            <span style={{ fontSize: 11, color: "#6b7280" }}>Max loss used {(dayLossPct * 100).toFixed(0)}%</span>
             <span style={{ fontSize: 11, color: "#3d4551" }}>Limit {fmt$(goals.dailyMaxLoss)}</span>
           </div>
           <Bar value={dayLossPct} color={dayLossPct > 0.75 ? "#ff1744" : "#ffab00"} />

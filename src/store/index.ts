@@ -153,26 +153,8 @@ export const useStore = create<Store>()(
             } catch {}
           },
         },
-          partialize:(s)=>({sidebarOpen:s.sidebarOpen,activeTab:s.activeTab,theme:s.theme,goals:s.goals,playbook:s.playbook,allTags:s.allTags,simShowLevels:s.simShowLevels,replayShowLevels:s.replayShowLevels,mobilePinnedIds:s.mobilePinnedIds}),
-          // `trades` is NOT persisted (see partialize), and an older persisted
-          // blob may be missing newer keys. Without this merge, rehydrate()
-          // replaces state with only what's in storage — leaving `goals`,
-          // `trades`, etc. undefined and crashing every page that reads them.
-          merge: (persisted, current) => {
-            const p = (persisted ?? {}) as Partial<typeof current>;
-            return {
-              ...current,
-              ...p,
-              // Never let a partial/legacy blob null these out
-              trades:   Array.isArray(p.trades)   ? p.trades   : (current.trades   ?? []),
-              goals:    { ...current.goals, ...(p.goals ?? {}) },
-              playbook: Array.isArray(p.playbook) ? p.playbook : (current.playbook ?? []),
-              allTags:  Array.isArray(p.allTags)  ? p.allTags  : (current.allTags  ?? []),
-              mobilePinnedIds: Array.isArray(p.mobilePinnedIds) && p.mobilePinnedIds.length
-                ? p.mobilePinnedIds
-                : (current.mobilePinnedIds ?? ["dashboard","trades","analytics","social"]),
-            };
-          },
+        skipHydration: true,
+        partialize:(s)=>({sidebarOpen:s.sidebarOpen,activeTab:s.activeTab,theme:s.theme,goals:s.goals,playbook:s.playbook,allTags:s.allTags,simShowLevels:s.simShowLevels,replayShowLevels:s.replayShowLevels,mobilePinnedIds:s.mobilePinnedIds}),
       }
     )
   )

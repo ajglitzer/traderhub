@@ -1,10 +1,4 @@
 "use client";
-
-// Safe number formatter — prevents the site-crashing undefined.toFixed() error
-function sf(n: unknown, d = 2): string {
-  const v = typeof n === "number" ? n : parseFloat(String(n ?? ""));
-  return Number.isFinite(v) ? v.toFixed(d) : "0";
-}
 import { useEffect, useRef, useState } from "react";
 import { Trade } from "@/types/trade";
 import { createPortal } from "react-dom";
@@ -182,8 +176,8 @@ export function TradeCardModal({ trade, username, onClose }: Props) {
       {/* Stats row */}
       <div style={{ display:"grid", gridTemplateColumns:"repeat(3,1fr)", gap:8, marginBottom:16 }}>
         {[
-          ["Entry", trade.entryPrice ? `$${sf(trade.entryPrice, 2)}` : "—"],
-          ["Exit",  trade.exitPrice  ? `$${sf(trade.exitPrice, 2)}`  : "—"],
+          ["Entry", trade.entryPrice ? `$${trade.entryPrice.toFixed(2)}` : "—"],
+          ["Exit",  trade.exitPrice  ? `$${trade.exitPrice.toFixed(2)}`  : "—"],
           ["Hold",  trade.holdTimeSeconds ? (trade.holdTimeSeconds < 3600 ? `${Math.round(trade.holdTimeSeconds/60)}m` : `${Math.round(trade.holdTimeSeconds/3600)}h`) : "—"],
         ].map(([l, v]) => (
           <div key={l} style={{ background:"rgba(255,255,255,0.03)", borderRadius:10, padding:"8px 12px", textAlign:"center" as const }}>

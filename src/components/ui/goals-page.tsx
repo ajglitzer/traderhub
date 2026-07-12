@@ -4,15 +4,9 @@ import { useStore } from "@/store";
 import { useAccountStore } from "@/store/accounts";
 
 export default function GoalsPage() {
-  const { goals: rawGoals, setGoals } = useStore();
-  const goals = {
-    ...(rawGoals ?? {}),
-    dailyProfitTarget: rawGoals?.dailyProfitTarget ?? 500,
-    dailyMaxLoss:      rawGoals?.dailyMaxLoss      ?? 250,
-    weeklyProfitTarget:rawGoals?.weeklyProfitTarget?? 2000,
-  };
+  const { goals, setGoals } = useStore();
   const { getActiveTrades } = useAccountStore();
-  const trades = getActiveTrades() ?? [];
+  const trades = getActiveTrades();
   const [editing, setEditing] = useState(false);
   const [form, setForm] = useState(goals);
 
@@ -29,11 +23,10 @@ export default function GoalsPage() {
 
   const save = () => { setGoals(form); setEditing(false); };
 
-  const num = (v: any, d = 0) => (typeof v === "number" && Number.isFinite(v) ? v : d);
   const goals_data = [
-    { label: "Daily Profit Target", current: num(todayPnl), target: num(goals.dailyProfitTarget, 500), positive: true, prefix: "$" },
-    { label: "Daily Max Loss", current: Math.abs(num(todayLoss)), target: num(goals.dailyMaxLoss, 250), positive: false, prefix: "$", inverse: true },
-    { label: "Weekly Profit Target", current: num(weekPnl), target: num(goals.weeklyProfitTarget, 2000), positive: true, prefix: "$" },
+    { label: "Daily Profit Target", current: todayPnl, target: goals.dailyProfitTarget, positive: true, prefix: "$" },
+    { label: "Daily Max Loss", current: Math.abs(todayLoss), target: goals.dailyMaxLoss, positive: false, prefix: "$", inverse: true },
+    { label: "Weekly Profit Target", current: weekPnl, target: goals.weeklyProfitTarget, positive: true, prefix: "$" },
   ];
 
   return (

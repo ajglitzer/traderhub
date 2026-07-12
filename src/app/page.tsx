@@ -1,10 +1,4 @@
 "use client";
-
-// Safe number formatter — prevents the site-crashing undefined.toFixed() error
-function sf(n: unknown, d = 2): string {
-  const v = typeof n === "number" ? n : parseFloat(String(n ?? ""));
-  return Number.isFinite(v) ? v.toFixed(d) : "0";
-}
 import { useAuth } from "@/components/auth/auth-provider";
 import { AuthPage } from "@/components/auth/auth-page";
 import { UsernameSetup, UsernameSetupLocal } from "@/components/auth/username-setup";
@@ -116,15 +110,10 @@ function getStoredUsername(): string | undefined {
 function Dashboard() {
   const { trades: storeTrades, setImportOpen } = useStore();
   const { getActiveTrades } = useAccountStore();
-  // Every one of these can be undefined mid-hydration — normalize to arrays
-  // before touching .length / .filter, otherwise the whole page throws.
-  const acctTrades = getActiveTrades() ?? [];
-  const safeStore  = Array.isArray(storeTrades) ? storeTrades : [];
-  const trades = acctTrades.length >= safeStore.length ? acctTrades : safeStore;
-  const closed = useMemo(
-    () => (Array.isArray(trades) ? trades : []).filter(t => t && t.status === "CLOSED" && t.netPnl !== null),
-    [trades]
-  );
+  const acctTrades = getActiveTrades();
+  // Use whichever store has more trades (migration safety)
+  const trades = acctTrades.length >= storeTrades.length ? acctTrades : storeTrades;
+  const closed = useMemo(() => trades.filter(t => t.status === "CLOSED" && t.netPnl !== null), [trades]);
   const M = useMemo(() => calculateMetrics(closed as Trade[]), [closed]);
   const equity = useMemo(() => buildEquityCurve(closed as Trade[]), [closed]);
   const isPos = M.totalNetPnl >= 0;
@@ -215,9 +204,9 @@ function Dashboard() {
           ["Largest Win",     fmt$(M.largestWin),      "#00e676",  "green"],
           ["Largest Loss",    fmt$(M.largestLoss),     "#ff1744",  "red"],
           ["Avg Hold",        fmtHold(M.avgHoldTime),  "#00e5ff",  "cyan"],
-          ["Consec. Wins",    String(M.consecutiveWins ?? 0),"#00e676", "green"],
-          ["Consec. Losses",  String(M.consecutiveLosses ?? 0),"#ff1744","red"],
-          ["Avg R",           (()=>{ const r=Number.isFinite(M.avgRMultiple)?M.avgRMultiple:null; return r===null?"N/A":(r>=0?"+":"")+r.toFixed(2)+"R"; })(), Number.isFinite(M.avgRMultiple)&&M.avgRMultiple>=0?"#00e676":"#4b5563", Number.isFinite(M.avgRMultiple)&&M.avgRMultiple>=0?"green":undefined],
+          ["Consec. Wins",    String(M.consecutiveWins),"#00e676", "green"],
+          ["Consec. Losses",  String(M.consecutiveLosses),"#ff1744","red"],
+          ["Avg R",           (M.avgRMultiple>=0?"+":"")+M.avgRMultiple.toFixed(2)+"R", M.avgRMultiple>=0?"#00e676":"#ff1744", M.avgRMultiple>=0?"green":"red"],
           ["Total Fees",      fmt$(M.totalFees),       "#4b5563",  undefined],
         ] as [string,string,string,string|undefined][]).map(([l,v,c,g]) => (
           <Panel key={l} p={14} glow={g as any} style={{ cursor:"default" }}>
