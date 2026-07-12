@@ -317,21 +317,22 @@ export default function SocialPage({ myProfile }: { myProfile: Profile }) {
     if(!user) return; 
     await unfriendUser(user.id,fid);
     setConfirmAction(null);
-    // Clear chat and battle if it was with this person
-    if(chatWith?.id===fid) setChatWith(null);
+    setChatWith(p=>p?.id===fid?null:p);
     if(activeBattle && (activeBattle.challenger_id===fid||activeBattle.opponent_id===fid)) setActiveBattle(null);
-    setConvos(prev=>prev.filter(c=>c.profile.id!==fid));
-    load(); 
+    setFriends(prev=>prev.filter(f=>f.id!==fid));
+    setConvos(prev=>prev.filter(cv=>cv.profile.id!==fid));
+    setBattles(prev=>prev.filter(b=>b.challenger_id!==fid&&b.opponent_id!==fid));
   };
   const handleUnblock = async(fid:string)=>{ if(!user) return; await unblockUser(user.id,fid); load(); };
   const handleBlock = async(fid:string)=>{ 
     if(!user) return; 
     await blockUser(user.id,fid);
     setConfirmAction(null);
-    if(chatWith?.id===fid) setChatWith(null);
+    setChatWith(p=>p?.id===fid?null:p);
     if(activeBattle && (activeBattle.challenger_id===fid||activeBattle.opponent_id===fid)) setActiveBattle(null);
-    setConvos(prev=>prev.filter(c=>c.profile.id!==fid));
-    load(); 
+    setFriends(prev=>prev.filter(f=>f.id!==fid));
+    setConvos(prev=>prev.filter(cv=>cv.profile.id!==fid));
+    setBattles(prev=>prev.filter(b=>b.challenger_id!==fid&&b.opponent_id!==fid));
   };
 
   const respondReq = async(id:string,status:"accepted"|"declined")=>{ await respondToFriendRequest(id,status); load(); };
