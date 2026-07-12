@@ -2,6 +2,8 @@
 import React, { createContext, useContext, useState, useEffect, ReactNode } from "react";
 import { User } from "@supabase/supabase-js";
 import { loadFromCloud, useAccountStore, loadUserData, clearUserData } from "@/store/accounts";
+import { useStore } from "@/store";
+import { loadTrades } from "@/lib/persistence";
 
 interface AuthCtx {
   user: User | null;
@@ -33,6 +35,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         if (sessionUser) {
           localStorage.setItem("th_current_user_id", sessionUser.id);
           loadUserData(sessionUser.id);
+          useStore.setState({ trades: loadTrades() });
           loadFromCloud().then(trades => {
             if (!mounted || trades.length === 0) return;
             const store = useAccountStore.getState();
@@ -59,6 +62,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
           if (_event === "SIGNED_IN") {
             loadUserData(newUser.id);
+            useStore.setState({ trades: loadTrades() });
             loadFromCloud().then(trades => {
               if (!mounted || trades.length === 0) return;
               const store = useAccountStore.getState();
@@ -69,6 +73,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         } else {
           localStorage.removeItem("th_current_user_id");
           clearUserData();
+          useStore.setState({ trades: [] });
         }
 
         setUser(newUser);
@@ -86,6 +91,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     const supabase = createClient();
     localStorage.removeItem("th_current_user_id");
     clearUserData();
+    useStore.setState({ trades: [] });
     await supabase.auth.signOut();
     setUser(null);
   };
