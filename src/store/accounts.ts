@@ -119,7 +119,7 @@ export function clearUserData() {
 // ── Cloud sync ────────────────────────────────────────────────────────────────
 let cloudTimer: ReturnType<typeof setTimeout> | null = null;
 function queueSync(trades: Trade[]) {
-  if (typeof window === "undefined" || !trades.length) return;
+  if (typeof window === "undefined") return;
   if (cloudTimer) clearTimeout(cloudTimer);
   cloudTimer = setTimeout(async () => {
     try {
@@ -138,6 +138,17 @@ export async function loadFromCloud(): Promise<any[]> {
     const d = await r.json();
     return Array.isArray(d.trades) ? d.trades : [];
   } catch { return []; }
+}
+
+export async function clearCloud(): Promise<void> {
+  try {
+    // POST empty array to replace all cloud trades with nothing
+    await fetch("/api/sync", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ trades: [], clearAll: true }),
+    });
+  } catch {}
 }
 
 export async function deleteFromCloud(id: string) {
