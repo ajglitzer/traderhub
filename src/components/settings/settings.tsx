@@ -179,12 +179,12 @@ export default function SettingsPage() {
     if(!isPro){ setShowUpgrade("Export CSV"); return; }
     // isPro confirmed
     exportToCSV(allTrades, `traderhub_${new Date().toISOString().slice(0,10)}.csv`);
-    showToast(`✓ Exported ${allTrades.length} allTrades as CSV`);
+    showToast(`✓ Exported ${allTrades.length} trades as CSV`);
   };
 
   const handleExportJSON = () => {
     exportToJSON(allTrades, `traderhub_backup_${new Date().toISOString().slice(0,10)}.json`);
-    showToast(`✓ Exported ${allTrades.length} allTrades as JSON backup`);
+    showToast(`✓ Exported ${allTrades.length} trades as JSON backup`);
   };
 
   const handleImportJSON = async (file: File) => {
@@ -194,7 +194,7 @@ export default function SettingsPage() {
       const existing = getActiveTrades();
       const merged = [...(imported as Trade[]), ...existing];
       setAccountTrades(activeAccountId, merged);
-      showToast(`✓ Restored ${imported.length} allTrades from backup`);
+      showToast(`✓ Restored ${imported.length} trades from backup`);
     } catch(e) {
       showToast(`Error: ${String(e)}`, "err");
     }
@@ -217,7 +217,7 @@ export default function SettingsPage() {
         const parsed = JSON.parse(uiStore);
         savedUIStore = JSON.stringify({
           ...parsed,
-          state: { ...parsed.state, allTrades: [] }
+          state: { ...parsed.state, trades: [] }
         });
       }
     } catch {}
@@ -331,15 +331,15 @@ export default function SettingsPage() {
       </Section>
 
       <Section title="Danger Zone">
-        <Row label="Remove all closed allTrades" desc={`Delete ${allTrades.filter((t:any)=>t.status==="CLOSED").length} closed trades, keep ${allTrades.filter((t:any)=>t.status==="OPEN").length} open positions`}>
+        <Row label="Remove all closed trades" desc={`Delete ${allTrades.filter((t:any)=>t.status==="CLOSED").length} closed trades, keep ${allTrades.filter((t:any)=>t.status==="OPEN").length} open positions`}>
           <ConfirmBtn
-            label="Remove closed allTrades"
+            label="Remove closed trades"
             confirmLabel="Click again to confirm"
-            onConfirm={() => { setAccountTrades(activeAccountId, allTrades.filter((t:any)=>t.status==="OPEN")); showToast(`✓ Removed closed allTrades`); }}
+            onConfirm={() => { setAccountTrades(activeAccountId, allTrades.filter((t:any)=>t.status==="OPEN")); showToast(`✓ Removed closed trades`); }}
             danger
           />
         </Row>
-        <Row label="Clear ALL allTrades" desc="Permanently delete all allTrades and data. Cannot be undone.">
+        <Row label="Clear ALL trades" desc="Permanently delete all trades and data. Cannot be undone.">
           <ConfirmBtn
             label={`Clear all ${allTrades.length} trades`}
             confirmLabel="Permanently delete everything?"
