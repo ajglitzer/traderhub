@@ -1,4 +1,10 @@
 "use client";
+
+/** Safe number formatter — a missing/NaN field would otherwise crash the page. */
+function sf(n: unknown, d = 2): string {
+  const v = typeof n === "number" ? n : parseFloat(String(n ?? ""));
+  return Number.isFinite(v) ? v.toFixed(d) : "—";
+}
 import { PricingModal } from "@/components/subscription/pro-gate";
 import { useSubscription } from "@/hooks/useSubscription";
 import { useState, useMemo } from "react";
@@ -167,7 +173,7 @@ export function TradeTable() {
                         <span style={{ fontSize:10, fontWeight:700, color: t.side==="LONG"?"#00e676":"#ff1744" }}>{t.side}</span>
                       </div>
                     </td>
-                    <td style={{ padding:"8px 12px", textAlign:"right", fontFamily:"monospace", fontSize:12, color:"#c9d1d9" }}>{t.entryPrice.toFixed(4)}</td>
+                    <td style={{ padding:"8px 12px", textAlign:"right", fontFamily:"monospace", fontSize:12, color:"#c9d1d9" }}>{sf(t.entryPrice, 4)}</td>
                     <td style={{ padding:"8px 12px", textAlign:"right", fontFamily:"monospace", fontSize:12, color:"#6b7280" }}>{t.exitPrice?.toFixed(4) ?? <span style={{color:"#1f2937"}}>—</span>}</td>
                     <td style={{ padding:"8px 12px", textAlign:"right", fontSize:12, color:"#6b7280" }}>{t.quantity.toLocaleString()}</td>
                     <td style={{ padding:"8px 12px", textAlign:"right", fontFamily:"monospace", fontWeight:800, fontSize:12,
@@ -177,7 +183,7 @@ export function TradeTable() {
                     </td>
                     <td style={{ padding:"8px 12px", textAlign:"right", fontFamily:"monospace", fontSize:11,
                       color:(t.rMultiple??0)>=0?"#00e676":"#ff1744" }}>
-                      {t.rMultiple !== null ? t.rMultiple.toFixed(2)+"R" : "—"}
+                      {Number.isFinite(t.rMultiple as number) ? sf(t.rMultiple, 2)+"R" : "—"}
                     </td>
                     <td style={{ padding:"8px 12px", textAlign:"right", fontSize:11, color:"#4b5563", fontFamily:"monospace" }}>{fmtHold(t.holdTimeSeconds)}</td>
                     {/* -- CHART BUTTON -- */}

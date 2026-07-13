@@ -1,4 +1,10 @@
 "use client";
+
+/** Safe number formatter — a missing/NaN field would otherwise crash the page. */
+function sf(n: unknown, d = 2): string {
+  const v = typeof n === "number" ? n : parseFloat(String(n ?? ""));
+  return Number.isFinite(v) ? v.toFixed(d) : "—";
+}
 import { boldOnly } from "@/lib/safe-markdown";
 import { useState, useRef, useEffect, useMemo } from "react";
 import { useAccountStore } from "@/store/accounts";
@@ -240,7 +246,7 @@ export default function PatternPage() {
           {[
             ["Trades Analyzed", closed.length.toString(), "#c9d1d9"],
             ["Overall P&L",     fmt$(totalPnl),           totalPnl>=0?"#00e676":"#ff1744"],
-            ["Win Rate",        wr.toFixed(1)+"%",        wr>=50?"#00e676":"#ff1744"],
+            ["Win Rate",        sf(wr, 1)+"%",            (Number(wr)||0)>=50?"#00e676":"#ff1744"],
             ["Best Hour",       bestHour?`${bestHour[0]}:00 (${fmt$(+bestHour[1])})`:"—","#00e676"],
             ["Worst Hour",      worstHour?`${worstHour[0]}:00 (${fmt$(+worstHour[1])})`:"—","#ff1744"],
           ].map(([l,v,c])=>(

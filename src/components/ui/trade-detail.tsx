@@ -1,4 +1,10 @@
 "use client";
+
+/** Safe number formatter — a missing/NaN field would otherwise crash the page. */
+function sf(n: unknown, d = 2): string {
+  const v = typeof n === "number" ? n : parseFloat(String(n ?? ""));
+  return Number.isFinite(v) ? v.toFixed(d) : "—";
+}
 import { useState, useRef } from "react";
 import { useStore } from "@/store";
 import { Trade } from "@/types/trade";
@@ -66,10 +72,10 @@ export function TradeDetailPanel({ trade, onClose }: Props) {
           {/* Trade summary */}
           <div style={{display:"grid",gridTemplateColumns:"repeat(4,1fr)",gap:10}}>
             {[
-              ["Entry",  "$"+trade.entryPrice.toFixed(4),          "#c9d1d9"],
-              ["Exit",   trade.exitPrice?"$"+trade.exitPrice.toFixed(4):"Open", "#c9d1d9"],
+              ["Entry",  "$"+sf(trade.entryPrice, 4),               "#c9d1d9"],
+              ["Exit",   trade.exitPrice?"$"+sf(trade.exitPrice, 4):"Open", "#c9d1d9"],
               ["Hold",   fmtHold(trade.holdTimeSeconds),           "#c9d1d9"],
-              ["R",      trade.rMultiple!=null?trade.rMultiple.toFixed(2)+"R":"—", trade.rMultiple!=null&&trade.rMultiple>=0?"#00e676":"#ff1744"],
+              ["R",      Number.isFinite(trade.rMultiple as number)?sf(trade.rMultiple,2)+"R":"—", Number.isFinite(trade.rMultiple as number)&&(trade.rMultiple as number)>=0?"#00e676":"#ff1744"],
             ].map(([l,v,c])=>(
               <div key={l as string} style={{background:"rgba(255,255,255,0.03)",borderRadius:8,padding:"8px 10px"}}>
                 <div style={{fontSize:9,color:"#3d4551",textTransform:"uppercase" as const,letterSpacing:"0.07em",marginBottom:3}}>{l}</div>
@@ -136,10 +142,10 @@ export function TradeDetailPanel({ trade, onClose }: Props) {
             <div style={S.label}>Expected Entry Price <span style={{color:"#4b5563",fontWeight:400,textTransform:"none" as const}}>(for slippage tracking)</span></div>
             <div style={{display:"flex",gap:10,alignItems:"center"}}>
               <input value={slippage} onChange={e=>setSlippage(e.target.value)} type="number" step="0.01"
-                placeholder={trade.entryPrice.toFixed(4)} style={{...S.input,width:160,height:34,padding:"0 10px"}}/>
+                placeholder={sf(trade.entryPrice, 4)} style={{...S.input,width:160,height:34,padding:"0 10px"}}/>
               {slippageVal!==null && (
                 <span style={{fontSize:12,color:"#ffab00",fontFamily:"monospace"}}>
-                  Slippage: {slippageVal.toFixed(4)} pts
+                  Slippage: {sf(slippageVal, 4)} pts
                 </span>
               )}
             </div>
