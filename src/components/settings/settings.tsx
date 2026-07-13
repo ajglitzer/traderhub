@@ -202,24 +202,21 @@ export default function SettingsPage() {
   };
 
   const handleClearAll = () => {
-    (window as any).__TRADERHUB_CLEARING__ = true;
-    setTrades([]);
+    // 1. Clear the in-memory store immediately so the UI updates now
     setAccountTrades(activeAccountId, []);
 
-    // Only clear THIS user's data — never touch other accounts
+    // 2. Wipe every trade/account key we have EVER used for this user
+    //    so loadUserData can't restore old data from a fallback key on reload.
     const uid = (() => { try { return localStorage.getItem("th_current_user_id") || ""; } catch { return ""; } })();
     const uiKey = uid ? `tv-ui-store__${uid}` : "tv-ui-store";
 
-    // Save playbook/goals/tags before clearing so they survive
+    // Preserve playbook/goals/tags
     let savedUIStore: string | null = null;
     try {
       const uiStore = localStorage.getItem(uiKey);
       if (uiStore) {
         const parsed = JSON.parse(uiStore);
-        savedUIStore = JSON.stringify({
-          ...parsed,
-          state: { ...parsed.state, trades: [] }
-        });
+        savedUIStore = JSON.stringify({ ...parsed, state: { ...parsed.state, trades: [] } });
       }
     } catch {}
 
@@ -227,16 +224,16 @@ export default function SettingsPage() {
     for (let i = 0; i < localStorage.length; i++) {
       const key = localStorage.key(i);
       if (!key) continue;
-      // Remove ALL trade/account keys for this user (check every key we've ever used)
       const isTradeKey =
         key.startsWith("traderhub") ||
         key.startsWith("tv-accounts-store") ||
         key.startsWith("th_accounts_v2_") ||
         key.startsWith("th_accounts_v2__") ||
-        key.startsWith("th_accts_v3__");
+        key.startsWith("th_accts_v3__") ||
+        key.startsWith("th_accts__") ||      // v153+ canonical key
+        key === "th_accts";                   // unscoped fallback
       if (!isTradeKey) continue;
-      // If we have a user id, only kill their keys
-      if (uid && !key.includes(uid)) continue;
+      if (uid && !key.includes(uid) && key !== "th_accts") continue;
       keysToRemove.push(key);
     }
     keysToRemove.forEach(k => localStorage.removeItem(k));

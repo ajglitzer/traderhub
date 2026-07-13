@@ -87,23 +87,12 @@ function persist(
 export function loadUserData(userId: string) {
   if (!userId) { useAccountStore.setState(FRESH_STATE()); return; }
   try {
-    // Check every key we have ever used so data survives version bumps
-    const keys = [
-      `${ACCT_STORAGE_KEY}__${userId}`,   // current canonical
-      `th_accounts_v2_${userId}`,          // v137
-      `th_accts_v3__${userId}`,            // v150
-      `tv-accounts-store__${userId}`,      // v138-v149
-      `th_accounts_v2__${userId}`,         // double-underscore typo variant
-    ];
-    let raw: string | null = null;
-    let foundKey = keys[0];
-    for (const k of keys) {
-      const v = localStorage.getItem(k);
-      if (v) { raw = v; foundKey = k; break; }
-    }
+    // Only read from the canonical key — no legacy fallbacks.
+    // Fallbacks caused "clear trades" to restore ghost data from old keys.
+    const canonicalKey = `${ACCT_STORAGE_KEY}__${userId}`;
+    const raw = localStorage.getItem(canonicalKey);
     if (!raw) { useAccountStore.setState(FRESH_STATE()); return; }
 
-    // Support both plain {accounts,...} and Zustand-persist {state:{accounts,...}}
     const parsed = JSON.parse(raw);
     const d = parsed?.state ?? parsed;
 
@@ -115,11 +104,6 @@ export function loadUserData(userId: string) {
         ? d.tradesByAccount : { default: [] },
     };
     useAccountStore.setState(state);
-
-    // Migrate to canonical key if we found data elsewhere
-    if (foundKey !== keys[0]) {
-      localStorage.setItem(keys[0], JSON.stringify(state));
-    }
   } catch { useAccountStore.setState(FRESH_STATE()); }
 }
 
