@@ -50,7 +50,7 @@ export function UsernameSetupLocal({ userId }: { userId: string }) {
   }, [username, userId]);
 
   const save = async () => {
-    if (!username.trim() || username.length < 3) { setError("Username must be at least 3 characters"); return; }
+    if (!username.trim() || username.length < 3) { setError(username.length < 3 ? "Username must be at least 3 characters" : "Username must be 20 characters or less"); return; }
     if (!/^[a-zA-Z0-9_]{3,20}$/.test(username)) { setError("Letters, numbers, underscores only (3-20 chars)"); return; }
     if (available === false) { setError("Username already taken — choose another"); return; }
     // Profanity check
@@ -131,9 +131,9 @@ export function UsernameSetupLocal({ userId }: { userId: string }) {
               <div style={{ fontSize:10, color:"#4b5563", textTransform:"uppercase", letterSpacing:"0.08em", marginBottom:6 }}>
                 Username <span style={{ color:"#374151", textTransform:"none" }}>(public)</span>
               </div>
-              <input value={username} onChange={e=>setUsername(e.target.value.toLowerCase().replace(/[^a-z0-9_]/g,""))}
+              <input value={username} maxLength={20} onChange={e=>setUsername(e.target.value.toLowerCase().replace(/[^a-z0-9_]/g,"").slice(0,20))}
                 onKeyDown={e=>e.key==="Enter"&&save()}
-                placeholder="e.g. nqtrader99" style={IS} maxLength={20} autoFocus/>
+                placeholder="e.g. nqtrader99" style={IS} autoFocus/>
               <div style={{ fontSize:10, marginTop:5, display:"flex", alignItems:"center", gap:6 }}>
                 <span style={{ color:"#374151" }}>{username.length}/20</span>
                 {username.length >= 3 && (

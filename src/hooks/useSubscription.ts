@@ -39,7 +39,8 @@ async function fetchStatus(userId: string): Promise<SubInfo> {
         status: d.status ?? "none",
         plan: d.plan ?? null,
         periodEnd: d.periodEnd ?? null,
-        isPro: d.status === "active" || d.status === "trialing",
+        isPro: d.status === "active" || d.status === "trialing" ||
+          (d.status === "canceled" && d.periodEnd && new Date(d.periodEnd).getTime() > Date.now()),
       };
       cache = { userId, data: info };
       broadcast(info);

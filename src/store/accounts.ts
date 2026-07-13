@@ -56,6 +56,7 @@ const FRESH_STATE = () => ({
 
 // ── Storage helpers ────────────────────────────────────────────────────────────
 // ONE canonical key, versioned. Never changes between deploys.
+// Obfuscated key — harder to find/edit in DevTools Application tab
 export const ACCT_STORAGE_KEY = "th_accts";
 
 function uid(): string {

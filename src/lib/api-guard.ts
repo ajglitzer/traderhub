@@ -21,13 +21,19 @@ export async function requirePro(): Promise<
 
     const { data } = await supabase
       .from("subscriptions")
-      .select("status")
+      .select("status,current_period_end")
       .eq("user_id", user.id)
       .order("created_at", { ascending: false })
       .limit(1)
       .single();
 
-    const isPro = data?.status === "active" || data?.status === "trialing";
+    const now = Date.now();
+    const periodEnd = data?.current_period_end ? new Date(data.current_period_end).getTime() : 0;
+    // Keep Pro active if: active, trialing, OR cancelled but billing period not yet over
+    const isPro =
+      data?.status === "active" ||
+      data?.status === "trialing" ||
+      (data?.status === "canceled" && periodEnd > now);
     if (!isPro) return { ok: false, status: 402, error: "TraderHub Pro required" };
 
     return { ok: true, userId: user.id };

@@ -3,17 +3,20 @@ import { EquityPoint } from "@/types/trade";
 import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, ReferenceLine } from "recharts";
 import { format } from "date-fns";
 
-const CustomTip = ({ active, payload }: any) => {
+const CustomTip = ({ active, payload, startingBalance = 0 }: any) => {
   if (!active || !payload?.length) return null;
   const d = payload[0].payload as EquityPoint;
-  const pos = d.equity >= 0;
-  const fmt = (n: number) => (n >= 0 ? "+" : "") + "$" + Math.abs(n).toLocaleString("en-US", {minimumFractionDigits:2,maximumFractionDigits:2});
+  const pos = d.equity >= startingBalance;
+  const base = Number.isFinite(startingBalance) ? startingBalance : 0;
+  const fmt = (n: number) => "$" + n.toLocaleString("en-US", {minimumFractionDigits:2,maximumFractionDigits:2});
+  const fmtPnl = (n: number) => (n >= 0 ? "+$" : "-$") + Math.abs(n).toLocaleString("en-US", {minimumFractionDigits:2,maximumFractionDigits:2});
   return (
     <div style={{ background:"rgba(6,10,15,0.97)", border:"1px solid rgba(0,229,255,0.2)", borderRadius:10, padding:"10px 14px", boxShadow:"0 8px 32px rgba(0,0,0,0.6)" }}>
       <div style={{ fontSize:10, color:"#4b5563", marginBottom:4 }}>{format(new Date(d.date), "MMM d, yyyy")}</div>
       <div style={{ fontSize:18, fontWeight:800, fontFamily:"monospace", color: pos ? "#00e676" : "#ff1744", letterSpacing:"-0.03em" }}>{fmt(d.equity)}</div>
+      <div style={{ fontSize:11, color:"#6b7280", marginTop:2 }}>Total P&L: <span style={{color:d.equity-base>=0?"#00e676":"#ff1744",fontFamily:"monospace"}}>{fmtPnl(d.equity-base)}</span></div>
       <div style={{ fontSize:11, fontFamily:"monospace", color: d.pnl >= 0 ? "#00e676" : "#ff1744", marginTop:3 }}>
-        {d.pnl >= 0 ? "▲" : "▼"} {fmt(Math.abs(d.pnl))} this trade
+        {d.pnl >= 0 ? "▲" : "▼"} {fmtPnl(d.pnl)} this trade
       </div>
       {d.drawdown > 0 && <div style={{ fontSize:10, color:"#ff1744", marginTop:2 }}>DD: {d.drawdownPct.toFixed(1)}%</div>}
     </div>
@@ -52,7 +55,7 @@ export function EquityChart({ data, height = 260, startingBalance = 0 }: { data:
         <YAxis domain={["auto","auto"]} tickFormatter={v => Math.abs(v) >= 1000 ? `$${(v/1000).toFixed(1)}k` : `$${v.toFixed(0)}`} tick={{ fontSize:10, fill:"#3d4551" }} axisLine={false} tickLine={false} width={58}/>
         <ReferenceLine y={base} stroke="rgba(255,255,255,0.12)" strokeDasharray="4 4"
           label={{ value: base > 0 ? "Start" : "", position: "insideTopLeft", fill: "#3d4551", fontSize: 9 }}/>
-        <Tooltip content={<CustomTip/>}/>
+        <Tooltip content={<CustomTip startingBalance={base}/>}/>
         <Area type="monotone" dataKey="equity" baseValue={base}
           stroke={color} strokeWidth={2.5}
           fill={`url(#${id})`} dot={false}

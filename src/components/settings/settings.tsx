@@ -183,6 +183,7 @@ export default function SettingsPage() {
   };
 
   const handleExportJSON = () => {
+    if(!isPro){ setShowUpgrade("Export JSON"); return; }
     exportToJSON(allTrades, `traderhub_backup_${new Date().toISOString().slice(0,10)}.json`);
     showToast(`✓ Exported ${allTrades.length} trades as JSON backup`);
   };
