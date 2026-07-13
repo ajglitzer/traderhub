@@ -241,8 +241,7 @@ export default function SettingsPage() {
     // Restore UI store with playbook intact
     if (savedUIStore) localStorage.setItem(uiKey, savedUIStore);
 
-    showToast("✓ All trade data cleared — reloading...");
-    setTimeout(() => { window.location.href = window.location.origin; }, 700);
+    showToast("✓ All trade data cleared");
   };
 
   return (
