@@ -2,7 +2,7 @@
 import React, { createContext, useContext, useState, useEffect, ReactNode } from "react";
 import { User } from "@supabase/supabase-js";
 import { loadFromCloud, useAccountStore, loadUserData, clearUserData } from "@/store/accounts";
-import { useStore } from "@/store";
+import { useStore, reloadUIStore } from "@/store";
 import { clearAllUserScoped } from "@/lib/user-storage";
 
 interface AuthCtx {
@@ -35,7 +35,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         if (sessionUser) {
           localStorage.setItem("th_current_user_id", sessionUser.id);
           loadUserData(sessionUser.id);
-          useStore.persist?.rehydrate?.();
+          reloadUIStore(sessionUser.id);
           loadFromCloud().then(trades => {
             if (!mounted || trades.length === 0) return;
             const store = useAccountStore.getState();
@@ -62,8 +62,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
           if (_event === "SIGNED_IN") {
             loadUserData(newUser.id);
-            useStore.persist?.rehydrate?.();
-              loadFromCloud().then(trades => {
+            reloadUIStore(newUser.id);
+                loadFromCloud().then(trades => {
               if (!mounted || trades.length === 0) return;
               const store = useAccountStore.getState();
               const activeId = store.activeAccountId;

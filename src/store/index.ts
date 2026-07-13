@@ -153,12 +153,53 @@ export const useStore = create<Store>()(
             } catch {}
           },
         },
-        skipHydration: true,
         partialize:(s)=>({sidebarOpen:s.sidebarOpen,activeTab:s.activeTab,theme:s.theme,goals:s.goals,playbook:s.playbook,allTags:s.allTags,simShowLevels:s.simShowLevels,replayShowLevels:s.replayShowLevels,mobilePinnedIds:s.mobilePinnedIds}),
+        // partialize excludes filters/page/trades. Without an explicit merge,
+        // rehydrate() replaces state with ONLY the persisted keys — leaving
+        // filters/page undefined and crashing Trade Log on `filters.sortBy`.
+        merge: (persisted, current) => {
+          const p = (persisted ?? {}) as Record<string, any>;
+          return {
+            ...current,
+            ...p,
+            // Always keep these — they are never persisted
+            filters:  { ...DEFAULT_FILTERS, ...(p.filters ?? {}) },
+            page:     typeof p.page === "number" ? p.page : 1,
+            trades:   Array.isArray(p.trades) ? p.trades : (current.trades ?? []),
+            goals:    { ...current.goals, ...(p.goals ?? {}) },
+            playbook: Array.isArray(p.playbook) ? p.playbook : (current.playbook ?? []),
+            allTags:  Array.isArray(p.allTags)  ? p.allTags  : (current.allTags  ?? []),
+            mobilePinnedIds: Array.isArray(p.mobilePinnedIds) && p.mobilePinnedIds.length
+              ? p.mobilePinnedIds
+              : (current.mobilePinnedIds ?? ["dashboard","trades","analytics","social"]),
+          };
+        },
       }
     )
   )
 );
+
+/** Re-read the UI store for a specific user. Call after th_current_user_id is set. */
+export function reloadUIStore(userId: string) {
+  if (!userId) return;
+  try {
+    const raw = localStorage.getItem(`tv-ui-store__${userId}`);
+    if (!raw) return;
+    const parsed = JSON.parse(raw);
+    const s = parsed?.state ?? parsed;
+    useStore.setState({
+      theme:            s.theme ?? "dark",
+      goals:            { ...DEFAULT_GOALS, ...(s.goals ?? {}) },
+      playbook:         Array.isArray(s.playbook) ? s.playbook : [],
+      allTags:          Array.isArray(s.allTags)  ? s.allTags  : [],
+      simShowLevels:    s.simShowLevels    ?? true,
+      replayShowLevels: s.replayShowLevels ?? true,
+      mobilePinnedIds:  Array.isArray(s.mobilePinnedIds) && s.mobilePinnedIds.length
+        ? s.mobilePinnedIds
+        : ["dashboard","trades","analytics","social"],
+    });
+  } catch {}
+}
 
 export function getFilteredTrades(trades:Trade[], filters:Record<string,string>, page:number, limit=50) {
   let list=[...trades];
