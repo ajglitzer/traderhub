@@ -20,14 +20,15 @@ const CustomTip = ({ active, payload }: any) => {
   );
 };
 
-export function EquityChart({ data, height = 260 }: { data: EquityPoint[]; height?: number }) {
+export function EquityChart({ data, height = 260, startingBalance = 0 }: { data: EquityPoint[]; height?: number; startingBalance?: number }) {
   if (!data.length) return (
     <div style={{ height, display:"flex", alignItems:"center", justifyContent:"center", color:"#3d4551", fontSize:13 }}>
       Import trades to see your equity curve
     </div>
   );
   const last = data[data.length - 1];
-  const isPos = last.equity >= 0;
+  const base = Number.isFinite(startingBalance) ? startingBalance : 0;
+  const isPos = last.equity >= base;
   const color = isPos ? "#00e676" : "#ff1744";
   const colorDim = isPos ? "rgba(0,230,118,0.6)" : "rgba(255,23,68,0.6)";
   const id = isPos ? "eqGreen" : "eqRed";
@@ -48,10 +49,11 @@ export function EquityChart({ data, height = 260 }: { data: EquityPoint[]; heigh
         </defs>
         <CartesianGrid strokeDasharray="1 6" stroke="rgba(255,255,255,0.03)" vertical={false}/>
         <XAxis dataKey="date" tickFormatter={v => format(new Date(v), "MMM d")} tick={{ fontSize:10, fill:"#3d4551" }} axisLine={false} tickLine={false} interval="preserveStartEnd"/>
-        <YAxis tickFormatter={v => v >= 1000 ? `$${(v/1000).toFixed(0)}k` : `$${v.toFixed(0)}`} tick={{ fontSize:10, fill:"#3d4551" }} axisLine={false} tickLine={false} width={54}/>
-        <ReferenceLine y={0} stroke="rgba(255,255,255,0.08)" strokeDasharray="4 4"/>
+        <YAxis domain={["auto","auto"]} tickFormatter={v => Math.abs(v) >= 1000 ? `$${(v/1000).toFixed(1)}k` : `$${v.toFixed(0)}`} tick={{ fontSize:10, fill:"#3d4551" }} axisLine={false} tickLine={false} width={58}/>
+        <ReferenceLine y={base} stroke="rgba(255,255,255,0.12)" strokeDasharray="4 4"
+          label={{ value: base > 0 ? "Start" : "", position: "insideTopLeft", fill: "#3d4551", fontSize: 9 }}/>
         <Tooltip content={<CustomTip/>}/>
-        <Area type="monotone" dataKey="equity"
+        <Area type="monotone" dataKey="equity" baseValue={base}
           stroke={color} strokeWidth={2.5}
           fill={`url(#${id})`} dot={false}
           activeDot={{ r:6, fill:color, stroke:"rgba(0,0,0,0.6)", strokeWidth:2, filter:"url(#glow)" }}

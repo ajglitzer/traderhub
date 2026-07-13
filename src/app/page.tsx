@@ -109,14 +109,15 @@ function getStoredUsername(): string | undefined {
 
 function Dashboard() {
   const { setImportOpen } = useStore();
-  const { getActiveTrades } = useAccountStore();
+  const { getActiveTrades, accounts, activeAccountId } = useAccountStore();
+  const startBal = accounts.find(a => a.id === activeAccountId)?.startingBalance ?? 0;
   // Single source of truth for trades — the accounts store.
   // Never fall back to the main store's stale `trades` field; that caused
   // cleared trades to reappear whenever the main store had more entries.
   const trades = getActiveTrades() ?? [];
   const closed = useMemo(() => trades.filter(t => t.status === "CLOSED" && t.netPnl !== null), [trades]);
   const M = useMemo(() => calculateMetrics(closed as Trade[]), [closed]);
-  const equity = useMemo(() => buildEquityCurve(closed as Trade[]), [closed]);
+  const equity = useMemo(() => buildEquityCurve(closed as Trade[], startBal), [closed, startBal]);
   const isPos = M.totalNetPnl >= 0;
   const netColor = isPos ? "#00e676" : "#ff1744";
   const pct = M.totalTrades > 0 ? Math.round((M.winCount / M.totalTrades) * 100) : 0;
@@ -222,7 +223,7 @@ function Dashboard() {
       <div style={{ display:"grid", gridTemplateColumns:isMob?"1fr":"1fr 300px", gap:14 }}>
         <Panel glow="cyan">
           <Label>Equity Curve</Label>
-          <EquityChart data={equity} height={220}/>
+          <EquityChart data={equity} height={220} startingBalance={startBal}/>
         </Panel>
         <Panel>
           <Label>Recent Trades</Label>

@@ -37,11 +37,12 @@ const AC: Record<string,string> = {
 };
 
 export default function AnalyticsPage() {
-  const { getActiveTrades } = useAccountStore();
+  const { getActiveTrades, accounts, activeAccountId } = useAccountStore();
+  const startBal = accounts.find(a => a.id === activeAccountId)?.startingBalance ?? 0;
   const trades = getActiveTrades();
   const closed = useMemo(()=>trades.filter(t=>t.status==="CLOSED"&&t.netPnl!==null),[trades]);
   const M = useMemo(()=>calculateMetrics(closed as Trade[]),[closed]);
-  const equity = useMemo(()=>buildEquityCurve(closed as Trade[]),[closed]);
+  const equity = useMemo(()=>buildEquityCurve(closed as Trade[], startBal),[closed, startBal]);
   const mc = useMemo(()=>closed.length>5?runMonteCarlo(closed as Trade[],500):null,[closed]);
   const [tab, setTab] = useState<"analytics"|"deep">("analytics");
 
@@ -150,7 +151,7 @@ export default function AnalyticsPage() {
       {tab==="analytics" && <>
       <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:14 }}>
         <Panel title="Equity Curve" sub={"Total: "+fmt$(equity[equity.length-1]?.equity||0)}>
-          <EquityChart data={equity} height={195}/>
+          <EquityChart data={equity} height={195} startingBalance={startBal}/>
         </Panel>
         <Panel title="Drawdown %" sub="Distance below peak equity">
           <ResponsiveContainer width="100%" height={195}>

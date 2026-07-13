@@ -174,17 +174,38 @@ export function calculateMetrics(trades: Trade[]): TradeMetrics {
   };
 }
 
-export function buildEquityCurve(trades: Trade[]): EquityPoint[] {
-  const sorted = [...trades]
-    .filter((t) => t.status==="CLOSED" && t.netPnl!==null)
+export function buildEquityCurve(trades: Trade[], startingBalance = 0): EquityPoint[] {
+  const sorted = [...(Array.isArray(trades) ? trades : [])]
+    .filter((t) => t && t.status==="CLOSED" && t.netPnl!==null)
     .sort((a,b) => new Date(a.exitTime||a.entryTime).getTime()-new Date(b.exitTime||b.entryTime).getTime());
-  let eq=0, peak=0;
-  return sorted.map((t) => {
+
+  const start = Number.isFinite(startingBalance) ? startingBalance : 0;
+  let eq = start;
+  let peak = start;
+
+  const points: EquityPoint[] = [];
+
+  // Seed the curve at the account's starting balance so it doesn't begin at $0
+  if (sorted.length) {
+    const first = sorted[0];
+    const firstDate = first.entryTime || first.exitTime || new Date().toISOString();
+    points.push({ date: firstDate, equity: start, pnl: 0, drawdown: 0, drawdownPct: 0 });
+  }
+
+  for (const t of sorted) {
     eq += t.netPnl!;
-    if(eq>peak)peak=eq;
-    const dd=peak-eq;
-    return { date:t.exitTime||t.entryTime, equity:eq, pnl:t.netPnl!, drawdown:dd, drawdownPct:peak>0?(dd/peak)*100:0 };
-  });
+    if (eq > peak) peak = eq;
+    const dd = peak - eq;
+    points.push({
+      date: t.exitTime || t.entryTime,
+      equity: eq,
+      pnl: t.netPnl!,
+      drawdown: dd,
+      drawdownPct: peak > 0 ? (dd / peak) * 100 : 0,
+    });
+  }
+
+  return points;
 }
 
 export function runMonteCarlo(trades: Trade[], runs=400) {
