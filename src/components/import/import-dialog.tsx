@@ -206,20 +206,44 @@ export function ImportDialog() {
                 </span>
               </div>
 
-              {/* Debug info if 0 trades */}
+              {/* No trades found — show a helpful guide instead of parser internals */}
               {parsed.length === 0 && (
-                <div style={{ padding:14, borderRadius:10, background:"rgba(248,81,73,0.06)", border:"1px solid rgba(248,81,73,0.15)", marginBottom:14, fontSize:12, color:"#f85149" }}>
-                  <div style={{ fontWeight:700, marginBottom:6 }}>Could not parse trades from this file.</div>
-                  <div style={{ color:"#8b949e", marginBottom:4 }}>Detected format: <strong style={{color:"#e6edf3"}}>{format}</strong> · Raw rows found: <strong style={{color:"#e6edf3"}}>{rawCount}</strong></div>
-                  {errors.length > 0 && <div style={{ color:"#8b949e" }}>Errors: {errors.join(" · ")}</div>}
-                  <div style={{ marginTop:8, color:"#8b949e" }}>
-                    Please paste the first 2–3 lines of your CSV file in chat and we can fix the parser.
+                <div style={{ padding:18, borderRadius:12, background:"rgba(248,81,73,0.05)", border:"1px solid rgba(248,81,73,0.15)", marginBottom:14 }}>
+                  <div style={{ fontSize:14, fontWeight:800, color:"#f85149", marginBottom:6 }}>
+                    No trades found in this file
                   </div>
-                  {debug.length > 0 && (
-                    <div style={{ marginTop:10, padding:10, borderRadius:7, background:"rgba(0,0,0,0.4)", fontSize:10, fontFamily:"monospace", color:"#484f58", lineHeight:1.6 }}>
-                      {debug.map((d,i) => <div key={i}>{d}</div>)}
+                  <div style={{ fontSize:12, color:"#8b949e", marginBottom:16, lineHeight:1.6 }}>
+                    Make sure you&apos;re uploading a valid <strong style={{color:"#c9d1d9"}}>.csv</strong> export from your broker — not a text file, screenshot, or report.
+                  </div>
+
+                  <div style={{ padding:14, borderRadius:10, background:"rgba(0,212,255,0.05)", border:"1px solid rgba(0,212,255,0.15)" }}>
+                    <div style={{ fontSize:12, fontWeight:700, color:"#00d4ff", marginBottom:10 }}>
+                      📊 Using TradingView?
                     </div>
-                  )}
+                    <div style={{ fontSize:12, color:"#8b949e", lineHeight:1.8 }}>
+                      Export <strong style={{color:"#c9d1d9"}}>both</strong> of these and upload them together:
+                      <div style={{ marginTop:8, paddingLeft:4 }}>
+                        <div style={{ marginBottom:5 }}>
+                          <span style={{ color:"#00e5ff", fontFamily:"monospace" }}>1.</span>{" "}
+                          <strong style={{color:"#c9d1d9"}}>Balance History</strong>
+                          <span style={{ color:"#6b7280" }}> — your P&amp;L for each trade</span>
+                        </div>
+                        <div>
+                          <span style={{ color:"#00e5ff", fontFamily:"monospace" }}>2.</span>{" "}
+                          <strong style={{color:"#c9d1d9"}}>Order History</strong>
+                          <span style={{ color:"#6b7280" }}> — your entry times &amp; hold durations</span>
+                        </div>
+                      </div>
+                      <div style={{ marginTop:12, fontSize:11, color:"#6b7280", paddingTop:10, borderTop:"1px solid rgba(255,255,255,0.05)" }}>
+                        Find them in TradingView under <strong style={{color:"#8b949e"}}>Trading Panel → Paper Trading → History → Export</strong>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div style={{ fontSize:11, color:"#4b5563", marginTop:14, lineHeight:1.6 }}>
+                    Also supported: Webull · IBKR · NinjaTrader · Tradovate · or any CSV with
+                    {" "}<span style={{fontFamily:"monospace", color:"#6b7280"}}>symbol, side, entry, exit, quantity</span> columns.
+                  </div>
                 </div>
               )}
 
