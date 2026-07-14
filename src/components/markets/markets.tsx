@@ -35,7 +35,7 @@ const TIMEFRAMES = [
 ];
 
 export default function MarketsPage() {
-  const [selected, setSelected] = useState(WATCHLIST[0]);
+  const [selected, setSelected] = useState(WATCHLIST.find(w=>w.label==="SPY") || WATCHLIST[0]);
   const [tfIdx, setTfIdx] = useState(1); // default 5m
   const [loaded, setLoaded] = useState(false);
   const [custom, setCustom] = useState("");
@@ -43,7 +43,12 @@ export default function MarketsPage() {
     return getScoped("th_markets_custom", []);
   });
   const [hidden, setHidden] = useState<string[]>(() => {
-    return getScoped("th_markets_hidden", []);
+    const saved = getScoped<string[]|null>("th_markets_hidden", null);
+    // First visit: hide everything except SPY and QQQ
+    if (saved === null) {
+      return WATCHLIST.filter(w => w.label !== "SPY" && w.label !== "QQQ").map(w => w.sym);
+    }
+    return saved;
   });
 
   // Persist on change
