@@ -2,7 +2,6 @@ import { create } from "zustand";
 import { useAccountStore } from "./accounts";
 import { persist, subscribeWithSelector } from "zustand/middleware";
 import { Trade, DailyGoal, PlaybookEntry } from "@/types/trade";
-import { loadTrades, saveTrades } from "@/lib/persistence";
 
 interface Store {
   // UI
@@ -45,7 +44,6 @@ interface Store {
   replayShowLevels: boolean; setReplayShowLevels: (v:boolean)=>void;
 
   // Init
-  initialized: boolean;
   init: ()=>void;
 }
 
@@ -71,13 +69,13 @@ export const useStore = create<Store>()(
         page: 1, setPage: (p)=>set({page:p}),
 
         trades: [],
-        setTrades: (trades)=>{ set({trades}); saveTrades(trades); },
+        setTrades: (trades)=>{ set({trades}); },
         addTrades: (newTrades)=>{
           const all=[...get().trades];
           const existing=new Set(all.map(t=>`${t.ticker}|${t.entryTime}|${t.quantity}`));
           const fresh=newTrades.filter(t=>!existing.has(`${t.ticker}|${t.entryTime}|${t.quantity}`));
           const merged=[...fresh,...all];
-          set({trades:merged}); saveTrades(merged);
+          set({trades:merged});
           // Extract and save new tags
           const tags=new Set(get().allTags);
           fresh.forEach(t=>(t.tags||[]).forEach(tag=>tags.add(tag)));
@@ -85,11 +83,11 @@ export const useStore = create<Store>()(
         },
         deleteTrade: (id)=>{
           const trades=get().trades.filter(t=>t.id!==id);
-          set({trades}); saveTrades(trades);
+          set({trades}); 
         },
         updateTrade: (id,data)=>{
           const trades=get().trades.map(t=>t.id===id?{...t,...data,updatedAt:new Date().toISOString()}:t);
-          set({trades}); saveTrades(trades);
+          set({trades}); 
           if(data.tags){ const tags=new Set(get().allTags); (data.tags||[]).forEach(tag=>tags.add(tag)); set({allTags:[...tags]}); }
         },
 
@@ -104,27 +102,9 @@ export const useStore = create<Store>()(
         allTags: ["breakout","reversal","trend","scalp","VWAP bounce","gap fill","momentum","news play","support","resistance"],
         addTag: (tag)=>set(s=>({allTags:[...new Set([...s.allTags,tag])]})),
 
-        initialized: false,
         init: ()=>{
-          if(get().initialized) return;
-          const saved=loadTrades();
-          set({trades:saved,initialized:true});
-          const handler=()=>{ if(!(window as any).__TRADERHUB_CLEARING__) saveTrades(get().trades); };
-          window.addEventListener("beforeunload",handler);
-          document.addEventListener("visibilitychange",()=>{ if(document.visibilityState==="hidden" && !(window as any).__TRADERHUB_CLEARING__) saveTrades(get().trades); });
           // Apply saved theme
           document.documentElement.setAttribute("data-theme", get().theme);
-          // Sync legacy trades into accounts store so analytics can read them
-          if(saved.length>0){
-            try{
-              const { useAccountStore } = require("@/store/accounts");
-              const accStore = useAccountStore.getState();
-              const existing = accStore.getActiveTrades();
-              if(existing.length===0){
-                accStore.addAccountTrades(accStore.activeAccountId, saved);
-              }
-            }catch{}
-          }
         },
       }),
       {
@@ -154,15 +134,11 @@ export const useStore = create<Store>()(
           },
         },
         partialize:(s)=>({sidebarOpen:s.sidebarOpen,activeTab:s.activeTab,theme:s.theme,goals:s.goals,playbook:s.playbook,allTags:s.allTags,simShowLevels:s.simShowLevels,replayShowLevels:s.replayShowLevels,mobilePinnedIds:s.mobilePinnedIds}),
-        // partialize excludes filters/page/trades. Without an explicit merge,
-        // rehydrate() replaces state with ONLY the persisted keys — leaving
-        // filters/page undefined and crashing Trade Log on `filters.sortBy`.
         merge: (persisted, current) => {
           const p = (persisted ?? {}) as Record<string, any>;
           return {
             ...current,
             ...p,
-            // Always keep these — they are never persisted
             filters:  { ...DEFAULT_FILTERS, ...(p.filters ?? {}) },
             page:     typeof p.page === "number" ? p.page : 1,
             trades:   Array.isArray(p.trades) ? p.trades : (current.trades ?? []),
@@ -179,7 +155,6 @@ export const useStore = create<Store>()(
   )
 );
 
-/** Re-read the UI store for a specific user. Call after th_current_user_id is set. */
 export function reloadUIStore(userId: string) {
   if (!userId) return;
   try {
@@ -201,18 +176,3 @@ export function reloadUIStore(userId: string) {
   } catch {}
 }
 
-export function getFilteredTrades(trades:Trade[], filters:Record<string,string>, page:number, limit=50) {
-  let list=[...trades];
-  if(filters.status)     list=list.filter(t=>t.status===filters.status);
-  if(filters.ticker)     list=list.filter(t=>t.ticker.includes(filters.ticker.toUpperCase()));
-  if(filters.side)       list=list.filter(t=>t.side===filters.side);
-  if(filters.assetClass) list=list.filter(t=>t.assetClass===filters.assetClass);
-  if(filters.strategy)   list=list.filter(t=>t.strategy===filters.strategy);
-  if(filters.tag)        list=list.filter(t=>(t.tags||[]).includes(filters.tag));
-  const sortBy=(filters.sortBy||"entryTime") as keyof Trade;
-  const dir=filters.sortDir==="asc"?1:-1;
-  list.sort((a,b)=>{ const av=a[sortBy],bv=b[sortBy]; if(av==null)return 1; if(bv==null)return -1; return av>bv?dir:av<bv?-dir:0; });
-  const total=list.length;
-  const start=(page-1)*limit;
-  return {trades:list.slice(start,start+limit),total,totalPages:Math.ceil(total/limit)};
-}

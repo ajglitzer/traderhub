@@ -27,8 +27,7 @@ const SEL: React.CSSProperties = {
 };
 
 export function AddTradeModal({ onClose }: Props) {
-  const { addTrades } = useStore();
-  const { activeAccountId, addAccountTrades } = useAccountStore();
+  const { addAccountTrades, activeAccountId } = useAccountStore();
   const now = new Date();
   const localNow = new Date(now.getTime() - now.getTimezoneOffset() * 60000).toISOString().slice(0, 16);
 
@@ -95,7 +94,7 @@ export function AddTradeModal({ onClose }: Props) {
       screenshots: [], customFields: {},
     };
 
-    addTrades([trade]);
+    addAccountTrades(activeAccountId, [trade]);
     addAccountTrades(activeAccountId, [trade]);
     setSaving(false);
     onClose();

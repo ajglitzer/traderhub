@@ -9,7 +9,9 @@ import { PricingModal } from "@/components/subscription/pro-gate";
 import { useSubscription } from "@/hooks/useSubscription";
 import { useState, useMemo } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { useStore, getFilteredTrades } from "@/store";
+import { useStore } from "@/store";
+import { getFilteredTrades } from "@/lib/utils";
+
 import { useAccountStore } from "@/store/accounts";
 import { fmt$, fmtHold, pnlClass, cn } from "@/lib/utils";
 import { format } from "date-fns";

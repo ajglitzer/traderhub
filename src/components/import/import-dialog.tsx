@@ -10,7 +10,7 @@ import { fmt$ } from "@/lib/utils";
 const MAX_IMPORT = 10000;  // guard: a 1M-row CSV would freeze the browser
 
 export function ImportDialog() {
-  const { importOpen, setImportOpen, addTrades } = useStore();
+  const { importOpen, setImportOpen } = useStore();
   const { activeAccountId, addAccountTrades } = useAccountStore();
   const [step, setStep] = useState<"idle"|"preview"|"done">("idle");
   const [parsed, setParsed] = useState<Partial<Trade>[]>([]);
@@ -107,7 +107,6 @@ export function ImportDialog() {
       };
     });
     const capped = enriched.slice(0, MAX_IMPORT);
-    addTrades(capped);
     addAccountTrades(activeAccountId, capped);
 
     // If user specified prior PnL (trades not in this export), add a synthetic entry
@@ -130,8 +129,7 @@ export function ImportDialog() {
         favorite: false, reviewLater: false, screenshots: [], customFields: {},
         manualPnl: prior,
       } as Trade;
-      addTrades([synth]);
-      addAccountTrades(activeAccountId, [synth]);
+        addAccountTrades(activeAccountId, [synth]);
     }
 
     setStep("done");

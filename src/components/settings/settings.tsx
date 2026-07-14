@@ -164,8 +164,8 @@ export default function SettingsPage() {
   const { user, signOut } = useAuth();
   const { isPro } = useSubscription();
   const [showUpgrade, setShowUpgrade] = useState<string|null>(null);
-  const { setTrades, addTrades, theme, setTheme, simShowLevels, setSimShowLevels, replayShowLevels, setReplayShowLevels } = useStore();
-  const { activeAccountId, getActiveTrades, setAccountTrades } = useAccountStore();
+  const { theme, setTheme, simShowLevels, setSimShowLevels, replayShowLevels, setReplayShowLevels } = useStore();
+  const { activeAccountId, getActiveTrades, setAccountTrades, addAccountTrades } = useAccountStore();
   const allTrades = getActiveTrades() ?? [];
   const [toast, setToast] = useState<{msg:string;type:"ok"|"err"}|null>(null);
   const jsonInputRef = useRef<HTMLInputElement>(null);
@@ -191,7 +191,7 @@ export default function SettingsPage() {
   const handleImportJSON = async (file: File) => {
     try {
       const imported = await importFromJSON(file);
-      addTrades(imported as Trade[]);
+      addAccountTrades(activeAccountId, imported as Trade[]);
       const existing = getActiveTrades();
       const merged = [...(imported as Trade[]), ...existing];
       setAccountTrades(activeAccountId, merged);

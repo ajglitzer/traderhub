@@ -40,3 +40,33 @@ export function fmtHold(s: number | null): string {
   if (s < 86400) return `${Math.round(s / 3600)}h`;
   return `${Math.round(s / 86400)}d`;
 }
+
+export function getFilteredTrades(
+  trades: any[],
+  filters: Record<string,string>,
+  page: number,
+  limit = 50
+): { trades: any[]; total: number; totalPages: number } {
+  if (!Array.isArray(trades)) return { trades: [], total: 0, totalPages: 1 };
+  let list = [...trades];
+  const { status, side, assetType, ticker, sortBy, sortDir, dateFrom, dateTo, tag } = filters ?? {};
+  if (status)    list = list.filter(t => t.status === status);
+  if (side)      list = list.filter(t => t.side === side);
+  if (assetType) list = list.filter(t => t.assetType === assetType);
+  if (ticker)    list = list.filter(t => t.ticker?.toLowerCase().includes(ticker.toLowerCase()));
+  if (tag)       list = list.filter(t => (t.tags||[]).includes(tag));
+  if (dateFrom)  list = list.filter(t => t.entryTime && t.entryTime >= dateFrom);
+  if (dateTo)    list = list.filter(t => t.entryTime && t.entryTime <= dateTo + "T23:59:59");
+  if (sortBy) {
+    list.sort((a, b) => {
+      const av = a[sortBy] ?? 0, bv = b[sortBy] ?? 0;
+      return sortDir === "asc" ? (av > bv ? 1 : -1) : (av < bv ? 1 : -1);
+    });
+  } else {
+    list.sort((a, b) => new Date(b.entryTime||0).getTime() - new Date(a.entryTime||0).getTime());
+  }
+  const total = list.length;
+  const totalPages = Math.max(1, Math.ceil(total / limit));
+  const safePage = Math.min(Math.max(1, page || 1), totalPages);
+  return { trades: list.slice((safePage - 1) * limit, safePage * limit), total, totalPages };
+}
