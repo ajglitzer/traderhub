@@ -200,7 +200,8 @@ export default function SimulatorPage() {
   const drawingCanvasRef=useRef<HTMLCanvasElement>(null);
   const [drawTool, setDrawTool] = useState<"none"|"line"|"rect"|"pencil">("none");
   const [drawColor, setDrawColor] = useState("#00e5ff");
-  const [drawings, setDrawings] = useState<{type:string;pts:number[];color:string}[]>([]);
+  const [drawings, setDrawings] = useState<{type:string;pts:number[];color:string;placedAt:number;id:number}[]>([]);
+  const nextDrawId = useRef(0);
   const isDrawing = useRef(false);
   const drawStart = useRef<{x:number;y:number}|null>(null);
   const currentPath = useRef<number[]>([]);
@@ -257,104 +258,126 @@ export default function SimulatorPage() {
     setCur(80); setPlaying(false); setInTrade(false);
   },[symbol]);
 
-  // Zoom/pan via imperative wheel listener on the drawing canvas (passive:false required)
+  // Wheel zoom (passive:false required — React can't do this)
   useEffect(()=>{
-    const dc = drawingCanvasRef.current;
-    if (!dc) return;
-    const onWheel = (e: WheelEvent) => {
+    const dc = drawingCanvasRef.current; if(!dc) return;
+    const handler = (e: WheelEvent) => {
       e.preventDefault();
-      if (drawTool !== "none") return;
+      if(drawTool !== "none") return;
       const factor = e.deltaY > 0 ? 1.15 : 0.87;
-      setViewCount(v => Math.round(Math.max(20, Math.min(candles.length, v * factor))));
+      setViewCount(v => Math.round(Math.max(15, Math.min(candles.length || 300, v * factor))));
     };
-    dc.addEventListener("wheel", onWheel, { passive: false });
-    return () => dc.removeEventListener("wheel", onWheel);
+    dc.addEventListener("wheel", handler, { passive: false });
+    return () => dc.removeEventListener("wheel", handler);
   }, [drawTool, candles.length]);
 
-  // Redraw drawing overlay
+  // Redraw drawing overlay — filter expired drawings (>50 candles old)
   useEffect(()=>{
-    const dc=drawingCanvasRef.current; if(!dc) return;
-    const dpr=window.devicePixelRatio||1;
-    const W=dc.offsetWidth*dpr, H=dc.offsetHeight*dpr;
-    if(dc.width!==W||dc.height!==H){ dc.width=W; dc.height=H; }
-    const ctx=dc.getContext("2d")!; ctx.scale(dpr,dpr);
+    const dc = drawingCanvasRef.current; if(!dc) return;
+    const dpr = window.devicePixelRatio||1;
+    const W = dc.offsetWidth*dpr, H = dc.offsetHeight*dpr;
+    if(dc.width!==W||dc.height!==H){dc.width=W;dc.height=H;}
+    const ctx = dc.getContext("2d")!;
+    ctx.setTransform(dpr,0,0,dpr,0,0);
     ctx.clearRect(0,0,dc.offsetWidth,dc.offsetHeight);
-    drawings.forEach(d=>{
-      ctx.strokeStyle=d.color; ctx.lineWidth=2; ctx.lineCap="round";
-      if(d.type==="line"&&d.pts.length===4){
-        ctx.beginPath(); ctx.moveTo(d.pts[0],d.pts[1]); ctx.lineTo(d.pts[2],d.pts[3]); ctx.stroke();
-      } else if(d.type==="rect"&&d.pts.length===4){
-        ctx.strokeRect(d.pts[0],d.pts[1],d.pts[2]-d.pts[0],d.pts[3]-d.pts[1]);
-        ctx.fillStyle=d.color+"22"; ctx.fillRect(d.pts[0],d.pts[1],d.pts[2]-d.pts[0],d.pts[3]-d.pts[1]);
-      } else if(d.type==="pencil"&&d.pts.length>=4){
-        ctx.beginPath(); ctx.moveTo(d.pts[0],d.pts[1]);
-        for(let i=2;i<d.pts.length;i+=2) ctx.lineTo(d.pts[i],d.pts[i+1]);
-        ctx.stroke();
-      }
-    });
-  },[drawings]);
+    const alive = drawings.filter(d => cur - d.placedAt <= 50);
+    if(alive.length !== drawings.length) { setDrawings(alive); return; }
+    const paint = (d:{type:string;pts:number[];color:string}) => {
+      ctx.strokeStyle=d.color; ctx.lineWidth=2; ctx.lineCap="round"; ctx.lineJoin="round";
+      if(d.type==="line"&&d.pts.length===4){ctx.beginPath();ctx.moveTo(d.pts[0],d.pts[1]);ctx.lineTo(d.pts[2],d.pts[3]);ctx.stroke();}
+      else if(d.type==="rect"&&d.pts.length===4){ctx.strokeRect(d.pts[0],d.pts[1],d.pts[2]-d.pts[0],d.pts[3]-d.pts[1]);ctx.fillStyle=d.color+"22";ctx.fillRect(d.pts[0],d.pts[1],d.pts[2]-d.pts[0],d.pts[3]-d.pts[1]);}
+      else if(d.type==="pencil"&&d.pts.length>=4){ctx.beginPath();ctx.moveTo(d.pts[0],d.pts[1]);for(let i=2;i<d.pts.length;i+=2)ctx.lineTo(d.pts[i],d.pts[i+1]);ctx.stroke();}
+    };
+    alive.forEach(paint);
+  },[drawings, cur]);
 
-  const getPos=(e:React.MouseEvent<HTMLCanvasElement>)=>{
-    const r=e.currentTarget.getBoundingClientRect();
-    return{x:e.clientX-r.left,y:e.clientY-r.top};
-  };
+  const getPos=(e:React.MouseEvent<HTMLCanvasElement>)=>{const r=e.currentTarget.getBoundingClientRect();return{x:e.clientX-r.left,y:e.clientY-r.top};};
+
   const onDrawMouseDown=(e:React.MouseEvent<HTMLCanvasElement>)=>{
-    if(drawTool==="none") {
-      // Start pan
-      isPanning.current=true;
-      panStart.current={x:e.clientX,panOff:viewOff};
-      return;
-    }
-    const p=getPos(e); isDrawing.current=true; drawStart.current=p;
-    if(drawTool==="pencil") currentPath.current=[p.x,p.y];
+    if(drawTool==="none"){isPanning.current=true;panStart.current={x:e.clientX,panOff:viewOff};return;}
+    e.preventDefault();
+    const p=getPos(e);isDrawing.current=true;drawStart.current=p;
+    if(drawTool==="pencil")currentPath.current=[p.x,p.y];
   };
+
   const onDrawMouseMove=(e:React.MouseEvent<HTMLCanvasElement>)=>{
-    // Pan mode
-    if(drawTool==="none") {
-      if(!isPanning.current||!panStart.current) return;
-      const dx = e.clientX - panStart.current.x;
-      const cw = (e.currentTarget as HTMLCanvasElement).offsetWidth / viewCount;
-      const delta = Math.round(-dx / Math.max(cw, 1));
-      setViewOff(Math.max(0, Math.min(candles.length - viewCount, panStart.current.panOff + delta)));
+    if(drawTool==="none"){
+      if(!isPanning.current||!panStart.current)return;
+      const dx=e.clientX-panStart.current.x;
+      const cw=Math.max(1,(e.currentTarget as HTMLCanvasElement).offsetWidth/Math.max(1,viewCount));
+      setViewOff(Math.max(0,Math.min((candles.length||300)-viewCount,panStart.current.panOff+Math.round(-dx/cw))));
       return;
     }
-    if(!isDrawing.current||!drawStart.current) return;
+    if(!isDrawing.current||!drawStart.current)return;
     const p=getPos(e);
+    if(drawTool==="pencil"){currentPath.current=[...currentPath.current,p.x,p.y];}
+    // Live preview
+    const dc=drawingCanvasRef.current;if(!dc)return;
+    const dpr=window.devicePixelRatio||1;
+    const W=dc.offsetWidth*dpr,H=dc.offsetHeight*dpr;
+    if(dc.width!==W||dc.height!==H){dc.width=W;dc.height=H;}
+    const ctx=dc.getContext("2d")!;
+    ctx.setTransform(dpr,0,0,dpr,0,0);
+    ctx.clearRect(0,0,dc.offsetWidth,dc.offsetHeight);
+    drawings.filter(d=>cur-d.placedAt<=50).forEach(d=>{
+      ctx.strokeStyle=d.color;ctx.lineWidth=2;ctx.lineCap="round";ctx.lineJoin="round";
+      if(d.type==="line"&&d.pts.length===4){ctx.beginPath();ctx.moveTo(d.pts[0],d.pts[1]);ctx.lineTo(d.pts[2],d.pts[3]);ctx.stroke();}
+      else if(d.type==="rect"&&d.pts.length===4){ctx.strokeRect(d.pts[0],d.pts[1],d.pts[2]-d.pts[0],d.pts[3]-d.pts[1]);ctx.fillStyle=d.color+"22";ctx.fillRect(d.pts[0],d.pts[1],d.pts[2]-d.pts[0],d.pts[3]-d.pts[1]);}
+      else if(d.type==="pencil"&&d.pts.length>=4){ctx.beginPath();ctx.moveTo(d.pts[0],d.pts[1]);for(let i=2;i<d.pts.length;i+=2)ctx.lineTo(d.pts[i],d.pts[i+1]);ctx.stroke();}
+    });
+    ctx.strokeStyle=drawColor;ctx.lineWidth=2;ctx.lineCap="round";ctx.lineJoin="round";
     if(drawTool==="pencil"){
-      currentPath.current=[...currentPath.current,p.x,p.y];
-      // Live preview
-      const dc=drawingCanvasRef.current; if(!dc) return;
-      const dpr=window.devicePixelRatio||1;
-      const W=dc.offsetWidth*dpr, H=dc.offsetHeight*dpr;
-      // Only reset dimensions when they actually changed to avoid clearing the canvas unnecessarily
-      if(dc.width!==W||dc.height!==H){ dc.width=W; dc.height=H; }
-      const ctx=dc.getContext("2d")!; ctx.scale(dpr,dpr);
-      ctx.clearRect(0,0,dc.offsetWidth,dc.offsetHeight);
-      drawings.forEach(d=>{
-        ctx.strokeStyle=d.color; ctx.lineWidth=2; ctx.lineCap="round";
-        if(d.type==="line"&&d.pts.length===4){ctx.beginPath();ctx.moveTo(d.pts[0],d.pts[1]);ctx.lineTo(d.pts[2],d.pts[3]);ctx.stroke();}
-        else if(d.type==="rect"&&d.pts.length===4){ctx.strokeRect(d.pts[0],d.pts[1],d.pts[2]-d.pts[0],d.pts[3]-d.pts[1]);ctx.fillStyle=d.color+"22";ctx.fillRect(d.pts[0],d.pts[1],d.pts[2]-d.pts[0],d.pts[3]-d.pts[1]);}
-        else if(d.type==="pencil"){ctx.beginPath();ctx.moveTo(d.pts[0],d.pts[1]);for(let i=2;i<d.pts.length;i+=2)ctx.lineTo(d.pts[i],d.pts[i+1]);ctx.stroke();}
-      });
-      ctx.strokeStyle=drawColor; ctx.lineWidth=2; ctx.lineCap="round";
-      ctx.beginPath(); ctx.moveTo(currentPath.current[0],currentPath.current[1]);
-      for(let i=2;i<currentPath.current.length;i+=2) ctx.lineTo(currentPath.current[i],currentPath.current[i+1]);
+      ctx.beginPath();ctx.moveTo(currentPath.current[0],currentPath.current[1]);
+      for(let i=2;i<currentPath.current.length;i+=2)ctx.lineTo(currentPath.current[i],currentPath.current[i+1]);
       ctx.stroke();
+    } else if(drawTool==="line"){
+      ctx.beginPath();ctx.moveTo(drawStart.current.x,drawStart.current.y);ctx.lineTo(p.x,p.y);ctx.stroke();
+    } else if(drawTool==="rect"){
+      ctx.strokeRect(drawStart.current.x,drawStart.current.y,p.x-drawStart.current.x,p.y-drawStart.current.y);
+      ctx.fillStyle=drawColor+"22";ctx.fillRect(drawStart.current.x,drawStart.current.y,p.x-drawStart.current.x,p.y-drawStart.current.y);
     }
   };
+
   const onDrawMouseUp=(e:React.MouseEvent<HTMLCanvasElement>)=>{
-    if(drawTool==="none") {
-      isPanning.current=false; panStart.current=null; return;
-    }
-    if(!isDrawing.current||!drawStart.current) return;
+    if(drawTool==="none"){isPanning.current=false;panStart.current=null;return;}
+    if(!isDrawing.current){return;}
     const p=getPos(e);
+    const id=nextDrawId.current++;
     if(drawTool==="pencil"){
-      setDrawings(prev=>[...prev,{type:"pencil",pts:currentPath.current,color:drawColor}]);
+      if(currentPath.current.length>=4)
+        setDrawings(prev=>[...prev,{type:"pencil",pts:[...currentPath.current],color:drawColor,placedAt:cur,id}]);
       currentPath.current=[];
-    } else {
-      setDrawings(prev=>[...prev,{type:drawTool,pts:[drawStart.current!.x,drawStart.current!.y,p.x,p.y],color:drawColor}]);
+    } else if(drawStart.current){
+      const dist=Math.hypot(p.x-drawStart.current.x,p.y-drawStart.current.y);
+      if(dist>5)
+        setDrawings(prev=>[...prev,{type:drawTool,pts:[drawStart.current!.x,drawStart.current!.y,p.x,p.y],color:drawColor,placedAt:cur,id}]);
     }
-    isDrawing.current=false; drawStart.current=null;
+    isDrawing.current=false;drawStart.current=null;
+  };
+
+  const onDrawRightClick=(e:React.MouseEvent<HTMLCanvasElement>)=>{
+    e.preventDefault();
+    const p=getPos(e);
+    setDrawings(prev=>{
+      let minDist=20,removeId=-1;
+      prev.forEach(d=>{
+        const check=(x1:number,y1:number,x2:number,y2:number)=>{
+          const dx=x2-x1,dy=y2-y1,len2=dx*dx+dy*dy;
+          const t=len2>0?Math.max(0,Math.min(1,((p.x-x1)*dx+(p.y-y1)*dy)/len2)):0;
+          return Math.hypot(p.x-(x1+t*dx),p.y-(y1+t*dy));
+        };
+        if((d.type==="line"||d.type==="rect")&&d.pts.length===4){
+          const dist=Math.min(check(d.pts[0],d.pts[1],d.pts[2],d.pts[1]),check(d.pts[0],d.pts[1],d.pts[0],d.pts[3]),check(d.pts[0],d.pts[3],d.pts[2],d.pts[3]),check(d.pts[2],d.pts[1],d.pts[2],d.pts[3]));
+          if(dist<minDist){minDist=dist;removeId=d.id;}
+        } else if(d.type==="pencil"){
+          for(let i=0;i<d.pts.length-2;i+=2){
+            const dist=Math.hypot(p.x-d.pts[i],p.y-d.pts[i+1]);
+            if(dist<minDist){minDist=dist;removeId=d.id;}
+          }
+        }
+      });
+      return removeId>=0?prev.filter(d=>d.id!==removeId):prev;
+    });
   };
 
   // Draw only
@@ -572,8 +595,13 @@ export default function SimulatorPage() {
         <canvas ref={canvasRef} style={{width:"100%",height:"100%",display:"block",position:"absolute",inset:0}}/>
         {/* Drawing overlay */}
         <canvas ref={drawingCanvasRef}
-          style={{width:"100%",height:"100%",display:"block",position:"absolute",inset:0,background:"transparent",cursor:drawTool==="none"?(isPanning.current?"grabbing":"grab"):"crosshair",zIndex:2}}
-          onMouseDown={onDrawMouseDown} onMouseMove={onDrawMouseMove} onMouseUp={onDrawMouseUp} onMouseLeave={onDrawMouseUp}
+          style={{width:"100%",height:"100%",display:"block",position:"absolute",inset:0,background:"transparent",
+            cursor:drawTool==="none"?"grab":"crosshair",zIndex:2}}
+          onMouseDown={onDrawMouseDown}
+          onMouseMove={onDrawMouseMove}
+          onMouseUp={onDrawMouseUp}
+          onMouseLeave={e=>{isPanning.current=false;panStart.current=null;if(isDrawing.current)onDrawMouseUp(e);}}
+          onContextMenu={onDrawRightClick}
         />
         {/* Drawing toolbar */}
         <div style={{position:"absolute",top:8,right:8,zIndex:3,display:"flex",flexDirection:"column",gap:4,background:"rgba(0,0,0,0.6)",borderRadius:10,padding:6,border:"1px solid rgba(255,255,255,0.08)"}}>

@@ -43,6 +43,10 @@ function BattleSimulator({ battle, myId, onSubmit }: { battle: Battle; myId: str
   const [sl, setSl] = useState("10");
   const [curIdx, setCurIdx] = useState(50);
   const [playing, setPlaying] = useState(false);
+  const [viewCount, setViewCount] = useState(60);
+  const [viewOff, setViewOff] = useState(0);
+  const isPanning = useRef(false);
+  const panStart = useRef<{x:number;panOff:number}|null>(null);
   const tickRef = useRef<any>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
 
@@ -77,7 +81,9 @@ function BattleSimulator({ battle, myId, onSubmit }: { battle: Battle; myId: str
     cv.width=W*dpr; cv.height=H*dpr;
     const ctx=cv.getContext("2d")!; ctx.scale(dpr,dpr);
     ctx.fillStyle="#060a0f"; ctx.fillRect(0,0,W,H);
-    const slice=candles.slice(Math.max(0,curIdx-60),curIdx);
+    const end=Math.max(Math.min(curIdx-viewOff,candles.length),1);
+    const start=Math.max(end-viewCount,0);
+    const slice=candles.slice(start,end);
     if(!slice.length) return;
     const lo=Math.min(...slice.map(c=>c.l)),hi=Math.max(...slice.map(c=>c.h));
     const pad=(hi-lo)*0.1||1;
@@ -106,7 +112,7 @@ function BattleSimulator({ battle, myId, onSubmit }: { battle: Battle; myId: str
         ctx.fillText(lbl as string,14,y-3);
       });
     }
-  },[candles,curIdx,inTrade,entry,side,tp,sl]);
+  },[candles,curIdx,inTrade,entry,side,tp,sl,viewCount,viewOff]);
 
   // Timer
   useEffect(()=>{
@@ -158,7 +164,21 @@ function BattleSimulator({ battle, myId, onSubmit }: { battle: Battle; myId: str
         {simTrades.length>=5&&<span style={{color:"#ffab00"}}> — Submit when ready</span>}
       </div>
 
-      <canvas ref={canvasRef} style={{width:"100%",height:160,display:"block",borderRadius:8}}/>
+      <canvas ref={canvasRef}
+        style={{width:"100%",height:160,display:"block",borderRadius:8,cursor:"grab"}}
+        onWheel={e=>{
+          const factor=e.deltaY>0?1.15:0.87;
+          setViewCount(v=>Math.round(Math.max(15,Math.min(candles.length||300,v*factor))));
+        }}
+        onMouseDown={e=>{isPanning.current=true;panStart.current={x:e.clientX,panOff:viewOff};}}
+        onMouseMove={e=>{
+          if(!isPanning.current||!panStart.current)return;
+          const cw=Math.max(1,(e.currentTarget as HTMLCanvasElement).offsetWidth/Math.max(1,viewCount));
+          setViewOff(Math.max(0,Math.min((candles.length||300)-viewCount,panStart.current.panOff+Math.round(-(e.clientX-panStart.current.x)/cw))));
+        }}
+        onMouseUp={()=>{isPanning.current=false;panStart.current=null;}}
+        onMouseLeave={()=>{isPanning.current=false;panStart.current=null;}}
+      />
 
       <div style={{display:"flex",gap:6,alignItems:"center",flexWrap:"wrap"}}>
         <button onClick={()=>setPlaying(p=>!p)} style={{height:30,width:30,borderRadius:8,border:"1px solid rgba(0,229,255,0.3)",background:"rgba(0,229,255,0.08)",color:"#00e5ff",cursor:"pointer",fontSize:14,display:"flex",alignItems:"center",justifyContent:"center"}}>
