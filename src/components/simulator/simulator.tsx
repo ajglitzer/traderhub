@@ -257,11 +257,26 @@ export default function SimulatorPage() {
     setCur(80); setPlaying(false); setInTrade(false);
   },[symbol]);
 
+  // Zoom/pan via imperative wheel listener on the drawing canvas (passive:false required)
+  useEffect(()=>{
+    const dc = drawingCanvasRef.current;
+    if (!dc) return;
+    const onWheel = (e: WheelEvent) => {
+      e.preventDefault();
+      if (drawTool !== "none") return;
+      const factor = e.deltaY > 0 ? 1.15 : 0.87;
+      setViewCount(v => Math.round(Math.max(20, Math.min(candles.length, v * factor))));
+    };
+    dc.addEventListener("wheel", onWheel, { passive: false });
+    return () => dc.removeEventListener("wheel", onWheel);
+  }, [drawTool, candles.length]);
+
   // Redraw drawing overlay
   useEffect(()=>{
     const dc=drawingCanvasRef.current; if(!dc) return;
     const dpr=window.devicePixelRatio||1;
-    dc.width=dc.offsetWidth*dpr; dc.height=dc.offsetHeight*dpr;
+    const W=dc.offsetWidth*dpr, H=dc.offsetHeight*dpr;
+    if(dc.width!==W||dc.height!==H){ dc.width=W; dc.height=H; }
     const ctx=dc.getContext("2d")!; ctx.scale(dpr,dpr);
     ctx.clearRect(0,0,dc.offsetWidth,dc.offsetHeight);
     drawings.forEach(d=>{
@@ -284,19 +299,35 @@ export default function SimulatorPage() {
     return{x:e.clientX-r.left,y:e.clientY-r.top};
   };
   const onDrawMouseDown=(e:React.MouseEvent<HTMLCanvasElement>)=>{
-    if(drawTool==="none") return;
+    if(drawTool==="none") {
+      // Start pan
+      isPanning.current=true;
+      panStart.current={x:e.clientX,panOff:viewOff};
+      return;
+    }
     const p=getPos(e); isDrawing.current=true; drawStart.current=p;
     if(drawTool==="pencil") currentPath.current=[p.x,p.y];
   };
   const onDrawMouseMove=(e:React.MouseEvent<HTMLCanvasElement>)=>{
-    if(!isDrawing.current||drawTool==="none"||!drawStart.current) return;
+    // Pan mode
+    if(drawTool==="none") {
+      if(!isPanning.current||!panStart.current) return;
+      const dx = e.clientX - panStart.current.x;
+      const cw = (e.currentTarget as HTMLCanvasElement).offsetWidth / viewCount;
+      const delta = Math.round(-dx / Math.max(cw, 1));
+      setViewOff(Math.max(0, Math.min(candles.length - viewCount, panStart.current.panOff + delta)));
+      return;
+    }
+    if(!isDrawing.current||!drawStart.current) return;
     const p=getPos(e);
     if(drawTool==="pencil"){
       currentPath.current=[...currentPath.current,p.x,p.y];
       // Live preview
       const dc=drawingCanvasRef.current; if(!dc) return;
       const dpr=window.devicePixelRatio||1;
-      dc.width=dc.offsetWidth*dpr; dc.height=dc.offsetHeight*dpr;
+      const W=dc.offsetWidth*dpr, H=dc.offsetHeight*dpr;
+      // Only reset dimensions when they actually changed to avoid clearing the canvas unnecessarily
+      if(dc.width!==W||dc.height!==H){ dc.width=W; dc.height=H; }
       const ctx=dc.getContext("2d")!; ctx.scale(dpr,dpr);
       ctx.clearRect(0,0,dc.offsetWidth,dc.offsetHeight);
       drawings.forEach(d=>{
@@ -312,7 +343,10 @@ export default function SimulatorPage() {
     }
   };
   const onDrawMouseUp=(e:React.MouseEvent<HTMLCanvasElement>)=>{
-    if(!isDrawing.current||drawTool==="none"||!drawStart.current) return;
+    if(drawTool==="none") {
+      isPanning.current=false; panStart.current=null; return;
+    }
+    if(!isDrawing.current||!drawStart.current) return;
     const p=getPos(e);
     if(drawTool==="pencil"){
       setDrawings(prev=>[...prev,{type:"pencil",pts:currentPath.current,color:drawColor}]);
@@ -334,7 +368,7 @@ export default function SimulatorPage() {
     const viewCandles = candles.slice(start, end);
     const viewCur = viewCandles.length;
     drawChart(cv,viewCandles,viewCur,inTrade&&simShowLevels,entry,side,tpP,slP,chartColors,simShowLevels?ghostEntry:0,simShowLevels?ghostTp:0,simShowLevels?ghostSl:0);
-  },[candles,cur,inTrade,entry,side,tp,sl,chartColors,ghostEntry,ghostTp,ghostSl,simShowLevels]);
+  },[candles,cur,inTrade,entry,side,tp,sl,chartColors,ghostEntry,ghostTp,ghostSl,simShowLevels,viewCount,viewOff]);
 
   // TP/SL auto-close check - separate effect, guarded against double-fire
   useEffect(()=>{
@@ -538,7 +572,7 @@ export default function SimulatorPage() {
         <canvas ref={canvasRef} style={{width:"100%",height:"100%",display:"block",position:"absolute",inset:0}}/>
         {/* Drawing overlay */}
         <canvas ref={drawingCanvasRef}
-          style={{width:"100%",height:"100%",display:"block",position:"absolute",inset:0,background:"transparent",cursor:drawTool==="none"?"default":drawTool==="pencil"?"crosshair":"crosshair",zIndex:2}}
+          style={{width:"100%",height:"100%",display:"block",position:"absolute",inset:0,background:"transparent",cursor:drawTool==="none"?(isPanning.current?"grabbing":"grab"):"crosshair",zIndex:2}}
           onMouseDown={onDrawMouseDown} onMouseMove={onDrawMouseMove} onMouseUp={onDrawMouseUp} onMouseLeave={onDrawMouseUp}
         />
         {/* Drawing toolbar */}
