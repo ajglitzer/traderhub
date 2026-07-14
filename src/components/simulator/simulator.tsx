@@ -218,6 +218,10 @@ export default function SimulatorPage() {
   const [symbol,   setSymbol]     = useState("NQ");
   const [candles,  setCandles]    = useState<Candle[]>([]);
   const [cur,      setCur]        = useState(80);
+  const [viewCount, setViewCount] = useState(80);  // how many candles visible
+  const [viewOff,  setViewOff]   = useState(0);   // pan offset from right edge
+  const isPanning = useRef(false);
+  const panStart  = useRef<{x:number;panOff:number}|null>(null);
   const [playing,  setPlaying]    = useState(false);
   const [speed,    setSpeed]      = useState(1);
   const [inTrade,  setInTrade]    = useState(false);
@@ -324,7 +328,12 @@ export default function SimulatorPage() {
     const cv=canvasRef.current; if(!cv||!candles.length) return;
     const tpP=side==="LONG"?entry+(+tp):entry-(+tp);
     const slP=side==="LONG"?entry-(+sl):entry+(+sl);
-    drawChart(cv,candles,cur,inTrade&&simShowLevels,entry,side,tpP,slP,chartColors,simShowLevels?ghostEntry:0,simShowLevels?ghostTp:0,simShowLevels?ghostSl:0);
+    // Apply zoom/pan: show viewCount candles ending at (cur - viewOff)
+    const end = Math.max(Math.min(cur - viewOff, candles.length), 1);
+    const start = Math.max(end - viewCount, 0);
+    const viewCandles = candles.slice(start, end);
+    const viewCur = viewCandles.length;
+    drawChart(cv,viewCandles,viewCur,inTrade&&simShowLevels,entry,side,tpP,slP,chartColors,simShowLevels?ghostEntry:0,simShowLevels?ghostTp:0,simShowLevels?ghostSl:0);
   },[candles,cur,inTrade,entry,side,tp,sl,chartColors,ghostEntry,ghostTp,ghostSl,simShowLevels]);
 
   // TP/SL auto-close check - separate effect, guarded against double-fire

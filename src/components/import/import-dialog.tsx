@@ -184,9 +184,6 @@ export function ImportDialog() {
                 </div>
               </div>
               <input ref={inputRef} type="file" accept=".csv,.txt,.tsv" multiple style={{ display:"none" }} onChange={(e) => { if (e.target.files?.length) handleFiles(e.target.files); }} />
-              <div style={{ marginTop:12, fontSize:11, color:"#484f58", textAlign:"center" }}>
-                Trades save to your browser automatically — no account needed
-              </div>
             </>
           )}
 
