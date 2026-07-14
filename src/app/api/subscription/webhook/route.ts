@@ -19,8 +19,23 @@ export async function POST(req: NextRequest) {
     );
 
     const upsertSub = async (sub: Stripe.Subscription) => {
-      const userId = sub.metadata?.supabase_user_id;
-      if (!userId) return;
+      let userId = sub.metadata?.supabase_user_id;
+
+      // If no user_id in metadata, look it up by stripe_subscription_id
+      if (!userId) {
+        const { data } = await supabase
+          .from("subscriptions")
+          .select("user_id")
+          .eq("stripe_subscription_id", sub.id)
+          .single();
+        userId = data?.user_id;
+      }
+
+      if (!userId) {
+        console.error("upsertSub: no user_id found for subscription", sub.id);
+        return;
+      }
+
       const item = sub.items.data[0];
       const interval = item?.plan?.interval;
       const plan = interval === "year" ? "annual" : "monthly";
