@@ -202,15 +202,20 @@ export default function SettingsPage() {
   };
 
   const handleClearAll = async () => {
-    // 1. Clear the in-memory store immediately so the UI updates now
+    const uid = (() => { try { return localStorage.getItem("th_current_user_id") || ""; } catch { return ""; } })();
+
+    // STEP 1: Set the "do not restore from cloud" flag SYNCHRONOUSLY first.
+    // Everything after this is async — the flag must exist before any refresh.
+    if (uid) {
+      localStorage.setItem(`${CLEARED_FLAG}__${uid}`, "1");
+      console.log("[TraderHub] cleared flag set for", uid);
+    }
+
+    // STEP 2: Clear in-memory store
     setAccountTrades(activeAccountId, []);
 
-    // 2. Wipe every trade/account key we have EVER used for this user
-    //    so loadUserData can't restore old data from a fallback key on reload.
-    const uid = (() => { try { return localStorage.getItem("th_current_user_id") || ""; } catch { return ""; } })();
+    // STEP 3: Wipe all localStorage trade keys for this user
     const uiKey = uid ? `tv-ui-store__${uid}` : "tv-ui-store";
-
-    // Preserve playbook/goals/tags
     let savedUIStore: string | null = null;
     try {
       const uiStore = localStorage.getItem(uiKey);
@@ -230,8 +235,8 @@ export default function SettingsPage() {
         key.startsWith("th_accounts_v2_") ||
         key.startsWith("th_accounts_v2__") ||
         key.startsWith("th_accts_v3__") ||
-        key.startsWith("th_accts__") ||      // v153+ canonical key
-        key === "th_accts";                   // unscoped fallback
+        key.startsWith("th_accts__") ||
+        key === "th_accts";
       if (!isTradeKey) continue;
       if (uid && !key.includes(uid) && key !== "th_accts") continue;
       keysToRemove.push(key);
@@ -241,12 +246,7 @@ export default function SettingsPage() {
     // Restore UI store with playbook intact
     if (savedUIStore) localStorage.setItem(uiKey, savedUIStore);
 
-    // Set flag so auth-provider skips loadFromCloud on next page load
-    const uid2 = localStorage.getItem("th_current_user_id") || "";
-    if (uid2) {
-      localStorage.setItem(`${CLEARED_FLAG}__${uid2}`, "1");
-      console.log("[TraderHub] set cleared flag for", uid2);
-    }
+    // STEP 4: Clear cloud (async — flag already set above so refresh is safe)
     console.log("[TraderHub] clearing cloud...");
     await clearCloud();
     console.log("[TraderHub] cloud cleared");
