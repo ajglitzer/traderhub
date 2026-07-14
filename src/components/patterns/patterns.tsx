@@ -1,4 +1,7 @@
 "use client";
+import { useSubscription } from "@/hooks/useSubscription";
+import { PricingModal } from "@/components/subscription/pro-gate";
+import { useState as useStateP } from "react";
 
 /** Safe number formatter — a missing/NaN field would otherwise crash the page. */
 function sf(n: unknown, d = 2): string {
@@ -160,6 +163,8 @@ function renderMd(md: string) {
 export default function PatternPage() {
   const { getActiveTrades } = useAccountStore();
   const trades = getActiveTrades();
+  const { isPro } = useSubscription();
+  const [showUpgrade, setShowUpgrade] = useState(false);
   const closed = useMemo(()=>trades.filter(t=>t.status==="CLOSED"&&t.netPnl!==null) as Trade[],[trades]);
 
   const [status, setStatus] = useState<"idle"|"loading"|"streaming"|"done"|"error">("idle");
@@ -214,6 +219,8 @@ export default function PatternPage() {
   closed.forEach(t=>{ const h=new Date(t.entryTime).getHours(); byHour[h]=(byHour[h]||0)+t.netPnl!; });
   const bestHour = Object.entries(byHour).sort(([,a],[,b])=>b-a)[0];
   const worstHour = Object.entries(byHour).sort(([,a],[,b])=>a-b)[0];
+
+  if(showUpgrade) return <PricingModal onClose={()=>setShowUpgrade(false)}/>;
 
   return (
     <div style={{padding:20,overflowY:"auto",height:"100%",display:"flex",flexDirection:"column",gap:14}}>

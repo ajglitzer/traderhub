@@ -1,4 +1,6 @@
 "use client";
+import { useSubscription } from "@/hooks/useSubscription";
+import { PricingModal } from "@/components/subscription/pro-gate";
 import { boldOnly } from "@/lib/safe-markdown";
 import { scopedKey } from "@/lib/user-storage";
 import { useState, useEffect, useRef } from "react";
@@ -47,6 +49,8 @@ One sentence on the mental/emotional aspect of today's trading.`;
 export default function DailyRecapPage() {
   const { getActiveTrades } = useAccountStore();
   const trades = getActiveTrades();
+  const { isPro } = useSubscription();
+  const [showUpgrade, setShowUpgrade] = useState(false);
   const [date, setDate] = useState(new Date().toISOString().slice(0,10));
   const [status, setStatus] = useState<"idle"|"loading"|"streaming"|"done"|"error">("idle");
   const [text, setText] = useState("");
@@ -63,6 +67,7 @@ export default function DailyRecapPage() {
   },[text]);
 
   const generate = async () => {
+    if(!isPro){ setShowUpgrade(true); return; }
     setStatus("loading"); setText(""); setErrMsg("");
     try {
       const res = await fetch("/api/analyze", {
@@ -70,7 +75,9 @@ export default function DailyRecapPage() {
         headers:{"Content-Type":"application/json"},
         body: JSON.stringify({ prompt: buildRecapPrompt(todayTrades, date) }),
       });
-      if(!res.ok){ const j=await res.json().catch(()=>({error:`HTTP ${res.status}`})); throw new Error(j.error||`HTTP ${res.status}`); }
+      if(!res.ok){ const j=await res.json().catch(()=>({error:`HTTP ${res.status}`}));
+        if(res.status===402){ setStatus("idle"); setShowUpgrade(true); return; }
+        throw new Error(j.error||`HTTP ${res.status}`); }
       if(!res.body) throw new Error("No response body");
       setStatus("streaming");
       const reader=res.body.getReader();
@@ -92,6 +99,8 @@ export default function DailyRecapPage() {
       setStatus("done");
     } catch(e){ setErrMsg(String(e)); setStatus("error"); }
   };
+
+  if(showUpgrade) return <PricingModal onClose={()=>setShowUpgrade(false)}/>;
 
   const renderMd = (md:string) => md.split("\n").map((line,i)=>{
     if(line.startsWith("## ")) return <div key={i} style={{fontSize:12,fontWeight:800,color:"#d500f9",textTransform:"uppercase" as const,letterSpacing:"0.08em",marginTop:18,marginBottom:6}}>{line.slice(3)}</div>;
