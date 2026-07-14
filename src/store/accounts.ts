@@ -62,6 +62,13 @@ const FRESH_STATE = () => ({
 // ONE canonical key, versioned. Never changes between deploys.
 // Obfuscated key — harder to find/edit in DevTools Application tab
 export const ACCT_STORAGE_KEY = "th_accts";
+
+// In-memory flag — set when user clears trades this session.
+// Prevents loadFromCloud from writing trades back after a clear.
+let _sessionCleared = false;
+export function markSessionCleared() { _sessionCleared = true; }
+export function clearSessionCleared() { _sessionCleared = false; }
+export function isSessionCleared() { return _sessionCleared; }
 // Set after clearing so auth-provider skips loadFromCloud on next load
 export const CLEARED_FLAG = "th_accts_cleared";
 
@@ -210,13 +217,19 @@ export const useAccountStore = create<AccountStore>()((set, get) => ({
     return (tradesByAccount ?? {})[activeAccountId] || [];
   },
 
-  setAccountTrades: (accountId, trades) =>
+  setAccountTrades: (accountId, trades) => {
+    // Block cloud from restoring trades after user explicitly cleared this session
+    if (_sessionCleared && trades.length > 0) {
+      console.log("[TraderHub] blocked restore of", trades.length, "trades — session was cleared");
+      return;
+    }
     set(s => {
       const next = { ...s, tradesByAccount: { ...s.tradesByAccount, [accountId]: trades } };
       persist(next);
       queueSync(trades);
       return next;
-    }),
+    });
+  },
 
   addAccountTrades: (accountId, newTrades) => {
     const existing = get().tradesByAccount[accountId] || [];

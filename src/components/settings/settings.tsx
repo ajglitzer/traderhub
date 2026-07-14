@@ -4,7 +4,7 @@ import { useSubscription } from "@/hooks/useSubscription";
 import { useAuth } from "@/components/auth/auth-provider";
 import { useState, useRef, useEffect } from "react";
 import { useStore } from "@/store";
-import { useAccountStore, clearCloud, CLEARED_FLAG } from "@/store/accounts";
+import { useAccountStore, clearCloud, CLEARED_FLAG, markSessionCleared } from "@/store/accounts";
 import { exportToCSV, exportToJSON, importFromJSON } from "@/lib/export";
 import { Trade } from "@/types/trade";
 
@@ -204,8 +204,9 @@ export default function SettingsPage() {
   const handleClearAll = async () => {
     const uid = (() => { try { return localStorage.getItem("th_current_user_id") || ""; } catch { return ""; } })();
 
-    // STEP 1: Set the "do not restore from cloud" flag SYNCHRONOUSLY first.
-    // Everything after this is async — the flag must exist before any refresh.
+    // STEP 1: Set flags SYNCHRONOUSLY — both in-memory (blocks this session)
+    // and in localStorage (blocks the next page load after refresh)
+    markSessionCleared();
     if (uid) {
       localStorage.setItem(`${CLEARED_FLAG}__${uid}`, "1");
       console.log("[TraderHub] cleared flag set for", uid);
