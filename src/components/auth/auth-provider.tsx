@@ -17,17 +17,20 @@ const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL || "";
 const hasSupabase = SUPABASE_URL.length > 0 && !SUPABASE_URL.includes("placeholder");
 
 function maybeLoadCloud(userId: string, mounted: { current: boolean }) {
-  // Skip cloud restore if user deliberately cleared their data this session
   const flag = `${CLEARED_FLAG}__${userId}`;
-  if (localStorage.getItem(flag) === "1") {
-    // Remove flag so next login restores normally
+  const wasCleared = localStorage.getItem(flag) === "1";
+  console.log("[TraderHub] maybeLoadCloud userId=", userId, "wasCleared=", wasCleared);
+  if (wasCleared) {
     localStorage.removeItem(flag);
+    console.log("[TraderHub] skipping cloud restore — user cleared data");
     return;
   }
   loadFromCloud().then(trades => {
+    console.log("[TraderHub] cloud trades received:", trades.length);
     if (!mounted.current || trades.length === 0) return;
     const store = useAccountStore.getState();
     const activeId = store.activeAccountId;
+    console.log("[TraderHub] setting", trades.length, "trades into account", activeId);
     if (activeId) store.setAccountTrades(activeId, trades);
   });
 }

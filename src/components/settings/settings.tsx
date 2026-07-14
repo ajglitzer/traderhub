@@ -243,8 +243,13 @@ export default function SettingsPage() {
 
     // Set flag so auth-provider skips loadFromCloud on next page load
     const uid2 = localStorage.getItem("th_current_user_id") || "";
-    if (uid2) localStorage.setItem(`${CLEARED_FLAG}__${uid2}`, "1");
+    if (uid2) {
+      localStorage.setItem(`${CLEARED_FLAG}__${uid2}`, "1");
+      console.log("[TraderHub] set cleared flag for", uid2);
+    }
+    console.log("[TraderHub] clearing cloud...");
     await clearCloud();
+    console.log("[TraderHub] cloud cleared");
     showToast("✓ All trade data cleared");
   };
 
