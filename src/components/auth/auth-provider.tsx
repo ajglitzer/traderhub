@@ -1,7 +1,7 @@
 "use client";
 import React, { createContext, useContext, useState, useEffect, ReactNode } from "react";
 import { User } from "@supabase/supabase-js";
-import { loadFromCloud, useAccountStore, loadUserData, clearUserData, CLEARED_FLAG } from "@/store/accounts";
+import { useAccountStore, loadUserData, clearUserData } from "@/store/accounts";
 import { useStore, reloadUIStore } from "@/store";
 import { clearAllUserScoped } from "@/lib/user-storage";
 
@@ -15,25 +15,6 @@ const Ctx = createContext<AuthCtx>({ user: null, loading: true, signOut: async (
 
 const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL || "";
 const hasSupabase = SUPABASE_URL.length > 0 && !SUPABASE_URL.includes("placeholder");
-
-function maybeLoadCloud(userId: string, mounted: { current: boolean }) {
-  const flag = `${CLEARED_FLAG}__${userId}`;
-  const wasCleared = localStorage.getItem(flag) === "1";
-  console.log("[TraderHub] maybeLoadCloud userId=", userId, "wasCleared=", wasCleared);
-  if (wasCleared) {
-    localStorage.removeItem(flag);
-    console.log("[TraderHub] skipping cloud restore — user cleared data");
-    return;
-  }
-  loadFromCloud().then(trades => {
-    console.log("[TraderHub] cloud trades received:", trades.length);
-    if (!mounted.current || trades.length === 0) return;
-    const store = useAccountStore.getState();
-    const activeId = store.activeAccountId;
-    console.log("[TraderHub] setting", trades.length, "trades into account", activeId);
-    if (activeId) store.setAccountTrades(activeId, trades);
-  });
-}
 
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
@@ -54,7 +35,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           localStorage.setItem("th_current_user_id", sessionUser.id);
           loadUserData(sessionUser.id);
           reloadUIStore(sessionUser.id);
-          maybeLoadCloud(sessionUser.id, mounted);
         }
         setUser(sessionUser);
         setLoading(false);
@@ -74,7 +54,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           if (_event === "SIGNED_IN") {
             loadUserData(newUser.id);
             reloadUIStore(newUser.id);
-            maybeLoadCloud(newUser.id, mounted);
           }
         } else {
           clearAllUserScoped();
