@@ -14,7 +14,6 @@ const NAV = [
   { id:"checklist",  label:"Checklist",  icon:"☑" },
   { id:"journal",    label:"Journal",    icon:"◧" },
   { id:"recap",      label:"AI Recap",   icon:"✦" },
-  { id:"simulator",  label:"Simulator",  icon:"⬡" },
   { id:"goals",      label:"Goals",        icon:"◎" },
   { id:"econ",       label:"Econ Calendar", icon:"⊡" },
   { id:"social",     label:"Community",  icon:"◎" },

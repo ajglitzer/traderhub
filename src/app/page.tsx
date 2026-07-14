@@ -20,7 +20,6 @@ import AnalyticsPage from "@/components/analytics/analytics";
 import PlaybookPage from "@/components/playbook/playbook";
 import ChecklistPage from "@/components/checklist/checklist";
 import DailyRecapPage from "@/components/recap/daily-recap";
-import SimulatorPage from "@/components/simulator/simulator";
 import PatternPage from "@/components/patterns/patterns";
 import LifestylePage from "@/components/lifestyle/lifestyle";
 import EconomicCalendar from "@/components/calendar/economic-calendar";
@@ -408,7 +407,6 @@ function AppContent({ activeTab, activeUser, d }: { activeTab: string; activeUse
   if (activeTab === "playbook")  return <><PlaybookPage/>{d}</>;
   if (activeTab === "checklist") return <><ChecklistPage/>{d}</>;
   if (activeTab === "recap")     return <><DailyRecapPage/>{d}</>;
-  if (activeTab === "simulator") return <><SimulatorPage/>{d}</>;
   if (activeTab === "social") return <div style={{height:"100%",overflow:"hidden"}}><SocialPageWrapper userId={activeUser.id}/>{d}</div>;
   if (activeTab === "patterns")  return <><PatternPage/>{d}</>;
   if (activeTab === "goals")       return <><GoalsPage/>{d}</>;
