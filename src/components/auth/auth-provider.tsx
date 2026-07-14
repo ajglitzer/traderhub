@@ -1,7 +1,7 @@
 "use client";
 import React, { createContext, useContext, useState, useEffect, ReactNode } from "react";
 import { User } from "@supabase/supabase-js";
-import { loadFromCloud, useAccountStore, loadUserData, clearUserData } from "@/store/accounts";
+import { loadFromCloud, useAccountStore, loadUserData, clearUserData, CLEARED_FLAG } from "@/store/accounts";
 import { useStore, reloadUIStore } from "@/store";
 import { clearAllUserScoped } from "@/lib/user-storage";
 
@@ -16,6 +16,21 @@ const Ctx = createContext<AuthCtx>({ user: null, loading: true, signOut: async (
 const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL || "";
 const hasSupabase = SUPABASE_URL.length > 0 && !SUPABASE_URL.includes("placeholder");
 
+function maybeLoadCloud(userId: string, mounted: { current: boolean }) {
+  // Skip cloud restore if user deliberately cleared their data this session
+  const flag = `${CLEARED_FLAG}__${userId}`;
+  if (localStorage.getItem(flag) === "1") {
+    // Remove flag so next login restores normally
+    localStorage.removeItem(flag);
+    return;
+  }
+  loadFromCloud().then(trades => {
+    if (!mounted.current || trades.length === 0) return;
+    const store = useAccountStore.getState();
+    const activeId = store.activeAccountId;
+    if (activeId) store.setAccountTrades(activeId, trades);
+  });
+}
 
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
@@ -23,52 +38,40 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     if (!hasSupabase) return;
-    let mounted = true;
+    const mounted = { current: true };
 
     import("@/lib/supabase").then(({ createClient }) => {
       const supabase = createClient();
 
       supabase.auth.getSession().then(({ data, error }) => {
-        if (!mounted) return;
+        if (!mounted.current) return;
         if (error) console.error("[Auth] getSession error:", error.message);
         const sessionUser = data?.session?.user ?? null;
         if (sessionUser) {
           localStorage.setItem("th_current_user_id", sessionUser.id);
           loadUserData(sessionUser.id);
           reloadUIStore(sessionUser.id);
-          loadFromCloud().then(trades => {
-            if (!mounted || trades.length === 0) return;
-            const store = useAccountStore.getState();
-            const activeId = store.activeAccountId;
-            if (activeId) store.setAccountTrades(activeId, trades);
-          });
+          maybeLoadCloud(sessionUser.id, mounted);
         }
         setUser(sessionUser);
         setLoading(false);
       }).catch(err => {
-        if (!mounted) return;
+        if (!mounted.current) return;
         console.error("[Auth] getSession failed:", err);
         setLoading(false);
       });
 
       const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
-        if (!mounted) return;
+        if (!mounted.current) return;
         const newUser = session?.user ?? null;
         setLoading(false);
 
         if (newUser) {
-          const prevId = localStorage.getItem("th_current_user_id");
           localStorage.setItem("th_current_user_id", newUser.id);
-
           if (_event === "SIGNED_IN") {
             loadUserData(newUser.id);
             reloadUIStore(newUser.id);
-                loadFromCloud().then(trades => {
-              if (!mounted || trades.length === 0) return;
-              const store = useAccountStore.getState();
-              const activeId = store.activeAccountId;
-              if (activeId) store.setAccountTrades(activeId, trades);
-            });
+            maybeLoadCloud(newUser.id, mounted);
           }
         } else {
           clearAllUserScoped();
@@ -79,10 +82,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         setUser(newUser);
       });
 
-      return () => { mounted = false; subscription.unsubscribe(); };
+      return () => { mounted.current = false; subscription.unsubscribe(); };
     });
 
-    return () => { mounted = false; };
+    return () => { mounted.current = false; };
   }, []);
 
   const signOut = async () => {

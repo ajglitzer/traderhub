@@ -4,7 +4,7 @@ import { useSubscription } from "@/hooks/useSubscription";
 import { useAuth } from "@/components/auth/auth-provider";
 import { useState, useRef, useEffect } from "react";
 import { useStore } from "@/store";
-import { useAccountStore, clearCloud } from "@/store/accounts";
+import { useAccountStore, clearCloud, CLEARED_FLAG } from "@/store/accounts";
 import { exportToCSV, exportToJSON, importFromJSON } from "@/lib/export";
 import { Trade } from "@/types/trade";
 
@@ -201,7 +201,7 @@ export default function SettingsPage() {
     }
   };
 
-  const handleClearAll = () => {
+  const handleClearAll = async () => {
     // 1. Clear the in-memory store immediately so the UI updates now
     setAccountTrades(activeAccountId, []);
 
@@ -241,7 +241,10 @@ export default function SettingsPage() {
     // Restore UI store with playbook intact
     if (savedUIStore) localStorage.setItem(uiKey, savedUIStore);
 
-    void clearCloud();   // wipe cloud so refresh doesn't restore old trades
+    // Set flag so auth-provider skips loadFromCloud on next page load
+    const uid2 = localStorage.getItem("th_current_user_id") || "";
+    if (uid2) localStorage.setItem(`${CLEARED_FLAG}__${uid2}`, "1");
+    await clearCloud();
     showToast("✓ All trade data cleared");
   };
 

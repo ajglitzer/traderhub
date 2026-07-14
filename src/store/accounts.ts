@@ -48,6 +48,10 @@ export const DEFAULT_ACCOUNT: Account = {
 
 export const COLORS = ["#00e5ff","#00e676","#d500f9","#ffab00","#ff6b35","#f9a8d4","#6ee7b7","#93c5fd"];
 
+// Flag written to localStorage when user explicitly clears data.
+// loadFromCloud checks this and skips restoring if set.
+export const ACCT_CLEARED_KEY = "th_accts_cleared";
+
 const FRESH_STATE = () => ({
   accounts: [{ ...DEFAULT_ACCOUNT }],
   activeAccountId: "default",
@@ -58,6 +62,8 @@ const FRESH_STATE = () => ({
 // ONE canonical key, versioned. Never changes between deploys.
 // Obfuscated key — harder to find/edit in DevTools Application tab
 export const ACCT_STORAGE_KEY = "th_accts";
+// Set after clearing so auth-provider skips loadFromCloud on next load
+export const CLEARED_FLAG = "th_accts_cleared";
 
 function uid(): string {
   try { return (typeof window !== "undefined" && localStorage.getItem("th_current_user_id")) || ""; }
@@ -229,6 +235,11 @@ export const useAccountStore = create<AccountStore>()((set, get) => ({
       const next = { ...s, tradesByAccount: { ...s.tradesByAccount, [accountId]: merged } };
       persist(next);
       queueSync(merged);
+      // Clear the "user cleared data" flag so cloud sync resumes after import
+      try {
+        const u = localStorage.getItem("th_current_user_id") || "";
+        if (u) localStorage.removeItem(`${ACCT_CLEARED_KEY}__${u}`);
+      } catch {}
       return next;
     });
   },
