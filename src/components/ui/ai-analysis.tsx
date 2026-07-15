@@ -26,6 +26,7 @@ interface Trade {
 interface Props {
   trade: Record<string, any>;
   onClose: () => void;
+  onUpgrade?: () => void;
 }
 
 const f$ = (n: number) =>
@@ -91,8 +92,9 @@ export function AIAnalysisBtn({ trade, size = 28 }: { trade: Record<string, any>
   const { isPro, status } = useSubscription();
   return (
     <>
+      {showUpgrade && <PricingModal onClose={()=>setShowUpgrade(false)}/>}
       <button
-        onClick={e => { e.stopPropagation(); setOpen(true); }}
+        onClick={e => { e.stopPropagation(); if(!isPro){ setShowUpgrade(true); return; } setOpen(true); }}
         title="AI trade analysis"
         style={{
           width: size, height: size, borderRadius: 7,
@@ -119,12 +121,12 @@ export function AIAnalysisBtn({ trade, size = 28 }: { trade: Record<string, any>
           <path d="M6.5 1L7.5 5.5L12 6.5L7.5 7.5L6.5 12L5.5 7.5L1 6.5L5.5 5.5L6.5 1Z" fill="#d500f9" fillOpacity="0.9"/>
         </svg>
       </button>
-      {open && <AIAnalysisPopup trade={trade} onClose={() => setOpen(false)} />}
+      {open && <AIAnalysisPopup trade={trade} onClose={() => setOpen(false)} onUpgrade={() => { setOpen(false); setShowUpgrade(true); }} />}
     </>
   );
 }
 
-function AIAnalysisPopup({ trade, onClose }: Props) {
+function AIAnalysisPopup({ trade, onClose, onUpgrade }: Props) {
   const [status, setStatus] = useState<"idle" | "loading" | "streaming" | "done" | "error">("idle");
   const [text, setText] = useState("");
   const [errMsg, setErrMsg] = useState("");
@@ -149,6 +151,7 @@ function AIAnalysisPopup({ trade, onClose }: Props) {
       });
 
       if (!res.ok) {
+        if (res.status === 402) { onUpgrade?.(); return; }
         const errJson = await res.json().catch(() => ({ error: `HTTP ${res.status}` }));
         throw new Error(errJson.error || `HTTP ${res.status}`);
       }
