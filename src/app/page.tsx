@@ -407,7 +407,23 @@ function AppContent({ activeTab, activeUser, d }: { activeTab: string; activeUse
   if (activeTab === "playbook")  return <><PlaybookPage/>{d}</>;
   if (activeTab === "checklist") return <><ChecklistPage/>{d}</>;
   if (activeTab === "recap")     return <><DailyRecapPage/>{d}</>;
-  if (activeTab === "social") return <div style={{height:"100%",overflow:"hidden"}}><SocialPageWrapper userId={activeUser.id}/>{d}</div>;
+  if (activeTab === "social") {
+    const onMobile = typeof window !== "undefined" && window.innerWidth < 768;
+    if (onMobile) return (
+      <div style={{height:"100%",display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",padding:32,textAlign:"center"}}>
+        <div style={{fontSize:48,marginBottom:20}}>💬</div>
+        <div style={{fontSize:22,fontWeight:900,color:"#f0f6fc",marginBottom:10,letterSpacing:"-0.03em"}}>Community</div>
+        <div style={{fontSize:14,color:"#4b5563",lineHeight:1.7,maxWidth:260,marginBottom:24}}>
+          The community tab isn't available on mobile yet.<br/>Head to a desktop to connect with other traders.
+        </div>
+        <div style={{padding:"10px 20px",borderRadius:10,background:"rgba(0,229,255,0.06)",border:"1px solid rgba(0,229,255,0.15)",fontSize:12,color:"#00e5ff"}}>
+          🖥️ Available on desktop
+        </div>
+        {d}
+      </div>
+    );
+    return <div style={{height:"100%",overflow:"hidden"}}><SocialPageWrapper userId={activeUser.id}/>{d}</div>;
+  }
   if (activeTab === "patterns")  return <><PatternPage/>{d}</>;
   if (activeTab === "goals")       return <><GoalsPage/>{d}</>;
   if (activeTab === "econ")        return <><EconomicCalendar/>{d}</>;

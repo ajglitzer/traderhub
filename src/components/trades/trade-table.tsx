@@ -113,8 +113,8 @@ export function TradeTable() {
       {showAddTrade && <AddTradeModal onClose={()=>setShowAddTrade(false)}/>}
 
       {/* Table */}
-      <div className="flex-1 overflow-auto">
-        <table style={{ width:"100%", borderCollapse:"collapse" }}>
+      <div className="flex-1 overflow-auto" style={{overflowX:"auto"}}>
+        <table style={{ width:"max-content", minWidth:"100%", borderCollapse:"collapse" }}>
           <thead style={{ position:"sticky", top:0, zIndex:10, background:"rgba(6,10,15,0.97)", backdropFilter:"blur(20px)" }}>
             <tr style={{ borderBottom:"1px solid rgba(255,255,255,0.05)" }}>
               <TH col="entryTime">Date</TH>
