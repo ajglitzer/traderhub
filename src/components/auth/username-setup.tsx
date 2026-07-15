@@ -153,7 +153,7 @@ export function UsernameSetupLocal({ userId }: { userId: string }) {
               {usernameErr && <div style={{fontSize:11,color:"#f87171",marginTop:4}}>⚠ {usernameErr}</div>}
               <div style={{ fontSize:10, marginTop:5, display:"flex", alignItems:"center", gap:6 }}>
                 <span style={{ color:"#374151" }}>{username.length}/20</span>
-                {username.length >= 3 && (
+                {username.length >= 3 && !usernameErr && (
                   checking ? <span style={{ color:"#4b5563" }}>Checking...</span>
                   : available === true  ? <span style={{ color:"#00e676", fontWeight:700 }}>✓ Available</span>
                   : available === false ? <span style={{ color:"#ff1744", fontWeight:700 }}>✗ Already taken</span>
