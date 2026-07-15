@@ -214,7 +214,12 @@ export function Sidebar() {
       <div style={{ position:"absolute", top:0, bottom:0, right:0, width:1, background:"linear-gradient(180deg, transparent, rgba(0,229,255,0.15) 40%, rgba(0,229,255,0.15) 60%, transparent)", pointerEvents:"none" }}/>
 
       <div style={{ height:54, display:"flex", alignItems:"center", padding: sidebarOpen ? "0 16px" : "0", justifyContent: sidebarOpen ? "flex-start" : "center", borderBottom:"1px solid rgba(255,255,255,0.04)", gap:10, flexShrink:0 }}>
-        <div style={{ width:32, height:32, borderRadius:10, flexShrink:0, background:"linear-gradient(135deg, #00e5ff 0%, #0077aa 100%)", display:"flex", alignItems:"center", justifyContent:"center", fontSize:15, fontWeight:900, color:"#000", boxShadow:"0 0 20px rgba(0,229,255,0.4), 0 4px 12px rgba(0,0,0,0.4), inset 0 1px 0 rgba(255,255,255,0.3)" }}>T</div>
+        <svg width="32" height="32" viewBox="0 0 32 32" fill="none" style={{flexShrink:0}}>
+          <polygon points="16,2 28,9 28,23 16,30 4,23 4,9" fill="#0a0e17" stroke="#00e5ff" strokeWidth="1.2"/>
+          <polygon points="16,5.5 25,10.5 25,22.5 16,27.5 7,22.5 7,10.5" fill="none" stroke="#00e5ff" strokeWidth="0.5" opacity="0.3"/>
+          <polyline points="9,22 12.5,17.5 16,12.5 19.5,15 23,9" fill="none" stroke="#00e5ff" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"/>
+          <circle cx="23" cy="9" r="2" fill="#00e5ff"/>
+        </svg>
         {sidebarOpen && (
           <div style={{ overflow:"hidden" }}>
             <div style={{ fontSize:13, fontWeight:800, color:"#f0f6fc", letterSpacing:"-0.03em", lineHeight:1 }}>TraderHub</div>
