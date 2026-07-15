@@ -257,7 +257,21 @@ export default function SocialPage({ myProfile }: { myProfile: Profile }) {
       getUnreadCount(user.id),
     ]);
     const rid = removedIds.current;
-    setFriends(f.filter((x:any)=>!rid.has(x.id))); setRequests(r); setConvos(c.filter((x:any)=>!rid.has(x.profile.id))); setBattles(b.filter((x:any)=>!rid.has(x.challenger_id)&&!rid.has(x.opponent_id))); setUnread(u);
+    const filteredFriends = f.filter((x:any)=>!rid.has(x.id));
+    const filteredConvos = c.filter((x:any)=>!rid.has(x.profile.id));
+    setFriends(filteredFriends);
+    setRequests(r);
+    setConvos(filteredConvos);
+    setBattles(b.filter((x:any)=>!rid.has(x.challenger_id)&&!rid.has(x.opponent_id)));
+    setUnread(u);
+    // If the active chat person is no longer in allowed conversations, close the chat
+    setChatWith(prev => {
+      if (!prev) return null;
+      const stillAllowed = filteredConvos.some((x:any) => x.profile.id === prev.id) ||
+                           filteredFriends.some((x:any) => x.id === prev.id);
+      if (!stillAllowed) { setMessages([]); return null; }
+      return prev;
+    });
     if(user) { const bids = await getBlockedUsers(user.id); setBlockedIds(bids); const bprofs = await Promise.all(bids.map(async(bid:string)=>{ try{ const r=await supabase.from("profiles").select("*").eq("id",bid).single(); return r.data; }catch{ return null; } })); setBlockedProfiles(bprofs.filter(Boolean) as Profile[]); }
     // Update sidebar badge when not on community tab
     const pendingR = r.filter((req:FriendRequest)=>req.to_id===user.id&&req.status==="pending");
@@ -270,13 +284,27 @@ export default function SocialPage({ myProfile }: { myProfile: Profile }) {
 
   useEffect(()=>{ load(); },[load]);
 
-  // Realtime messages
+  // Realtime — messages, friend changes, blocks
   useEffect(()=>{
     if(!user) return;
-    const ch = supabase.channel("messages").on("postgres_changes",{event:"INSERT",schema:"public",table:"messages"},()=>{
-      load();
-      if(chatWith) loadMessages(chatWith.id);
-    }).subscribe();
+
+    // When someone unfriends or blocks us, reload so they disappear
+    const ch = supabase.channel("social_realtime")
+      .on("postgres_changes",{event:"INSERT",schema:"public",table:"messages"},()=>{
+        load();
+        if(chatWith) loadMessages(chatWith.id);
+      })
+      .on("postgres_changes",{event:"*",schema:"public",table:"friend_requests",filter:`or(from_id=eq.${user.id},to_id=eq.${user.id})`},()=>{
+        load();
+      })
+      .on("postgres_changes",{event:"*",schema:"public",table:"blocks",filter:`or(blocker_id=eq.${user.id},blocked_id=eq.${user.id})`},()=>{
+        // When we get blocked or someone we blocked changes — reload everything
+        // Also clear the active chat if the person is now blocked/unfriended
+        load();
+        setChatWith(null);
+        setMessages([]);
+      })
+      .subscribe();
     return()=>{ supabase.removeChannel(ch); };
   },[user,chatWith]);
 
@@ -586,7 +614,7 @@ export default function SocialPage({ myProfile }: { myProfile: Profile }) {
                 <div style={{fontSize:10,color:"#4b5563"}}>{chatWith.display_name}</div>
               </div>
               <button onClick={shareLastTrade} title="Share your last trade" style={{height:28,padding:"0 10px",borderRadius:8,background:"rgba(0,229,255,0.08)",border:"1px solid rgba(0,229,255,0.15)",color:"#00e5ff",cursor:"pointer",fontSize:11,fontWeight:700,display:isMob?"none":"flex"}}>📊 Share Trade</button>
-              <button onClick={()=>startBattle(chatWith.id,prompt("Symbol (NQ/ES/MGC)?","NQ")||"NQ")} style={{height:28,padding:"0 10px",borderRadius:8,background:"rgba(213,0,249,0.08)",border:"1px solid rgba(213,0,249,0.2)",color:"#d500f9",cursor:"pointer",fontSize:11,fontWeight:700,display:isMob?"none":"flex"}}>⚔️ Battle</button>
+
               <button onClick={()=>setFriendActionTarget(chatWith)} title="More options" style={{width:32,height:32,borderRadius:8,background:"rgba(255,255,255,0.05)",border:"1px solid rgba(255,255,255,0.08)",color:"#9ca3af",cursor:"pointer",fontSize:18,display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0}}>⋯</button>
               <button onClick={()=>setChatWith(null)} style={{width:28,height:28,borderRadius:8,background:"rgba(255,255,255,0.05)",border:"1px solid rgba(255,255,255,0.08)",color:"#4b5563",cursor:"pointer",fontSize:17,display:"flex",alignItems:"center",justifyContent:"center"}}>×</button>
             </div>
