@@ -201,6 +201,23 @@ export default function SettingsPage() {
     }
   };
 
+  const handleDeleteAccount = async () => {
+    try {
+      // 1. Clear all local data
+      await handleClearAll();
+      // 2. Delete from Supabase via API
+      const res = await fetch("/api/user/delete", { method: "DELETE" });
+      if (!res.ok) throw new Error("Failed to delete account");
+      // 3. Sign out
+      const { createClient } = await import("@/lib/supabase");
+      const sb = createClient();
+      await sb.auth.signOut();
+      window.location.href = "/";
+    } catch (e) {
+      showToast("Failed to delete account — please try again");
+    }
+  };
+
   const handleClearAll = async () => {
     const uid = (() => { try { return localStorage.getItem("th_current_user_id") || ""; } catch { return ""; } })();
 
@@ -351,6 +368,14 @@ export default function SettingsPage() {
             label={`Clear all ${allTrades.length} trades`}
             confirmLabel="Permanently delete everything?"
             onConfirm={() => { handleClearAll(); }}
+            danger
+          />
+        </Row>
+        <Row label="Delete Account" desc="Permanently delete your account, all trades, and all data. This cannot be undone.">
+          <ConfirmBtn
+            label="Delete my account"
+            confirmLabel="Yes, permanently delete everything"
+            onConfirm={() => { handleDeleteAccount(); }}
             danger
           />
         </Row>
