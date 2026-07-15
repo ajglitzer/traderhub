@@ -138,7 +138,13 @@ export function UsernameSetupLocal({ userId }: { userId: string }) {
                   setUsername(v);
                   if(v.length>0&&v.length<3) setUsernameErr("Must be at least 3 characters");
                   else if(v.length>20) setUsernameErr("Max 20 characters");
-                  else setUsernameErr("");
+                  else {
+                    // Client-side profanity check so button disables immediately
+                    import("@/lib/profanity").then(({filterUsername:fu})=>{
+                      const r=fu(v);
+                      setUsernameErr(r.ok?"":r.reason||"Username not allowed");
+                    });
+                  }
                 }}
                 onKeyDown={e=>e.key==="Enter"&&save()}
                 placeholder="e.g. nqtrader99"
