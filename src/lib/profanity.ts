@@ -12,12 +12,22 @@ filter.addWords(
   "dyke","lesbo","queer","troon"
 );
 
+// Extra words to always block as substrings
+const HARD_BLOCK = [
+  "nigga","nigger","n1gga","n1gger","nigg","niqqa","niqger",
+  "faggot","fag","f4g","retard","kys","chink","spic","wetback",
+  "beaner","gook","towelhead","sandnig","raghead","coon","jigaboo",
+  "tranny","dyke","cracker","honkey","peckerwood",
+];
+
 export function containsProfanity(text: string): boolean {
-  try {
-    return filter.isProfane(text);
-  } catch {
-    return false;
-  }
+  // Normalize: lowercase, strip non-alphanumeric for substring check
+  const clean = text.toLowerCase().replace(/[^a-z0-9]/g, "");
+  // Check our hard-block list as substrings of the cleaned text
+  if (HARD_BLOCK.some(w => clean.includes(w.replace(/[^a-z0-9]/g, "")))) return true;
+  // Also run the library check on the original text
+  try { if (filter.isProfane(text)) return true; } catch {}
+  return false;
 }
 
 export function filterMessage(text: string): { ok: boolean; reason?: string } {
