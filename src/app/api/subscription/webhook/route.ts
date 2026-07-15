@@ -23,13 +23,16 @@ export async function POST(req: NextRequest) {
 
       // If no user_id in metadata, look it up by stripe_subscription_id
       if (!userId) {
-        const { data } = await supabase
+        const { data, error: lookupErr } = await supabase
           .from("subscriptions")
           .select("user_id")
           .eq("stripe_subscription_id", sub.id)
           .single();
+        console.log("lookup by sub_id:", sub.id, "found:", data, "err:", lookupErr);
         userId = data?.user_id;
       }
+
+      console.log("upsertSub userId:", userId, "sub.id:", sub.id, "status:", sub.status);
 
       if (!userId) {
         console.error("upsertSub: no user_id found for subscription", sub.id);
