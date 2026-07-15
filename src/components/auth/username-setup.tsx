@@ -32,6 +32,8 @@ export function UsernameSetupLocal({ userId }: { userId: string }) {
   const [checking,  setChecking]  = useState(false);
   const [available, setAvailable] = useState<boolean|null>(null);
   const [saving,    setSaving]    = useState(false);
+  const [usernameErr, setUsernameErr] = useState("");
+  const [displayErr,  setDisplayErr]  = useState("");
 
   // Live availability check
   useEffect(() => {
@@ -131,9 +133,18 @@ export function UsernameSetupLocal({ userId }: { userId: string }) {
               <div style={{ fontSize:10, color:"#4b5563", textTransform:"uppercase", letterSpacing:"0.08em", marginBottom:6 }}>
                 Username <span style={{ color:"#374151", textTransform:"none" }}>(public)</span>
               </div>
-              <input value={username} maxLength={20} onChange={e=>setUsername(e.target.value.toLowerCase().replace(/[^a-z0-9_]/g,"").slice(0,20))}
+              <input value={username} maxLength={20} onChange={e=>{
+                  const v=e.target.value.toLowerCase().replace(/[^a-z0-9_]/g,"").slice(0,20);
+                  setUsername(v);
+                  if(v.length>0&&v.length<3) setUsernameErr("Must be at least 3 characters");
+                  else if(v.length>20) setUsernameErr("Max 20 characters");
+                  else setUsernameErr("");
+                }}
                 onKeyDown={e=>e.key==="Enter"&&save()}
-                placeholder="e.g. nqtrader99" style={IS} autoFocus/>
+                placeholder="e.g. nqtrader99"
+                style={{...IS, borderColor: usernameErr ? "rgba(255,23,68,0.5)" : "rgba(255,255,255,0.1)"}}
+                autoFocus/>
+              {usernameErr && <div style={{fontSize:11,color:"#f87171",marginTop:4}}>⚠ {usernameErr}</div>}
               <div style={{ fontSize:10, marginTop:5, display:"flex", alignItems:"center", gap:6 }}>
                 <span style={{ color:"#374151" }}>{username.length}/20</span>
                 {username.length >= 3 && (
@@ -149,9 +160,17 @@ export function UsernameSetupLocal({ userId }: { userId: string }) {
               <div style={{ fontSize:10, color:"#4b5563", textTransform:"uppercase", letterSpacing:"0.08em", marginBottom:6 }}>
                 Display Name <span style={{ color:"#374151", textTransform:"none" }}>(optional)</span>
               </div>
-              <input value={display} onChange={e=>setDisplay(e.target.value)}
+              <input value={display} maxLength={30} onChange={e=>{
+                  const v=e.target.value;
+                  setDisplay(v);
+                  if(v.length>30) setDisplayErr("Max 30 characters");
+                  else if(v.length>0&&v.trim().length===0) setDisplayErr("Cannot be only spaces");
+                  else setDisplayErr("");
+                }}
                 onKeyDown={e=>e.key==="Enter"&&save()}
-                placeholder="Your name" style={IS} maxLength={30}/>
+                placeholder="Your name"
+                style={{...IS, borderColor: displayErr ? "rgba(255,23,68,0.5)" : "rgba(255,255,255,0.1)"}}/>
+              {displayErr && <div style={{fontSize:11,color:"#f87171",marginTop:4}}>⚠ {displayErr}</div>}
             </div>
 
             {error && <div style={{ padding:"10px 14px", borderRadius:9, background:"rgba(255,23,68,0.08)", border:"1px solid rgba(255,23,68,0.2)", fontSize:13, color:"#f87171" }}>{error}</div>}
