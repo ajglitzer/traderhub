@@ -1,7 +1,7 @@
 "use client";
 import React, { createContext, useContext, useState, useEffect, ReactNode } from "react";
 import { User } from "@supabase/supabase-js";
-import { useAccountStore, loadUserData, clearUserData } from "@/store/accounts";
+import { useAccountStore, loadUserData, clearUserData, saveUserData } from "@/store/accounts";
 import { useStore, reloadUIStore } from "@/store";
 import { clearAllUserScoped } from "@/lib/user-storage";
 
@@ -56,6 +56,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
             reloadUIStore(newUser.id);
           }
         } else {
+          // Save before clearing so trades survive logout
+          const uid = localStorage.getItem("th_current_user_id");
+          if (uid) saveUserData(uid);
           clearAllUserScoped();
           localStorage.removeItem("th_current_user_id");
           clearUserData();
@@ -74,6 +77,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     if (!hasSupabase) return;
     const { createClient } = await import("@/lib/supabase");
     const supabase = createClient();
+    // Save trades BEFORE clearing so they survive the logout
+    const uid = localStorage.getItem("th_current_user_id");
+    if (uid) saveUserData(uid);
     clearAllUserScoped();
     localStorage.removeItem("th_current_user_id");
     clearUserData();
