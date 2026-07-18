@@ -27,15 +27,19 @@ export function removeScoped(base: string): void {
   try { localStorage.removeItem(scopedKey(base)); } catch {}
 }
 
-/** Wipe every scoped key for the current user (call on logout). */
+/** Wipe every scoped key for the current user (call on logout).
+ * NOTE: excludes the accounts/trades key so trades survive logout. */
 export function clearAllUserScoped(): void {
   const uid = currentUserId();
   if (!uid) return;
   try {
+    const keep = new Set([
+      `th_accts__${uid}`,   // trades — must survive logout
+    ]);
     const kill: string[] = [];
     for (let i = 0; i < localStorage.length; i++) {
       const k = localStorage.key(i);
-      if (k && k.endsWith(`__${uid}`)) kill.push(k);
+      if (k && k.endsWith(`__${uid}`) && !keep.has(k)) kill.push(k);
     }
     kill.forEach(k => localStorage.removeItem(k));
   } catch {}
