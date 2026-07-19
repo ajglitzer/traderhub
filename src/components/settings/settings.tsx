@@ -226,7 +226,6 @@ export default function SettingsPage() {
     markSessionCleared();
     if (uid) {
       localStorage.setItem(`${CLEARED_FLAG}__${uid}`, "1");
-      console.log("[TraderHub] cleared flag set for", uid);
     }
 
     // STEP 2: Clear in-memory store
@@ -265,9 +264,7 @@ export default function SettingsPage() {
     if (savedUIStore) localStorage.setItem(uiKey, savedUIStore);
 
     // STEP 4: Clear cloud (async — flag already set above so refresh is safe)
-    console.log("[TraderHub] clearing cloud...");
     await clearCloud();
-    console.log("[TraderHub] cloud cleared");
     showToast("✓ All trade data cleared");
   };
 

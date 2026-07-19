@@ -233,7 +233,6 @@ export const useAccountStore = create<AccountStore>()((set, get) => ({
   setAccountTrades: (accountId, trades) => {
     // Block cloud from restoring trades after user explicitly cleared this session
     if (_sessionCleared && trades.length > 0) {
-      console.log("[TraderHub] blocked restore of", trades.length, "trades — session was cleared");
       return;
     }
     set(s => {

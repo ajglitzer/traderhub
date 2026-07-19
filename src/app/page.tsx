@@ -372,7 +372,6 @@ function UsernameGate({ userId, hasSupabase, children }: { userId: string; hasSu
             return;
           }
           // No profile found  user needs to pick a username
-          console.log("[UsernameGate] no profile found for user, showing setup");
         } catch (e) {
           console.error("[UsernameGate] check failed:", e);
         }
