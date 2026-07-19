@@ -220,7 +220,8 @@ export function resolveAssetClass(trade: { assetClass?: string; ticker?: string 
   const detected = detectAssetClass(trade?.ticker ?? "");
   const stated = trade?.assetClass;
   if (!stated) return detected;
-  // A ticker that is unambiguously a futures root wins over a stale "STOCK".
-  if (detected === "FUTURES" && stated !== "FUTURES") return "FUTURES";
+  // An unambiguous non-stock signal from the ticker (futures root, FX pair like
+  // XAUUSD, crypto symbol) wins over a stale/default "STOCK" from CSV import.
+  if (detected !== "STOCK" && stated !== detected) return detected;
   return stated as AssetClass;
 }

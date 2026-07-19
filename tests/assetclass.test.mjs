@@ -41,6 +41,10 @@ t("real stock is left alone", () =>
   is(resolveAssetClass({ticker:"AAPL", assetClass:"STOCK"}),"STOCK"));
 t("deliberate OPTIONS on a stock ticker is respected", () =>
   is(resolveAssetClass({ticker:"AAPL", assetClass:"OPTIONS"}),"OPTIONS"));
+t("XAUUSD saved as STOCK is corrected to FOREX", () =>
+  is(resolveAssetClass({ticker:"XAUUSD", assetClass:"STOCK"}),"FOREX"));
+t("BTCUSDT saved as STOCK is corrected to CRYPTO", () =>
+  is(resolveAssetClass({ticker:"BTCUSDT", assetClass:"STOCK"}),"CRYPTO"));
 
 console.log("\n--- Filtering: futures vs stocks ---");
 const T=(o)=>({status:"CLOSED",side:"LONG",entryTime:"2026-01-05T10:00:00.000Z",netPnl:0,tags:[],...o});
