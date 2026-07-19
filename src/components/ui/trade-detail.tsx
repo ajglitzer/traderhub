@@ -7,6 +7,7 @@ function sf(n: unknown, d = 2): string {
 }
 import { useState, useRef } from "react";
 import { useStore } from "@/store";
+import { useAccountStore } from "@/store/accounts";
 import { Trade } from "@/types/trade";
 import { fmt$, fmtHold } from "@/lib/utils";
 import { format } from "date-fns";
@@ -23,7 +24,9 @@ const S = {
 interface Props { trade: Trade; onClose: () => void; }
 
 export function TradeDetailPanel({ trade, onClose }: Props) {
-  const { updateTrade, allTags, addTag } = useStore();
+  const { allTags, addTag } = useStore();
+  const { activeAccountId, updateAccountTrade } = useAccountStore();
+  const updateTrade = (id: string, data: Partial<Trade>) => updateAccountTrade(activeAccountId, id, data);
   const [notes,    setNotes]    = useState(trade.notes || "");
   const [tags,     setTags]     = useState<string[]>(trade.tags || []);
   const [rating,   setRating]   = useState(trade.rating || 0);
