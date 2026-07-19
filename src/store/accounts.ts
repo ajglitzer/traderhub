@@ -294,17 +294,6 @@ if (typeof window !== "undefined") {
     const u = uid();
     if (u) saveUserData(u);
   });
-
-  // Cross-tab sync: when another tab/window writes trades to localStorage,
-  // reload them here so two open tabs never clobber each other's data.
-  // (storage events only fire in OTHER tabs, so this can't loop.)
-  window.addEventListener("storage", (e) => {
-    const u = uid();
-    if (!u || !e.key) return;
-    if (e.key === `${ACCT_STORAGE_KEY}__${u}` && e.newValue) {
-      loadUserData(u);
-    }
-  });
 }
 
 export { COLORS as ACCOUNT_COLORS };
