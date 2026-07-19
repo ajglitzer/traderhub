@@ -1,3 +1,4 @@
+import type { AssetClass } from "@/types/trade";
 import { type ClassValue, clsx } from "clsx";
 import { twMerge } from "tailwind-merge";
 
@@ -63,16 +64,7 @@ function toNum(v: unknown): number | null {
 }
 function toTime(v: unknown): number | null {
   if (v === null || v === undefined || v === "") return null;
-  let s = v as string;
-  // A date-time string with no timezone designator (no "Z"/±HH:mm) is parsed
-  // as local time by native Date, not UTC — but every timestamp this app
-  // writes (Prisma, .toISOString() call sites) is UTC with a "Z" suffix. Force
-  // UTC here too, so a stray unqualified string doesn't sort out of order
-  // relative to properly-tagged ones depending on the server's local offset.
-  if (typeof s === "string" && /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}(:\d{2}(\.\d+)?)?$/.test(s)) {
-    s = s + "Z";
-  }
-  const t = new Date(s).getTime();
+  const t = new Date(v as string).getTime();
   return Number.isFinite(t) ? t : null;
 }
 function toStr(v: unknown): string | null {
@@ -156,4 +148,79 @@ export function getFilteredTrades(
   const totalPages = Math.max(1, Math.ceil(total / limit));
   const safePage = Math.min(Math.max(1, page || 1), totalPages);
   return { trades: list.slice((safePage - 1) * limit, safePage * limit), total, totalPages };
+}
+
+// ── Asset class detection ─────────────────────────────────────────────────────
+// Single source of truth, shared by the CSV parsers and the P&L engine.
+// Misclassifying a futures contract as STOCK silently computes P&L with
+// multiplier 1 (e.g. gold 10x/100x too small), so this must stay correct.
+
+export const FUTURES_ROOTS = new Set([
+  // Equity index
+  "ES","MES","NQ","MNQ","YM","MYM","RTY","M2K","NKD","EMD",
+  // Energy
+  "CL","MCL","QM","NG","QG","HO","RB","BZ",
+  // Metals
+  "GC","MGC","SI","SIL","MSI","HG","MHG","PL","PA",
+  // Treasury / rates
+  "ZN","ZB","ZF","ZT","UB","TN","GE","SR3","ZQ",
+  // Currency futures
+  "6E","6J","6B","6A","6C","6S","6M","6N","M6E","M6A","M6B",
+  // Agriculture
+  "HE","LE","GF","KC","CC","CT","SB","OJ",
+  "ZC","ZW","ZS","ZM","ZL","ZO","ZR",
+  // Crypto futures
+  "BTC","MBT","ETH","MET",
+]);
+
+const FX_CURRENCIES = ["EUR","GBP","USD","JPY","AUD","CAD","CHF","NZD","XAU","XAG"];
+
+/** CME_MINI:NQ1! -> NQ,  COMEX_MINI:MGC1! -> MGC,  GCZ24 -> GC */
+export function getRootSymbol(sym: string): string {
+  const s = String(sym ?? "");
+  const withoutExchange = s.includes(":") ? s.split(":")[1] : s;
+  return withoutExchange
+    .replace(/\d+!$/, "")          // "1!" continuous-contract suffix
+    .replace(/!$/, "")             // bare "!"
+    .replace(/[A-Z]\d{2,4}$/i, "") // expiry code like Z24 / H2025
+    .trim()
+    .toUpperCase();
+}
+
+/**
+ * Normalized root for FUTURES_SPECS lookup.
+ * Must NOT strip digits — roots like "6E", "M2K" and "SR3" are numeric by design.
+ */
+export function specRootSymbol(sym: string): string {
+  return getRootSymbol(sym).replace(/[^A-Z0-9]/g, "");
+}
+
+export function detectAssetClass(sym: string): AssetClass {
+  const raw = String(sym ?? "");
+  if (!raw) return "STOCK";
+
+  if (FUTURES_ROOTS.has(getRootSymbol(raw))) return "FUTURES";
+
+  const stripped = raw.replace(/[/_:-]/g, "").toUpperCase().replace(/\d+!?$/, "");
+
+  if (/^[A-Z]{6}$/.test(stripped) &&
+      FX_CURRENCIES.includes(stripped.slice(0, 3)) &&
+      FX_CURRENCIES.includes(stripped.slice(3))) return "FOREX";
+
+  if (["BTC","ETH","SOL","USDT","XRP","DOGE","ADA"].some(x => stripped.includes(x))) return "CRYPTO";
+
+  return "STOCK";
+}
+
+/**
+ * Trust an explicit assetClass only when the ticker doesn't clearly contradict it.
+ * Repairs legacy/imported trades saved with a missing or wrong class.
+ */
+export function resolveAssetClass(trade: { assetClass?: string; ticker?: string }): AssetClass {
+  const detected = detectAssetClass(trade?.ticker ?? "");
+  const stated = trade?.assetClass;
+  if (!stated) return detected;
+  // A ticker that is unambiguously a futures root wins over a stale "STOCK".
+  if (detected === "FUTURES" && stated !== "FUTURES") return "FUTURES";
+  return stated as AssetClass;
 }

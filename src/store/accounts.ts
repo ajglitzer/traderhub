@@ -8,6 +8,7 @@
  */
 import { create } from "zustand";
 import { Trade } from "@/types/trade";
+import { resolveAssetClass } from "@/lib/utils";
 
 // ── Types ──────────────────────────────────────────────────────────────────────
 export interface Account {
@@ -109,12 +110,24 @@ export function loadUserData(userId: string) {
     const parsed = JSON.parse(raw);
     const d = parsed?.state ?? parsed;
 
+    // Repair legacy trades saved with a missing/incorrect assetClass.
+    // A futures ticker stored as STOCK computes P&L with multiplier 1.
+    const repaired: Record<string, any[]> = {};
+    const byAcct = (d.tradesByAccount && typeof d.tradesByAccount === "object") ? d.tradesByAccount : {};
+    for (const [acctId, list] of Object.entries(byAcct)) {
+      repaired[acctId] = Array.isArray(list)
+        ? (list as any[]).filter(Boolean).map(t => {
+            const fixed = resolveAssetClass(t);
+            return fixed === t.assetClass ? t : { ...t, assetClass: fixed };
+          })
+        : [];
+    }
+
     const state = {
       accounts: Array.isArray(d.accounts) && d.accounts.length
         ? d.accounts : FRESH_STATE().accounts,
       activeAccountId: d.activeAccountId || "default",
-      tradesByAccount: (d.tradesByAccount && Object.keys(d.tradesByAccount).length)
-        ? d.tradesByAccount : { default: [] },
+      tradesByAccount: Object.keys(repaired).length ? repaired : { default: [] },
     };
     useAccountStore.setState(state);
   } catch { useAccountStore.setState(FRESH_STATE()); }

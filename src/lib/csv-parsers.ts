@@ -1,6 +1,7 @@
 import Papa from "papaparse";
 import { Trade } from "@/types/trade";
 import { calculateTradePnl } from "./calculations";
+import { detectAssetClass, getRootSymbol } from "@/lib/utils";
 
 export type BrokerFormat = "TRADINGVIEW" | "TRADINGVIEW_BALANCE" | "GENERIC";
 
@@ -32,38 +33,6 @@ function getCol(row: Record<string, string>, ...keys: string[]): string {
 }
 
 // -- Symbol helpers ------------------------------------------------------------
-// TradingView paper trading uses full exchange-prefixed symbols: CME_MINI:NQ1!
-// Strip to get root: CME_MINI:NQ1! -> NQ, COMEX_MINI:MGC1! -> MGC
-function getRootSymbol(sym: string): string {
-  // Remove exchange prefix (everything before and including ":")
-  const withoutExchange = sym.includes(":") ? sym.split(":")[1] : sym;
-  // Remove continuous contract suffix: NQ1! -> NQ, MGC1! -> MGC
-  return withoutExchange
-    .replace(/\d+!$/, "")   // "1!" suffix
-    .replace(/!$/, "")       // bare "!"
-    .replace(/[A-Z]\d{2,4}$/, "") // expiry like Z24, H25
-    .toUpperCase();
-}
-
-const FUTURES_ROOTS = new Set([
-  "ES","MES","NQ","MNQ","YM","MYM","RTY","M2K",
-  "CL","MCL","QM","GC","MGC","SI","MSI","NG","HO","RB",
-  "ZN","ZB","ZF","ZT","UB",
-  "6E","6J","6B","6A","6C","6S","6M","6N",
-  "HE","LE","GF","KC","CC","CT","SB","OJ",
-  "ZC","ZW","ZS","ZM","ZL",
-]);
-
-function detectAssetClass(sym: string): Trade["assetClass"] {
-  const root = getRootSymbol(sym);
-  if (FUTURES_ROOTS.has(root)) return "FUTURES";
-  const stripped = sym.replace(/[/_:-]/g, "").toUpperCase().replace(/\d+!?$/, "");
-  const CURRENCIES = ["EUR","GBP","USD","JPY","AUD","CAD","CHF","NZD","XAU","XAG"];
-  if (/^[A-Z]{6}$/.test(stripped) && CURRENCIES.includes(stripped.slice(0,3)) && CURRENCIES.includes(stripped.slice(3))) return "FOREX";
-  if (stripped.includes("BTC") || stripped.includes("ETH") || stripped.includes("SOL") || stripped.includes("USDT")) return "CRYPTO";
-  return "STOCK";
-}
-
 // Clean symbol for display: CME_MINI:NQ1! -> NQ1!
 function displaySymbol(sym: string): string {
   return sym.includes(":") ? sym.split(":")[1] : sym;

@@ -1,6 +1,8 @@
 import { Trade, TradeMetrics, EquityPoint } from "@/types/trade";
 
 // Contract specs for common futures
+import { resolveAssetClass, specRootSymbol } from "@/lib/utils";
+
 const FUTURES_SPECS: Record<string, { multiplier: number; currency: string }> = {
   // Equity index
   "ES":   { multiplier: 50,    currency: "USD" },  // E-mini S&P 500
@@ -17,11 +19,26 @@ const FUTURES_SPECS: Record<string, { multiplier: number; currency: string }> = 
   "GC":   { multiplier: 100,   currency: "USD" },  // Gold
   "MGC":  { multiplier: 10,    currency: "USD" },  // Micro Gold
   "SI":   { multiplier: 5000,  currency: "USD" },  // Silver
+  "SIL":  { multiplier: 1000,  currency: "USD" },  // Micro Silver
+  "MSI":  { multiplier: 1000,  currency: "USD" },  // Micro Silver (alt root)
+  "HG":   { multiplier: 25000, currency: "USD" },  // Copper
+  "MHG":  { multiplier: 2500,  currency: "USD" },  // Micro Copper
+  "PL":   { multiplier: 50,    currency: "USD" },  // Platinum
+  "PA":   { multiplier: 100,   currency: "USD" },  // Palladium
+  "HO":   { multiplier: 42000, currency: "USD" },  // Heating Oil
+  "RB":   { multiplier: 42000, currency: "USD" },  // RBOB Gasoline
+  "QG":   { multiplier: 2500,  currency: "USD" },  // E-mini Natural Gas
+  "BZ":   { multiplier: 1000,  currency: "USD" },  // Brent Crude
   "NG":   { multiplier: 10000, currency: "USD" },  // Natural Gas
   // Treasury
   "ZN":   { multiplier: 1000,  currency: "USD" },  // 10-Year T-Note
   "ZB":   { multiplier: 1000,  currency: "USD" },  // 30-Year T-Bond
   "ZF":   { multiplier: 1000,  currency: "USD" },  // 5-Year T-Note
+  "ZT":   { multiplier: 2000,  currency: "USD" },  // 2-Year T-Note
+  "UB":   { multiplier: 1000,  currency: "USD" },  // Ultra T-Bond
+  "TN":   { multiplier: 1000,  currency: "USD" },  // Ultra 10-Year
+  "MBT":  { multiplier: 0.1,   currency: "USD" },  // Micro Bitcoin
+  "MET":  { multiplier: 0.1,   currency: "USD" },  // Micro Ether
   // Forex futures
   "6E":   { multiplier: 125000, currency: "USD" }, // Euro FX
   "6J":   { multiplier: 12500000, currency: "USD" }, // Japanese Yen
@@ -58,18 +75,18 @@ export function calculateTradePnl(trade: Partial<Trade>): {
 
   const sign = trade.side === "SHORT" ? -1 : 1;
   const priceDiff = trade.exitPrice - trade.entryPrice;
-  const assetClass = trade.assetClass || "STOCK";
+  // Fall back to ticker-based detection instead of assuming STOCK — assuming
+  // STOCK on a futures ticker applies multiplier 1 and under-reports P&L.
+  const assetClass = resolveAssetClass(trade as any);
   // Strip continuous contract suffix: NQ1! -> NQ, MGC1! -> MGC
-  const ticker = (trade.ticker || "").toUpperCase()
-    .replace(/\d+!$/, "")   // "1!" suffix
-    .replace(/!$/, "")        // bare "!"
-    .replace(/[^A-Z]/g, "");  // remove remaining non-alpha
+  // Keep digits: roots like "6E", "M2K", "SR3" are numeric by design.
+  const ticker = specRootSymbol(trade.ticker || "");
 
   let grossPnl = 0;
 
   if (assetClass === "FUTURES") {
     // Look up contract multiplier
-    const spec = FUTURES_SPECS[ticker] || FUTURES_SPECS[ticker.replace(/\d+/g, "")] || { multiplier: 1 };
+    const spec = FUTURES_SPECS[ticker] || { multiplier: 1 };
     grossPnl = sign * priceDiff * trade.quantity * spec.multiplier;
   } else if (assetClass === "FOREX") {
     // Standard lot = 100,000 units of base currency
