@@ -6,7 +6,9 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "eslint"
+    "lint": "eslint",
+    "test:build": "esbuild src/lib/utils.ts --bundle --format=esm --platform=node --outfile=tests/__built__/utils.mjs",
+    "test": "npm run test:build && node tests/sorting.test.mjs"
   },
   "dependencies": {
     "@hookform/resolvers": "^5.4.0",

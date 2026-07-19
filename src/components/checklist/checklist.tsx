@@ -1,5 +1,6 @@
 "use client";
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import { getScoped, setScoped } from "@/lib/user-storage";
 import { useStore } from "@/store";
 
 interface CheckItem { id: string; text: string; checked: boolean; }
@@ -82,9 +83,24 @@ function RiskCalc() {
 export default function ChecklistPage() {
   const { playbook } = useStore();
   const [items, setItems] = useState<CheckItem[]>(DEFAULT_ITEMS);
+  const [loaded, setLoaded] = useState(false);
+
+  // Load this user's saved checklist (custom items survive refresh)
+  useEffect(() => {
+    const saved = getScoped<CheckItem[] | null>("th_checklist_items", null);
+    if (Array.isArray(saved) && saved.length) setItems(saved);
+    setLoaded(true);
+  }, []);
+
+  // Save on every change (skip the first render so we don't clobber saved data)
+  useEffect(() => {
+    if (!loaded) return;
+    setScoped("th_checklist_items", items);
+  }, [items, loaded]);
   const [custom, setCustom] = useState("");
   const [selectedSetup, setSelectedSetup] = useState<string>("");
   const [showCalc, setShowCalc] = useState(true);
+  const [hovId, setHovId] = useState<string|null>(null);
 
   const toggle = (id: string) =>
     setItems(its => its.map(i => i.id===id ? {...i, checked:!i.checked} : i));
@@ -94,6 +110,11 @@ export default function ChecklistPage() {
     setItems(its => [...its, { id: Date.now().toString(), text: custom.trim(), checked: false }]);
     setCustom("");
   };
+
+  const removeItem = (id: string) =>
+    setItems(its => its.filter(i => i.id !== id));
+
+  const restoreDefaults = () => setItems(DEFAULT_ITEMS.map(i => ({...i, checked:false})));
 
   const reset = () => setItems(its => its.map(i => ({...i, checked:false})));
 
@@ -156,8 +177,16 @@ export default function ChecklistPage() {
         {/* Checklist */}
         <div style={{ background:"linear-gradient(160deg,#0f1520,#0b1017)", border:"1px solid rgba(255,255,255,0.07)", borderRadius:14, padding:18, display:"flex", flexDirection:"column", gap:4 }}>
           <div style={{ fontSize:10, fontWeight:700, textTransform:"uppercase" as const, letterSpacing:"0.08em", color:"#3d4551", marginBottom:8 }}>Checklist Items</div>
+          {items.length === 0 && (
+            <div style={{ padding:"18px 12px", textAlign:"center", fontSize:12, color:"#4b5563", lineHeight:1.6 }}>
+              No checklist items.<br/>
+              <span onClick={restoreDefaults} style={{ color:"#00e5ff", cursor:"pointer", textDecoration:"underline" }}>Restore defaults</span>
+            </div>
+          )}
           {items.map(item => (
-            <div key={item.id} onClick={()=>toggle(item.id)} style={{
+            <div key={item.id} onClick={()=>toggle(item.id)}
+              onMouseEnter={()=>setHovId(item.id)} onMouseLeave={()=>setHovId(null)}
+              style={{
               display:"flex", alignItems:"center", gap:12, padding:"10px 12px", borderRadius:9, cursor:"pointer",
               background: item.checked ? "rgba(0,230,118,0.06)" : "rgba(255,255,255,0.02)",
               border:`1px solid ${item.checked ? "rgba(0,230,118,0.2)" : "rgba(255,255,255,0.04)"}`,
@@ -170,7 +199,19 @@ export default function ChecklistPage() {
               }}>
                 {item.checked && <span style={{color:"#000",fontSize:12,fontWeight:900,lineHeight:1}}>✓</span>}
               </div>
-              <span style={{ fontSize:12, color: item.checked ? "#6b7280" : "#c9d1d9", textDecoration: item.checked?"line-through":"none", lineHeight:1.4 }}>{item.text}</span>
+              <span style={{ flex:1, fontSize:12, color: item.checked ? "#6b7280" : "#c9d1d9", textDecoration: item.checked?"line-through":"none", lineHeight:1.4 }}>{item.text}</span>
+              <button
+                onClick={(e)=>{ e.stopPropagation(); removeItem(item.id); }}
+                title="Delete item"
+                aria-label={`Delete ${item.text}`}
+                style={{
+                  width:22, height:22, borderRadius:6, flexShrink:0, cursor:"pointer",
+                  display:"flex", alignItems:"center", justifyContent:"center",
+                  background:"transparent",
+                  border:`1px solid ${hovId===item.id ? "rgba(255,23,68,0.3)" : "transparent"}`,
+                  color: hovId===item.id ? "#ff1744" : "transparent",
+                  fontSize:13, lineHeight:1, transition:"all 0.15s", padding:0,
+                }}>×</button>
             </div>
           ))}
           <div style={{ display:"flex", gap:6, marginTop:8 }}>
