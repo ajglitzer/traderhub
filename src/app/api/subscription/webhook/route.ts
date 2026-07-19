@@ -28,11 +28,9 @@ export async function POST(req: NextRequest) {
           .select("user_id")
           .eq("stripe_subscription_id", sub.id)
           .single();
-        console.log("lookup by sub_id:", sub.id, "found:", data, "err:", lookupErr);
+        if (lookupErr) console.error("subscription lookup error:", lookupErr);
         userId = data?.user_id;
       }
-
-      console.log("upsertSub userId:", userId, "sub.id:", sub.id, "status:", sub.status);
 
       if (!userId) {
         console.error("upsertSub: no user_id found for subscription", sub.id);

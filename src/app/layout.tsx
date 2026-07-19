@@ -4,9 +4,26 @@ import { Providers } from "./providers";
 import { Sidebar } from "@/components/layout/sidebar";
 import { Topbar } from "@/components/layout/topbar";
 
+const SITE_URL = "https://traderhub-nine.vercel.app";
+const TITLE = "TraderHub — Professional Trading Journal";
+const DESCRIPTION = "Track, analyze, and improve your trading with TraderHub.";
+
 export const metadata: Metadata = {
-  title: "TraderHub — Professional Trading Journal",
-  description: "Track, analyze, and improve your trading with TraderHub.",
+  metadataBase: new URL(SITE_URL),
+  title: TITLE,
+  description: DESCRIPTION,
+  openGraph: {
+    title: TITLE,
+    description: DESCRIPTION,
+    url: SITE_URL,
+    siteName: "TraderHub",
+    type: "website",
+  },
+  twitter: {
+    card: "summary",
+    title: TITLE,
+    description: DESCRIPTION,
+  },
 };
 
 export const viewport: Viewport = {
