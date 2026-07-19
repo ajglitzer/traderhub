@@ -218,7 +218,7 @@ export default function SocialPage({ myProfile }: { myProfile: Profile }) {
   const { setCommunityBadge, activeTab } = useStore();
   const trades = getActiveTrades();
 
-  const [tab, setTab] = useState<"messages"|"friends"|"battles">("messages");
+  const [tab, setTab] = useState<"messages"|"friends">("messages");
   const [confirmAction, setConfirmAction] = useState<{type:"unfriend"|"block",friend:Profile}|null>(null);
   const [isMob, setIsMob] = useState(()=>typeof window!=="undefined"&&window.innerWidth<768);
   useEffect(()=>{ const h=()=>setIsMob(window.innerWidth<768); window.addEventListener("resize",h); return ()=>window.removeEventListener("resize",h); },[]);
@@ -294,10 +294,10 @@ export default function SocialPage({ myProfile }: { myProfile: Profile }) {
         load();
         if(chatWith) loadMessages(chatWith.id);
       })
-      .on("postgres_changes",{event:"*",schema:"public",table:"friend_requests",filter:`or(from_id=eq.${user.id},to_id=eq.${user.id})`},()=>{
+      .on("postgres_changes",{event:"*",schema:"public",table:"friend_requests"},()=>{
         load();
       })
-      .on("postgres_changes",{event:"*",schema:"public",table:"blocks",filter:`or(blocker_id=eq.${user.id},blocked_id=eq.${user.id})`},()=>{
+      .on("postgres_changes",{event:"*",schema:"public",table:"blocks"},()=>{
         // When we get blocked or someone we blocked changes — reload everything
         // Also clear the active chat if the person is now blocked/unfriended
         load();
@@ -394,7 +394,6 @@ export default function SocialPage({ myProfile }: { myProfile: Profile }) {
   const TABS = [
     {id:"messages" as const, label:"Messages", badge:unread},
     {id:"friends"  as const, label:"Friends",  badge:pendingRequests.length},
-    {id:"battles"  as const, label:"Battles",  badge:myBattles.length},
   ];
 
   return (
@@ -512,42 +511,7 @@ export default function SocialPage({ myProfile }: { myProfile: Profile }) {
           </div>
         )}
 
-        {/* Battles tab */}
-        {tab==="battles"&&(
-          <div style={{flex:1,overflowY:"auto",padding:12,display:"flex",flexDirection:"column",gap:8}}>
-            {battles.length===0&&<div style={{fontSize:12,color:"#374151",textAlign:"center",padding:20}}>No battles yet.<br/>Challenge a friend from the Friends tab.</div>}
-            {battles.map(b=>{
-              const isChallenger=b.challenger_id===user?.id;
-              const opponent=isChallenger?b.opponent_profile:b.challenger_profile;
-              const myScore=isChallenger?b.challenger_score:b.opponent_score;
-              const theirScore=isChallenger?b.opponent_score:b.challenger_score;
-              const iWon=b.winner_id===user?.id;
-              return (
-                <div key={b.id} style={{padding:"10px 12px",background:"rgba(255,255,255,0.02)",borderRadius:10,border:`1px solid ${b.status==="active"?"rgba(213,0,249,0.2)":b.status==="completed"?iWon?"rgba(0,230,118,0.2)":"rgba(255,23,68,0.2)":"rgba(255,255,255,0.06)"}`,cursor:"pointer"}} onClick={()=>setActiveBattle(b)}>
-                  <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:6}}>
-                    <span style={{fontSize:14}}>⚔️</span>
-                    <div style={{flex:1}}>
-                      <div style={{fontSize:12,fontWeight:700,color:"#f0f6fc"}}>vs @{opponent?.username}</div>
-                      <div style={{fontSize:10,color:"#4b5563"}}>{b.symbol} · {b.status}</div>
-                    </div>
-                    {b.status==="pending"&&!isChallenger&&(
-                      <div style={{display:"flex",gap:4}}>
-                        <button onClick={e=>{e.stopPropagation();respondToBattle(b.id, true).then(load);}} style={{height:24,padding:"0 8px",borderRadius:6,background:"rgba(0,230,118,0.1)",border:"1px solid rgba(0,230,118,0.2)",color:"#00e676",cursor:"pointer",fontSize:10,fontWeight:700}}>Accept</button>
-                        <button onClick={e=>{e.stopPropagation();respondToBattle(b.id,false).then(load);}} style={{height:24,padding:"0 8px",borderRadius:6,background:"rgba(255,23,68,0.08)",border:"1px solid rgba(255,23,68,0.15)",color:"#f87171",cursor:"pointer",fontSize:10}}>Decline</button>
-                      </div>
-                    )}
-                  </div>
-                  {b.status==="completed"&&(
-                    <div style={{display:"flex",justifyContent:"space-between",fontSize:11}}>
-                      <span style={{color:iWon?"#00e676":"#ff1744",fontWeight:800}}>{iWon?"🏆 You won!":"💀 You lost"}</span>
-                      <span style={{fontFamily:"monospace",color:"#6b7280"}}>{fmt$(myScore||0)} vs {fmt$(theirScore||0)}</span>
-                    </div>
-                  )}
-                </div>
-              );
-            })}
-          </div>
-        )}
+
       </div>
 
       {/* Right panel - chat or battle */}
@@ -642,7 +606,7 @@ export default function SocialPage({ myProfile }: { myProfile: Profile }) {
                           <div style={{fontSize:12,color:"#c9d1d9"}}>{msg.content}</div>
                           {!mine&&battles.find(b=>b.id===msg.metadata?.battle_id&&b.status==="pending")&&(
                             <div style={{display:"flex",gap:6,marginTop:8}}>
-                              <button onClick={()=>{ respondToBattle(msg.metadata!.battle_id, true).then(()=>{load();setTab("battles");}); }} style={{flex:1,height:28,borderRadius:7,background:"rgba(0,230,118,0.1)",border:"1px solid rgba(0,230,118,0.2)",color:"#00e676",cursor:"pointer",fontSize:11,fontWeight:700}}>Accept</button>
+                              <button onClick={()=>{ respondToBattle(msg.metadata!.battle_id, true).then(load); }} style={{flex:1,height:28,borderRadius:7,background:"rgba(0,230,118,0.1)",border:"1px solid rgba(0,230,118,0.2)",color:"#00e676",cursor:"pointer",fontSize:11,fontWeight:700}}>Accept</button>
                               <button onClick={()=>respondToBattle(msg.metadata!.battle_id, false).then(load)} style={{flex:1,height:28,borderRadius:7,background:"rgba(255,23,68,0.06)",border:"1px solid rgba(255,23,68,0.15)",color:"#f87171",cursor:"pointer",fontSize:11}}>Decline</button>
                             </div>
                           )}

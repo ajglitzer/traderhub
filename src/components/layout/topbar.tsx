@@ -11,7 +11,6 @@ const TITLES: Record<string,{label:string;sub:string}> = {
   playbook: { label:"Playbook",      sub:"Your trading setups" },
   checklist:{ label:"Checklist",     sub:"Risk calculator · Rules" },
   recap:    { label:"AI Recap",      sub:"End-of-day analysis" },
-  simulator:{ label:"Simulator",     sub:"Practice on simulated charts" },
   social:   { label:"Community",     sub:"Messages · Friends" },
   patterns: { label:"AI Patterns",   sub:"Find hidden patterns · Groq AI" },
   backtest: { label:"Backtester",    sub:"Test strategies on real data" },

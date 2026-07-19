@@ -1,5 +1,5 @@
 import { NextRequest } from "next/server";
-import { requirePro, rateLimit } from "@/lib/api-guard";
+import { requirePro, rateLimit, checkAiLimit } from "@/lib/api-guard";
 
 const SYSTEM = "You are a professional trading coach. Be direct, specific, and honest. Give real actionable feedback.";
 
@@ -18,6 +18,15 @@ export async function POST(req: NextRequest) {
     if (!guard.ok) {
       return new Response(JSON.stringify({ error: guard.error }), {
         status: guard.status,
+        headers: { "Content-Type": "application/json" },
+      });
+    }
+
+    // 20 AI requests per day per user
+    const aiLimit = await checkAiLimit(guard.userId, 20);
+    if (!aiLimit.ok) {
+      return new Response(JSON.stringify({ error: aiLimit.error }), {
+        status: aiLimit.status,
         headers: { "Content-Type": "application/json" },
       });
     }

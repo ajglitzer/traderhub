@@ -61,3 +61,42 @@ export function rateLimit(userId: string, max = 20, windowMs = 60_000): boolean 
   }
   return true;
 }
+
+/**
+ * Per-user daily AI rate limit (default 20/day).
+ * Uses the ai_usage table in Supabase; requires service role.
+ */
+export async function checkAiLimit(userId: string, limit = 20): Promise<
+  { ok: true; remaining: number } | { ok: false; status: number; error: string }
+> {
+  try {
+    const { createClient } = await import("@supabase/supabase-js");
+    const admin = createClient(
+      process.env.NEXT_PUBLIC_SUPABASE_URL!,
+      process.env.SUPABASE_SERVICE_ROLE_KEY!
+    );
+    const today = new Date().toISOString().slice(0, 10); // YYYY-MM-DD
+
+    const { data } = await admin
+      .from("ai_usage")
+      .select("count")
+      .eq("user_id", userId)
+      .eq("day", today)
+      .single();
+
+    const count = data?.count ?? 0;
+    if (count >= limit) {
+      return { ok: false, status: 429, error: `Daily AI limit reached (${limit}/day). Resets at midnight UTC.` };
+    }
+
+    await admin.from("ai_usage").upsert(
+      { user_id: userId, day: today, count: count + 1 },
+      { onConflict: "user_id,day" }
+    );
+
+    return { ok: true, remaining: limit - count - 1 };
+  } catch {
+    // Fail open — a rate-limit outage shouldn't break AI for paying users
+    return { ok: true, remaining: -1 };
+  }
+}

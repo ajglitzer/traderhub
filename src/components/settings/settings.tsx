@@ -302,18 +302,6 @@ export default function SettingsPage() {
         <ManageSubscription/>
       </Section>
 
-      <Section title="Simulator & Replay">
-        <Row label="Show TP/SL lines on Simulator" desc="Display TP and SL level lines while using the simulator">
-          <button onClick={() => setSimShowLevels(!simShowLevels)} style={{ width:44, height:24, borderRadius:12, border:"none", cursor:"pointer", background: simShowLevels ? "#00e5ff" : "rgba(255,255,255,0.1)", position:"relative" as const, flexShrink:0, transition:"background 0.2s" }}>
-            <div style={{ width:18, height:18, borderRadius:"50%", background:"#fff", position:"absolute" as const, top:3, left: simShowLevels ? 22 : 3, transition:"left 0.2s", boxShadow:"0 1px 4px rgba(0,0,0,0.4)" }}/>
-          </button>
-        </Row>
-        <Row label="Show TP/SL lines on Replay" desc="Display TP and SL level lines on the trade chart replay">
-          <button onClick={() => setReplayShowLevels(!replayShowLevels)} style={{ width:44, height:24, borderRadius:12, border:"none", cursor:"pointer", background: replayShowLevels ? "#00e5ff" : "rgba(255,255,255,0.1)", position:"relative" as const, flexShrink:0, transition:"background 0.2s" }}>
-            <div style={{ width:18, height:18, borderRadius:"50%", background:"#fff", position:"absolute" as const, top:3, left: replayShowLevels ? 22 : 3, transition:"left 0.2s", boxShadow:"0 1px 4px rgba(0,0,0,0.4)" }}/>
-          </button>
-        </Row>
-      </Section>
 
       <Section title="Appearance">
         <Row label="Theme" desc="Switch between dark and light mode">
