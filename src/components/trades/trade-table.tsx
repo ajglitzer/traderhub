@@ -56,6 +56,17 @@ export function TradeTable() {
     }
   }, [trades, filters, page, search]);
 
+  // Full filtered set for export — the table shows one 50-row page, but the
+  // export button promises "Export N filtered" and must deliver all N.
+  const exportRows = useMemo(() => {
+    try {
+      const f = search ? {...filters, ticker:search} : filters;
+      return getFilteredTrades(trades, f, 1, Number.MAX_SAFE_INTEGER).trades;
+    } catch {
+      return [];
+    }
+  }, [trades, filters, search]);
+
   const sort = (col: string) => {
     if (filters.sortBy === col) setFilters({ sortDir: filters.sortDir === "desc" ? "asc" : "desc" });
     else setFilters({ sortBy: col, sortDir: "desc" });
@@ -101,7 +112,7 @@ export function TradeTable() {
             {opts.map(([v,l]) => <option key={v} value={v}>{l}</option>)}
           </select>
         ))}
-        <button onClick={()=>{ if(!isPro){setShowUpgrade(true);return;} exportToCSV(list as Trade[], `traderhub_filtered_${new Date().toISOString().slice(0,10)}.csv`)}}
+        <button onClick={()=>{ if(!isPro){setShowUpgrade(true);return;} exportToCSV(exportRows as Trade[], `traderhub_filtered_${new Date().toISOString().slice(0,10)}.csv`)}}
           style={{height:30,padding:"0 12px",borderRadius:8,background:"rgba(0,229,255,0.08)",border:"1px solid rgba(0,229,255,0.2)",color:"#00e5ff",fontSize:11,fontWeight:700,cursor:"pointer",marginLeft:"auto"}}>
           ↓ Export {total.toLocaleString()} filtered
         </button>
