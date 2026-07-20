@@ -7,6 +7,7 @@ import { useStore } from "@/store";
 import { useAccountStore, clearCloud, CLEARED_FLAG, markSessionCleared } from "@/store/accounts";
 import { exportToCSV, exportToJSON, importFromJSON } from "@/lib/export";
 import { Trade } from "@/types/trade";
+import { filterMessage } from "@/lib/profanity";
 
 function ProfileEditor({ userId }: { userId?: string }) {
   const [bio, setBio] = useState("");
@@ -15,6 +16,7 @@ function ProfileEditor({ userId }: { userId?: string }) {
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState("");
   const username = typeof window !== "undefined" ? (() => {
     for (let i = 0; i < localStorage.length; i++) {
       const k = localStorage.key(i);
@@ -38,6 +40,15 @@ function ProfileEditor({ userId }: { userId?: string }) {
 
   const save = async () => {
     if (!userId) return;
+    setError("");
+    if (bio) {
+      const check = filterMessage(bio);
+      if (!check.ok) { setError(`Bio: ${check.reason}`); return; }
+    }
+    if (twitter) {
+      const check = filterMessage(twitter);
+      if (!check.ok) { setError(`Twitter handle: ${check.reason}`); return; }
+    }
     setSaving(true);
     try {
       const { createClient } = await import("@/lib/supabase");
@@ -95,6 +106,8 @@ function ProfileEditor({ userId }: { userId?: string }) {
           <div style={{ width:18, height:18, borderRadius:"50%", background:"#fff", position:"absolute" as const, top:3, left: showReal ? 22 : 3, transition:"left 0.2s", boxShadow:"0 1px 4px rgba(0,0,0,0.4)" }}/>
         </button>
       </div>
+
+      {error && <div style={{ fontSize:12, color:"#f87171" }}>{error}</div>}
 
       <button onClick={save} disabled={saving} style={{ height:38, borderRadius:9, border:`1px solid ${saved ? "rgba(0,230,118,0.3)" : "transparent"}`, background: saved ? "rgba(0,230,118,0.2)" : "linear-gradient(135deg,#00e5ff,#0088bb)", color: saved ? "#00e676" : "#000", fontSize:13, fontWeight:800, cursor:"pointer" }}>
         {saving ? "Saving..." : saved ? "✓ Saved" : "Save Profile"}
