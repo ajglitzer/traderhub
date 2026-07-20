@@ -245,6 +245,9 @@ export default function SocialPage({ myProfile }: { myProfile: Profile }) {
     removedIds.current.add(id);
     try{ localStorage.setItem(scopedKey("th_removed_friends"), JSON.stringify([...removedIds.current])); }catch{}
   };
+  const persistRemovedIds = ()=>{
+    try{ localStorage.setItem(scopedKey("th_removed_friends"), JSON.stringify([...removedIds.current])); }catch{}
+  };
   const [unread, setUnread] = useState(0);
   const msgEndRef = useRef<HTMLDivElement>(null);
   const supabase = createClient();
@@ -257,6 +260,14 @@ export default function SocialPage({ myProfile }: { myProfile: Profile }) {
       getUnreadCount(user.id),
     ]);
     const rid = removedIds.current;
+    // Self-heal: the server is authoritative. If it says someone is
+    // currently a friend/conversation partner (already excludes blocked
+    // users), any stale "removed" marker from a past unfriend/block is
+    // wrong — e.g. after re-friending someone you'd previously unfriended.
+    let ridChanged = false;
+    for (const x of f as any[]) { if (rid.delete(x.id)) ridChanged = true; }
+    for (const x of c as any[]) { if (rid.delete(x.profile.id)) ridChanged = true; }
+    if (ridChanged) persistRemovedIds();
     const filteredFriends = f.filter((x:any)=>!rid.has(x.id));
     const filteredConvos = c.filter((x:any)=>!rid.has(x.profile.id));
     setFriends(filteredFriends);
