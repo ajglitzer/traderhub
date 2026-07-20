@@ -284,3 +284,13 @@ export async function getBlockedUsers(myId: string): Promise<string[]> {
     return (data || []).map((r: any) => r.blocked_id);
   } catch { return []; }
 }
+
+export const REPORT_REASONS = ["Spam", "Harassment or abuse", "Inappropriate content", "Impersonation", "Other"] as const;
+export type ReportReason = typeof REPORT_REASONS[number];
+
+export async function reportUser(reporterId: string, reportedId: string, reason: ReportReason): Promise<boolean> {
+  try {
+    const { error } = await sb().from("reports").insert({ reporter_id: reporterId, reported_id: reportedId, reason });
+    return !error;
+  } catch { return false; }
+}

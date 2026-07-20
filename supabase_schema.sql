@@ -94,3 +94,28 @@ alter table public.profiles add column if not exists bio text default '';
 alter table public.profiles add column if not exists show_real_stats boolean default false;
 alter table public.profiles add column if not exists twitter text default '';
 alter table public.profiles add column if not exists joined_at timestamptz default now();
+
+-- ── Blocks (documented here for completeness — already live, added out of band) ──
+create table if not exists public.blocks (
+  id uuid default gen_random_uuid() primary key,
+  blocker_id uuid references public.profiles(id) on delete cascade,
+  blocked_id uuid references public.profiles(id) on delete cascade,
+  created_at timestamptz default now(),
+  unique(blocker_id, blocked_id)
+);
+alter table public.blocks enable row level security;
+create policy "See own blocks" on public.blocks for select using (auth.uid() = blocker_id or auth.uid() = blocked_id);
+create policy "Create block"   on public.blocks for insert with check (auth.uid() = blocker_id);
+create policy "Delete block"   on public.blocks for delete using (auth.uid() = blocker_id);
+
+-- ── Reports (user safety — report a user for review) ──────────────────────────
+create table if not exists public.reports (
+  id uuid default gen_random_uuid() primary key,
+  reporter_id uuid references public.profiles(id) on delete cascade,
+  reported_id uuid references public.profiles(id) on delete cascade,
+  reason text not null,
+  created_at timestamptz default now()
+);
+alter table public.reports enable row level security;
+create policy "Create report"   on public.reports for insert with check (auth.uid() = reporter_id);
+create policy "See own reports" on public.reports for select using (auth.uid() = reporter_id);

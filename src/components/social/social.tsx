@@ -5,9 +5,9 @@ import { useState, useEffect, useRef, useCallback } from "react";
 import { useAuth } from "@/components/auth/auth-provider";
 import { createClient } from "@/lib/supabase";
 import {
-  Profile, Message, FriendRequest,
+  Profile, Message, FriendRequest, ReportReason, REPORT_REASONS,
   getFriends, getFriendRequests, sendFriendRequest, respondToFriendRequest,
-  unfriendUser, blockUser, unblockUser, getBlockedUsers,
+  unfriendUser, blockUser, unblockUser, getBlockedUsers, reportUser,
   getConversations, getMessages, sendMessage, markMessagesRead, getUnreadCount,
   searchProfiles, getMyProfile,
 } from "@/lib/social";
@@ -56,6 +56,8 @@ export default function SocialPage({ myProfile }: { myProfile: Profile }) {
   const [showBlocked, setShowBlocked] = useState(false);
   const [friendMenu, setFriendMenu] = useState<string|null>(null);
   const [friendActionTarget, setFriendActionTarget] = useState<Profile|null>(null);
+  const [reportTarget, setReportTarget] = useState<Profile|null>(null);
+  const [reportSent, setReportSent] = useState(false);
   const [friends, setFriends] = useState<Profile[]>([]);
   const [requests, setRequests] = useState<FriendRequest[]>([]);
   const [convos, setConvos] = useState<{profile:Profile;lastMessage:Message;unread:number}[]>([]);
@@ -210,6 +212,13 @@ export default function SocialPage({ myProfile }: { myProfile: Profile }) {
   };
 
   const respondReq = async(id:string,status:"accepted"|"declined")=>{ await respondToFriendRequest(id,status); load(); };
+
+  const handleReport = async(reason:ReportReason)=>{
+    if(!user||!reportTarget) return;
+    const ok = await reportUser(user.id, reportTarget.id, reason);
+    setReportTarget(null);
+    if(ok){ setReportSent(true); setTimeout(()=>setReportSent(false),3000); }
+  };
 
   const pendingRequests = requests.filter(r=>r.to_id===user?.id&&r.status==="pending");
 
@@ -418,12 +427,39 @@ export default function SocialPage({ myProfile }: { myProfile: Profile }) {
             <span style={{fontSize:22}}>👋</span>
             <div><div>Unfriend</div><div style={{fontSize:11,fontWeight:400,opacity:0.7}}>Remove from friends list</div></div>
           </button>
-          <button onClick={()=>{const t=friendActionTarget;setFriendActionTarget(null);setConfirmAction({type:"block",friend:t});}} style={{width:"100%",padding:"15px 18px",background:"rgba(255,23,68,0.08)",border:"1px solid rgba(255,23,68,0.2)",borderRadius:13,color:"#ff1744",cursor:"pointer",fontSize:14,fontWeight:700,display:"flex",alignItems:"center",gap:12,marginBottom:14,textAlign:"left" as const}}>
+          <button onClick={()=>{const t=friendActionTarget;setFriendActionTarget(null);setConfirmAction({type:"block",friend:t});}} style={{width:"100%",padding:"15px 18px",background:"rgba(255,23,68,0.08)",border:"1px solid rgba(255,23,68,0.2)",borderRadius:13,color:"#ff1744",cursor:"pointer",fontSize:14,fontWeight:700,display:"flex",alignItems:"center",gap:12,marginBottom:10,textAlign:"left" as const}}>
             <span style={{fontSize:22}}>🚫</span>
             <div><div>Block</div><div style={{fontSize:11,fontWeight:400,opacity:0.7}}>They won't be able to contact you</div></div>
           </button>
+          <button onClick={()=>{const t=friendActionTarget;setFriendActionTarget(null);setReportTarget(t);}} style={{width:"100%",padding:"15px 18px",background:"rgba(255,171,0,0.08)",border:"1px solid rgba(255,171,0,0.2)",borderRadius:13,color:"#ffab00",cursor:"pointer",fontSize:14,fontWeight:700,display:"flex",alignItems:"center",gap:12,marginBottom:14,textAlign:"left" as const}}>
+            <span style={{fontSize:22}}>🚩</span>
+            <div><div>Report</div><div style={{fontSize:11,fontWeight:400,opacity:0.7}}>Flag this user for review</div></div>
+          </button>
           <button onClick={()=>setFriendActionTarget(null)} style={{width:"100%",padding:"12px",background:"none",border:"1px solid rgba(255,255,255,0.07)",borderRadius:13,color:"#4b5563",cursor:"pointer",fontSize:13}}>Cancel</button>
         </div>
+      </div>
+    )}
+
+    {/* Report reason picker */}
+    {reportTarget&&(
+      <div onClick={()=>setReportTarget(null)} style={{position:"fixed",inset:0,zIndex:99999,background:"rgba(0,0,0,0.85)",backdropFilter:"blur(10px)",display:"flex",alignItems:"center",justifyContent:"center",padding:20}}>
+        <div onClick={e=>e.stopPropagation()} style={{background:"#0e1117",border:"1px solid rgba(255,255,255,0.1)",borderRadius:18,padding:28,width:"100%",maxWidth:360}}>
+          <div style={{fontSize:15,fontWeight:800,color:"#f0f6fc",marginBottom:4}}>Report @{reportTarget.username}</div>
+          <div style={{fontSize:12,color:"#4b5563",marginBottom:18,lineHeight:1.6}}>Why are you reporting this user? They won't be notified.</div>
+          <div style={{display:"flex",flexDirection:"column",gap:8,marginBottom:16}}>
+            {REPORT_REASONS.map(reason=>(
+              <button key={reason} onClick={()=>handleReport(reason)} style={{padding:"12px 14px",borderRadius:10,border:"1px solid rgba(255,255,255,0.08)",background:"rgba(255,255,255,0.03)",color:"#d1d5db",cursor:"pointer",fontSize:13,textAlign:"left" as const}}>{reason}</button>
+            ))}
+          </div>
+          <button onClick={()=>setReportTarget(null)} style={{width:"100%",padding:"12px",background:"none",border:"1px solid rgba(255,255,255,0.07)",borderRadius:13,color:"#4b5563",cursor:"pointer",fontSize:13}}>Cancel</button>
+        </div>
+      </div>
+    )}
+
+    {/* Report confirmation toast */}
+    {reportSent&&(
+      <div style={{position:"fixed",bottom:24,left:"50%",transform:"translateX(-50%)",zIndex:100000,background:"#0e1117",border:"1px solid rgba(0,230,118,0.3)",borderRadius:12,padding:"12px 20px",color:"#00e676",fontSize:13,fontWeight:700,boxShadow:"0 8px 24px rgba(0,0,0,0.5)"}}>
+        ✓ Report submitted — thank you
       </div>
     )}
 
