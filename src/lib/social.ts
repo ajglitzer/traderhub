@@ -26,35 +26,11 @@ export interface Message {
   from_id: string;
   to_id: string;
   content: string;
-  type: "text" | "trade_share" | "battle_request" | "battle_result";
+  type: "text" | "trade_share";
   metadata: Record<string, any> | null;
   read: boolean;
   created_at: string;
   from_profile?: Profile;
-}
-
-export interface Battle {
-  id: string;
-  challenger_id: string;
-  opponent_id: string;
-  symbol: string;
-  status: "pending" | "active" | "completed" | "declined";
-  challenger_trades: BattleTrade[] | null;
-  opponent_trades: BattleTrade[] | null;
-  challenger_score: number | null;
-  opponent_score: number | null;
-  winner_id: string | null;
-  created_at: string;
-  challenger_profile?: Profile;
-  opponent_profile?: Profile;
-}
-
-export interface BattleTrade {
-  side: "LONG" | "SHORT";
-  entry: number;
-  exit: number;
-  pnl: number;
-  pct: number;
 }
 
 const sb = () => createClient();
@@ -235,45 +211,6 @@ export async function getConversations(userId: string): Promise<{profile: Profil
       return { profile: profile as Profile, lastMessage, unread: unreadByUser.get(id) || 0 };
     })
     .filter(Boolean) as {profile: Profile; lastMessage: Message; unread: number}[];
-}
-
-// -- Battles -------------------------------------------------------------------
-export async function sendBattleRequest(challengerId: string, opponentId: string, symbol: string): Promise<string> {
-  const { data: bl } = await sb().from("blocks").select("blocker_id")
-    .or(`and(blocker_id.eq.${challengerId},blocked_id.eq.${opponentId}),and(blocker_id.eq.${opponentId},blocked_id.eq.${challengerId})`);
-  if (bl && bl.length > 0) return "";
-  const { data } = await sb().from("battles").insert({ challenger_id: challengerId, opponent_id: opponentId, symbol }).select().single();
-  return data?.id;
-}
-
-export async function getBattles(userId: string): Promise<Battle[]> {
-  const [{ data }, allowed] = await Promise.all([
-    sb().from("battles")
-      .select("*, challenger_profile:profiles!battles_challenger_id_fkey(*), opponent_profile:profiles!battles_opponent_id_fkey(*)")
-      .or(`challenger_id.eq.${userId},opponent_id.eq.${userId}`)
-      .order("created_at", { ascending: false }),
-    getAllowedIds(userId),
-  ]);
-  return ((data || []) as Battle[]).filter(b => {
-    const otherId = b.challenger_id === userId ? b.opponent_id : b.challenger_id;
-    return allowed.has(otherId);
-  });
-}
-
-export async function respondToBattle(battleId: string, accept: boolean): Promise<void> {
-  await sb().from("battles").update({ status: accept ? "active" : "declined" }).eq("id", battleId);
-}
-
-export async function submitBattleTrades(battleId: string, userId: string, challengerId: string, trades: BattleTrade[]): Promise<void> {
-  const score = trades.reduce((a,t) => a + t.pnl, 0);
-  const field = userId === challengerId ? { challenger_trades: trades, challenger_score: score } : { opponent_trades: trades, opponent_score: score };
-  await sb().from("battles").update(field).eq("id", battleId);
-}
-
-export async function finalizeBattle(battle: Battle): Promise<void> {
-  if (battle.challenger_score === null || battle.opponent_score === null) return;
-  const winnerId = battle.challenger_score >= battle.opponent_score ? battle.challenger_id : battle.opponent_id;
-  await sb().from("battles").update({ status: "completed", winner_id: winnerId, completed_at: new Date().toISOString() }).eq("id", battle.id);
 }
 
 // -- localStorage fallback for when Supabase auth not used --------------------

@@ -5,11 +5,10 @@ import { useState, useEffect, useRef, useCallback } from "react";
 import { useAuth } from "@/components/auth/auth-provider";
 import { createClient } from "@/lib/supabase";
 import {
-  Profile, Message, FriendRequest, Battle, BattleTrade,
+  Profile, Message, FriendRequest,
   getFriends, getFriendRequests, sendFriendRequest, respondToFriendRequest,
   unfriendUser, blockUser, unblockUser, getBlockedUsers,
   getConversations, getMessages, sendMessage, markMessagesRead, getUnreadCount,
-  getBattles, sendBattleRequest, respondToBattle, submitBattleTrades, finalizeBattle,
   searchProfiles, getMyProfile,
 } from "@/lib/social";
 import { useAccountStore } from "@/store/accounts";
@@ -27,176 +26,6 @@ function Avatar({ profile, size=32 }: { profile: Profile; size?: number }) {
   );
 }
 
-// -- Battle simulator - 5 simulated trades -------------------------------------
-function BattleSimulator({ battle, myId, onSubmit }: { battle: Battle; myId: string; onSubmit: (trades: BattleTrade[]) => void }) {
-  const isChallenger = myId === battle.challenger_id;
-  const myTrades = isChallenger ? battle.challenger_trades : battle.opponent_trades;
-
-  // Mini sim state
-  type Candle = {o:number;h:number;l:number;c:number};
-  const [candles, setCandles] = useState<Candle[]>([]);
-  const [simTrades, setSimTrades] = useState<BattleTrade[]>([]);
-  const [inTrade, setInTrade] = useState(false);
-  const [entry, setEntry] = useState(0);
-  const [side, setSide] = useState<"LONG"|"SHORT">("LONG");
-  const [tp, setTp] = useState("20");
-  const [sl, setSl] = useState("10");
-  const [curIdx, setCurIdx] = useState(50);
-  const [playing, setPlaying] = useState(false);
-  const tickRef = useRef<any>(null);
-  const canvasRef = useRef<HTMLCanvasElement>(null);
-
-  // Symbol base prices
-  const bases: Record<string,number> = { NQ:20000, ES:5000, MGC:2500, CL:80 };
-  const base = bases[battle.symbol] || 100;
-
-  // Generate realistic candles on mount
-  useEffect(() => {
-    const c: Candle[] = [];
-    let p = base;
-    let trend = 0, vol = 1.0;
-    for (let i = 0; i < 300; i++) {
-      if(Math.random()<0.06) vol = 0.5+Math.random()*2.5;
-      else vol = vol*0.97+(0.5+Math.random()*1.5)*0.03;
-      if(Math.random()<0.04) trend=(Math.random()-0.5)*0.8;
-      else trend*=0.95;
-      const v = base*0.0015*vol;
-      const o=p, move=(Math.random()-0.48+trend*0.1)*v;
-      const cl=+(p+move).toFixed(2);
-      const uW=Math.random()*v*0.5, lW=Math.random()*v*0.5;
-      c.push({ o, h:+(Math.max(o,cl)+uW).toFixed(2), l:+(Math.min(o,cl)-lW).toFixed(2), c:cl });
-      p=+(cl).toFixed(2);
-    }
-    setCandles(c);
-  }, [base]);
-
-  // Draw canvas
-  useEffect(() => {
-    const cv = canvasRef.current; if(!cv||!candles.length) return;
-    const dpr=window.devicePixelRatio||1, W=cv.offsetWidth, H=cv.offsetHeight;
-    cv.width=W*dpr; cv.height=H*dpr;
-    const ctx=cv.getContext("2d")!; ctx.scale(dpr,dpr);
-    ctx.fillStyle="#060a0f"; ctx.fillRect(0,0,W,H);
-    const slice=candles.slice(Math.max(0,curIdx-60),curIdx);
-    if(!slice.length) return;
-    const lo=Math.min(...slice.map(c=>c.l)),hi=Math.max(...slice.map(c=>c.h));
-    const pad=(hi-lo)*0.1||1;
-    const toX=(i:number)=>12+(i/(slice.length-1||1))*(W-24);
-    const toY=(p:number)=>8+(H-16)-(p-lo+pad)/((hi-lo+pad*2))*(H-16);
-    const bW=Math.max(2,Math.min(10,(W-24)/slice.length*0.7));
-    slice.forEach((c,i)=>{
-      const g=c.c>=c.o;
-      ctx.strokeStyle=g?"rgba(0,230,118,0.6)":"rgba(255,23,68,0.6)"; ctx.lineWidth=1;
-      ctx.beginPath(); ctx.moveTo(toX(i),toY(c.h)); ctx.lineTo(toX(i),toY(c.l)); ctx.stroke();
-      ctx.fillStyle=g?"#00e676":"#ff1744"; ctx.globalAlpha=0.85;
-      ctx.fillRect(toX(i)-bW/2,toY(Math.max(c.o,c.c)),bW,Math.max(1.5,toY(Math.min(c.o,c.c))-toY(Math.max(c.o,c.c))));
-      ctx.globalAlpha=1;
-    });
-    if(inTrade&&entry){
-      const entryY=toY(entry);
-      const tpPrice=side==="LONG"?entry+(+tp):entry-(+tp);
-      const slPrice=side==="LONG"?entry-(+sl):entry+(+sl);
-      [[entry,"#00e5ff","Entry"],[tpPrice,"#00e676","TP"],[slPrice,"#ff1744","SL"]].forEach(([p,col,lbl])=>{
-        const y=toY(p as number);
-        ctx.strokeStyle=col as string; ctx.lineWidth=lbl==="Entry"?2:1.5;
-        ctx.setLineDash(lbl==="Entry"?[]:[6,4]);
-        ctx.beginPath(); ctx.moveTo(12,y); ctx.lineTo(W-12,y); ctx.stroke();
-        ctx.setLineDash([]);
-        ctx.fillStyle=col as string; ctx.font="bold 9px Inter"; ctx.textAlign="left";
-        ctx.fillText(lbl as string,14,y-3);
-      });
-    }
-  },[candles,curIdx,inTrade,entry,side,tp,sl]);
-
-  // Timer
-  useEffect(()=>{
-    if(tickRef.current) clearInterval(tickRef.current);
-    if(!playing) return;
-    tickRef.current=setInterval(()=>{
-      setCurIdx(v=>{
-        if(v>=candles.length){setPlaying(false);return candles.length;}
-        // Check TP/SL if in trade
-        if(inTrade&&candles[v]){
-          const c=candles[v];
-          const tpP=side==="LONG"?entry+(+tp):entry-(+tp);
-          const slP=side==="LONG"?entry-(+sl):entry+(+sl);
-          // Point value per contract
-          const sym=(battle.symbol||"NQ").toUpperCase();
-          const ptVal=sym.includes("MNQ")?2:sym.includes("MES")?5:sym.includes("NQ")?20:sym.includes("ES")?50:sym.includes("YM")?5:1;
-          if((side==="LONG"&&c.h>=tpP)||(side==="SHORT"&&c.l<=tpP)){
-            const pnl=+(+tp*ptVal).toFixed(2);
-            setSimTrades(prev=>[...prev,{side,entry,exit:tpP,pnl,pct:pnl/entry*100}]);
-            setInTrade(false);
-          } else if((side==="LONG"&&c.l<=slP)||(side==="SHORT"&&c.h>=slP)){
-            const pnl=+(-(+sl)*ptVal).toFixed(2);
-            setSimTrades(prev=>[...prev,{side,entry,exit:slP,pnl,pct:pnl/entry*100}]);
-            setInTrade(false);
-          }
-        }
-        return v+1;
-      });
-    },200);
-    return()=>{if(tickRef.current)clearInterval(tickRef.current);};
-  },[playing,candles,inTrade,entry,side,tp,sl]);
-
-  const curPrice = candles[curIdx-1]?.c || base;
-  const totalPnl = simTrades.reduce((a,t)=>a+t.pnl,0);
-  const done = myTrades !== null;
-
-  if (done) return (
-    <div style={{textAlign:"center",padding:24,color:"#4b5563"}}>
-      <div style={{fontSize:14,fontWeight:700,color:"#00e676",marginBottom:4}}>✓ Trades submitted!</div>
-      <div style={{fontSize:12}}>Score: {fmt$(myTrades?.reduce((a,t)=>a+t.pnl,0)||0)}</div>
-      <div style={{fontSize:11,marginTop:8}}>Waiting for opponent...</div>
-    </div>
-  );
-
-  return (
-    <div style={{display:"flex",flexDirection:"column",gap:10}}>
-      <div style={{fontSize:11,color:"#4b5563",textAlign:"center"}}>
-        Battle on <strong style={{color:"#f0f6fc"}}>{battle.symbol}</strong> · Trade {simTrades.length}/5
-        {simTrades.length>=5&&<span style={{color:"#ffab00"}}> — Submit when ready</span>}
-      </div>
-
-      <canvas ref={canvasRef} style={{width:"100%",height:160,display:"block",borderRadius:8}}/>
-
-      <div style={{display:"flex",gap:6,alignItems:"center",flexWrap:"wrap"}}>
-        <button onClick={()=>setPlaying(p=>!p)} style={{height:30,width:30,borderRadius:8,border:"1px solid rgba(0,229,255,0.3)",background:"rgba(0,229,255,0.08)",color:"#00e5ff",cursor:"pointer",fontSize:14,display:"flex",alignItems:"center",justifyContent:"center"}}>
-          {playing?"⏸":"▶"}
-        </button>
-        <div style={{fontSize:12,fontFamily:"monospace",color:"#f0f6fc",fontWeight:700}}>{curPrice.toFixed(2)}</div>
-        <div style={{display:"flex",gap:4,alignItems:"center",marginLeft:4}}>
-          <span style={{fontSize:10,color:"#4b5563"}}>TP</span>
-          <input value={tp} onChange={e=>setTp(e.target.value)} type="number" style={{width:52,height:26,padding:"0 6px",background:"rgba(0,230,118,0.06)",border:"1px solid rgba(0,230,118,0.2)",borderRadius:6,color:"#00e676",fontSize:12,textAlign:"center",outline:"none"}}/>
-          <span style={{fontSize:10,color:"#4b5563"}}>SL</span>
-          <input value={sl} onChange={e=>setSl(e.target.value)} type="number" style={{width:52,height:26,padding:"0 6px",background:"rgba(255,23,68,0.06)",border:"1px solid rgba(255,23,68,0.2)",borderRadius:6,color:"#ff1744",fontSize:12,textAlign:"center",outline:"none"}}/>
-        </div>
-        {!inTrade&&simTrades.length<5&&<>
-          <button onClick={()=>{if(!candles.length)return;setSide("LONG");setEntry(curPrice);setInTrade(true);}} disabled={!candles.length} style={{height:28,padding:"0 12px",borderRadius:8,border:"none",background:candles.length?"#00e676":"rgba(0,230,118,0.2)",color:candles.length?"#000":"#374151",cursor:candles.length?"pointer":"default",fontSize:11,fontWeight:800}}>▲ LONG</button>
-          <button onClick={()=>{if(!candles.length)return;setSide("SHORT");setEntry(curPrice);setInTrade(true);}} disabled={!candles.length} style={{height:28,padding:"0 12px",borderRadius:8,border:"none",background:candles.length?"#ff1744":"rgba(255,23,68,0.2)",color:candles.length?"#fff":"#374151",cursor:candles.length?"pointer":"default",fontSize:11,fontWeight:800}}>▼ SHORT</button>
-        </>}
-        {inTrade&&<div style={{fontSize:11,color:"#ffab00"}}>In trade...</div>}
-        <div style={{marginLeft:"auto",fontSize:12,fontWeight:700,fontFamily:"monospace",color:totalPnl>=0?"#00e676":"#ff1744"}}>{fmt$(totalPnl)}</div>
-      </div>
-
-      {/* Trade history */}
-      <div style={{display:"flex",gap:6,flexWrap:"wrap"}}>
-        {simTrades.map((t,i)=>(
-          <div key={i} style={{padding:"3px 10px",borderRadius:6,fontSize:11,fontWeight:700,background:t.pnl>=0?"rgba(0,230,118,0.1)":"rgba(255,23,68,0.1)",color:t.pnl>=0?"#00e676":"#ff1744"}}>
-            {t.side} {t.pnl>=0?"+":""}{t.pnl.toFixed(1)}
-          </div>
-        ))}
-      </div>
-
-      {simTrades.length>=5&&(
-        <button onClick={()=>onSubmit(simTrades)} style={{height:36,borderRadius:10,border:"none",background:"linear-gradient(135deg,#00e5ff,#0088bb)",color:"#000",fontSize:13,fontWeight:800,cursor:"pointer",boxShadow:"0 0 16px rgba(0,229,255,0.2)"}}>
-          Submit {simTrades.length} Trades — Score: {fmt$(totalPnl)}
-        </button>
-      )}
-    </div>
-  );
-}
-
 // -- Main Social Hub -----------------------------------------------------------
 export default function SocialPage({ myProfile }: { myProfile: Profile }) {
   const hasSupabase = !!(process.env.NEXT_PUBLIC_SUPABASE_URL && process.env.NEXT_PUBLIC_SUPABASE_URL !== "https://placeholder.supabase.co");
@@ -205,7 +34,7 @@ export default function SocialPage({ myProfile }: { myProfile: Profile }) {
       <div style={{fontSize:36}}>🔌</div>
       <div style={{fontSize:16,fontWeight:800,color:"#f0f6fc"}}>Supabase not configured</div>
       <div style={{fontSize:13,color:"#4b5563",textAlign:"center" as const,maxWidth:420,lineHeight:1.7}}>
-        The Community tab requires Supabase for real-time messaging and battles.<br/>
+        The Community tab requires Supabase for real-time messaging.<br/>
         Add your <strong style={{color:"#00e5ff"}}>NEXT_PUBLIC_SUPABASE_URL</strong> and <strong style={{color:"#00e5ff"}}>NEXT_PUBLIC_SUPABASE_ANON_KEY</strong> to your <strong style={{color:"#c9d1d9"}}>.env</strong> file then restart the server.
       </div>
       <a href="https://supabase.com/dashboard/project/_/settings/api" target="_blank" rel="noreferrer" style={{padding:"10px 20px",borderRadius:10,background:"rgba(0,229,255,0.1)",border:"1px solid rgba(0,229,255,0.25)",color:"#00e5ff",fontSize:13,fontWeight:700,textDecoration:"none"}}>
@@ -230,13 +59,11 @@ export default function SocialPage({ myProfile }: { myProfile: Profile }) {
   const [friends, setFriends] = useState<Profile[]>([]);
   const [requests, setRequests] = useState<FriendRequest[]>([]);
   const [convos, setConvos] = useState<{profile:Profile;lastMessage:Message;unread:number}[]>([]);
-  const [battles, setBattles] = useState<Battle[]>([]);
   const [chatWith, setChatWith] = useState<Profile|null>(null);
   const [messages, setMessages] = useState<Message[]>([]);
   const [msgInput, setMsgInput] = useState("");
   const [searchQ, setSearchQ] = useState("");
   const [searchRes, setSearchRes] = useState<Profile[]>([]);
-  const [activeBattle, setActiveBattle] = useState<Battle|null>(null);
   const removedIds = React.useRef<Set<string>>(new Set<string>());
   React.useEffect(()=>{
     try{ const saved=JSON.parse(localStorage.getItem(scopedKey("th_removed_friends"))||"[]"); removedIds.current=new Set(saved); }catch{}
@@ -254,9 +81,9 @@ export default function SocialPage({ myProfile }: { myProfile: Profile }) {
 
   const load = useCallback(async()=>{
     if(!user) return;
-    const [f,r,c,b,u] = await Promise.all([
+    const [f,r,c,u] = await Promise.all([
       getFriends(user.id), getFriendRequests(user.id),
-      getConversations(user.id), getBattles(user.id),
+      getConversations(user.id),
       getUnreadCount(user.id),
     ]);
     const rid = removedIds.current;
@@ -273,7 +100,6 @@ export default function SocialPage({ myProfile }: { myProfile: Profile }) {
     setFriends(filteredFriends);
     setRequests(r);
     setConvos(filteredConvos);
-    setBattles(b.filter((x:any)=>!rid.has(x.challenger_id)&&!rid.has(x.opponent_id)));
     setUnread(u);
     // If the active chat person is no longer in allowed conversations, close the chat
     setChatWith(prev => {
@@ -363,44 +189,29 @@ export default function SocialPage({ myProfile }: { myProfile: Profile }) {
   };
 
   const addFriend = async(toId:string)=>{ if(!user) return; await sendFriendRequest(user.id, toId); setSearchRes([]); setSearchQ(""); load(); };
-  const handleUnfriend = async(fid:string)=>{ 
+  const handleUnfriend = async(fid:string)=>{
     if(!user) return;
     addRemovedId(fid);
     await unfriendUser(user.id,fid);
     setConfirmAction(null);
     setChatWith(p=>p?.id===fid?null:p);
-    setActiveBattle(prev=>prev&&(prev.challenger_id===fid||prev.opponent_id===fid)?null:prev);
     setFriends(prev=>prev.filter(f=>f.id!==fid));
     setConvos(prev=>prev.filter(cv=>cv.profile.id!==fid));
-    setBattles(prev=>prev.filter(b=>b.challenger_id!==fid&&b.opponent_id!==fid));
   };
   const handleUnblock = async(fid:string)=>{ if(!user) return; await unblockUser(user.id,fid); load(); };
-  const handleBlock = async(fid:string)=>{ 
+  const handleBlock = async(fid:string)=>{
     if(!user) return;
     addRemovedId(fid);
     await blockUser(user.id,fid);
     setConfirmAction(null);
     setChatWith(p=>p?.id===fid?null:p);
-    setActiveBattle(prev=>prev&&(prev.challenger_id===fid||prev.opponent_id===fid)?null:prev);
     setFriends(prev=>prev.filter(f=>f.id!==fid));
     setConvos(prev=>prev.filter(cv=>cv.profile.id!==fid));
-    setBattles(prev=>prev.filter(b=>b.challenger_id!==fid&&b.opponent_id!==fid));
   };
 
   const respondReq = async(id:string,status:"accepted"|"declined")=>{ await respondToFriendRequest(id,status); load(); };
 
-  const startBattle = async(opponentId:string,symbol:string)=>{
-    if(!user) return;
-    // Only allow one pending/active battle at a time
-    const activeBattles = battles.filter(b=>(b.status==="active"||b.status==="pending")&&(b.challenger_id===user.id||b.opponent_id===user.id));
-    if(activeBattles.length>0){ alert("You already have an active battle. Finish it before starting a new one."); return; }
-    const id = await sendBattleRequest(user.id, opponentId, symbol);
-    await sendMessage(user.id, opponentId, `⚔️ Battle challenge! Join me for a ${symbol} trading battle — 5 trades each.`, "battle_request", { battle_id: id });
-    load();
-  };
-
   const pendingRequests = requests.filter(r=>r.to_id===user?.id&&r.status==="pending");
-  const myBattles = battles.filter(b=>b.status==="active"&&(b.challenger_id===user?.id||b.opponent_id===user?.id));
 
   const TABS = [
     {id:"messages" as const, label:"Messages", badge:unread},
@@ -525,62 +336,9 @@ export default function SocialPage({ myProfile }: { myProfile: Profile }) {
 
       </div>
 
-      {/* Right panel - chat or battle */}
+      {/* Right panel - chat */}
       <div style={{flex:1,display:"flex",flexDirection:"column",minWidth:0}}>
-        {activeBattle&&(
-          <div style={{flex:1,display:"flex",flexDirection:"column",overflow:"hidden"}}>
-            <div style={{padding:"12px 16px",borderBottom:"1px solid rgba(255,255,255,0.06)",display:"flex",alignItems:"center",gap:10,background:"rgba(0,0,0,0.2)"}}>
-              <span style={{fontSize:16}}>⚔️</span>
-              <div style={{flex:1}}>
-                <div style={{fontSize:13,fontWeight:800,color:"#f0f6fc"}}>Battle vs @{activeBattle.challenger_id===user?.id?activeBattle.opponent_profile?.username:activeBattle.challenger_profile?.username}</div>
-                <div style={{fontSize:10,color:"#4b5563"}}>{activeBattle.symbol} · 5 trades each · Most P&L wins</div>
-              </div>
-              <button onClick={()=>setActiveBattle(null)} style={{width:28,height:28,borderRadius:8,background:"rgba(255,255,255,0.05)",border:"1px solid rgba(255,255,255,0.08)",color:"#4b5563",cursor:"pointer",fontSize:17,display:"flex",alignItems:"center",justifyContent:"center"}}>×</button>
-            </div>
-            <div style={{flex:1,overflowY:"auto",padding:16}}>
-              {activeBattle.status==="active"&&(
-                <BattleSimulator battle={activeBattle} myId={user?.id||""} onSubmit={async(t)=>{
-                  await submitBattleTrades(activeBattle.id,user?.id||"",activeBattle.challenger_id,t);
-                  // Check if both submitted
-                  const updated=await getBattles(user?.id||"");
-                  const b=updated.find(x=>x.id===activeBattle.id);
-                  if(b&&b.challenger_trades&&b.opponent_trades) await finalizeBattle(b);
-                  load(); setActiveBattle(null);
-                }}/>
-              )}
-              {activeBattle.status==="completed"&&(
-                <div style={{textAlign:"center",padding:32}}>
-                  <div style={{fontSize:32,marginBottom:12}}>{activeBattle.winner_id===user?.id?"🏆":"💀"}</div>
-                  <div style={{fontSize:18,fontWeight:800,color:activeBattle.winner_id===user?.id?"#00e676":"#ff1744",marginBottom:8}}>
-                    {activeBattle.winner_id===user?.id?"You won the battle!":"You lost the battle"}
-                  </div>
-                  <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:16,marginTop:16,maxWidth:300,margin:"0 auto"}}>
-                    <div style={{background:"rgba(255,255,255,0.03)",borderRadius:10,padding:14}}>
-                      <div style={{fontSize:10,color:"#4b5563",marginBottom:4}}>Your score</div>
-                      <div style={{fontSize:22,fontWeight:900,fontFamily:"monospace",color:activeBattle.challenger_id===user?.id?(activeBattle.challenger_score||0)>=0?"#00e676":"#ff1744":(activeBattle.opponent_score||0)>=0?"#00e676":"#ff1744"}}>
-                        {fmt$(activeBattle.challenger_id===user?.id?activeBattle.challenger_score||0:activeBattle.opponent_score||0)}
-                      </div>
-                    </div>
-                    <div style={{background:"rgba(255,255,255,0.03)",borderRadius:10,padding:14}}>
-                      <div style={{fontSize:10,color:"#4b5563",marginBottom:4}}>Their score</div>
-                      <div style={{fontSize:22,fontWeight:900,fontFamily:"monospace",color:"#6b7280"}}>
-                        {fmt$(activeBattle.challenger_id===user?.id?activeBattle.opponent_score||0:activeBattle.challenger_score||0)}
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              )}
-              {activeBattle.status==="pending"&&(
-                <div style={{textAlign:"center",padding:32,color:"#4b5563"}}>
-                  <div style={{fontSize:28,marginBottom:12}}>⏳</div>
-                  <div style={{fontSize:13}}>Waiting for opponent to accept...</div>
-                </div>
-              )}
-            </div>
-          </div>
-        )}
-
-        {!activeBattle&&chatWith&&(
+        {chatWith&&(
           <>
             <div style={{padding:"12px 16px",borderBottom:"1px solid rgba(255,255,255,0.06)",display:"flex",alignItems:"center",gap:10,background:"rgba(0,0,0,0.2)"}}>
               <Avatar profile={chatWith} size={32}/>
@@ -598,7 +356,6 @@ export default function SocialPage({ myProfile }: { myProfile: Profile }) {
               {messages.map(msg=>{
                 const mine=msg.from_id===user?.id;
                 const isTradeShare=msg.type==="trade_share";
-                const isBattleReq=msg.type==="battle_request";
                 return (
                   <div key={msg.id} style={{display:"flex",justifyContent:mine?"flex-end":"flex-start",gap:8}}>
                     {!mine&&<Avatar profile={chatWith} size={24}/>}
@@ -611,19 +368,7 @@ export default function SocialPage({ myProfile }: { myProfile: Profile }) {
                           <div style={{fontSize:10,color:"#4b5563"}}>Entry: ${msg.metadata.entryPrice} → Exit: ${msg.metadata.exitPrice}</div>
                         </div>
                       )}
-                      {isBattleReq&&msg.metadata&&(
-                        <div style={{background:"rgba(213,0,249,0.08)",border:"1px solid rgba(213,0,249,0.2)",borderRadius:10,padding:"10px 14px",marginBottom:4}}>
-                          <div style={{fontSize:10,color:"#d500f9",fontWeight:700,marginBottom:4}}>⚔️ Battle Request</div>
-                          <div style={{fontSize:12,color:"#c9d1d9"}}>{msg.content}</div>
-                          {!mine&&battles.find(b=>b.id===msg.metadata?.battle_id&&b.status==="pending")&&(
-                            <div style={{display:"flex",gap:6,marginTop:8}}>
-                              <button onClick={()=>{ respondToBattle(msg.metadata!.battle_id, true).then(load); }} style={{flex:1,height:28,borderRadius:7,background:"rgba(0,230,118,0.1)",border:"1px solid rgba(0,230,118,0.2)",color:"#00e676",cursor:"pointer",fontSize:11,fontWeight:700}}>Accept</button>
-                              <button onClick={()=>respondToBattle(msg.metadata!.battle_id, false).then(load)} style={{flex:1,height:28,borderRadius:7,background:"rgba(255,23,68,0.06)",border:"1px solid rgba(255,23,68,0.15)",color:"#f87171",cursor:"pointer",fontSize:11}}>Decline</button>
-                            </div>
-                          )}
-                        </div>
-                      )}
-                      {!isTradeShare&&!isBattleReq&&(
+                      {!isTradeShare&&(
                         <div style={{padding:"8px 12px",borderRadius:10,background:mine?"rgba(0,229,255,0.12)":"rgba(255,255,255,0.06)",maxWidth:"100%"}}>
                           <div style={{fontSize:13,color:"#f0f6fc",lineHeight:1.5,wordBreak:"break-word"}}>{msg.content}</div>
                         </div>
@@ -646,11 +391,11 @@ export default function SocialPage({ myProfile }: { myProfile: Profile }) {
           </>
         )}
 
-        {!activeBattle&&!chatWith&&(
+        {!chatWith&&(
           <div style={{display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",height:"100%",gap:14,color:"#374151"}}>
             <div style={{fontSize:40}}>💬</div>
             <div style={{fontSize:14,fontWeight:700,color:"#4b5563"}}>Select a conversation</div>
-            <div style={{fontSize:12}}>Or add friends to start chatting and battling</div>
+            <div style={{fontSize:12}}>Or add friends to start chatting</div>
           </div>
         )}
       </div>
