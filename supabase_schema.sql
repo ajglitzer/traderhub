@@ -119,3 +119,11 @@ create table if not exists public.reports (
 alter table public.reports enable row level security;
 create policy "Create report"   on public.reports for insert with check (auth.uid() = reporter_id);
 create policy "See own reports" on public.reports for select using (auth.uid() = reporter_id);
+
+-- ── Bans (moderation) ──────────────────────────────────────────────────────────
+alter table public.profiles add column if not exists banned boolean default false;
+
+-- To ban a user after reviewing a report:
+--   update public.profiles set banned = true where username = 'someuser';
+-- To unban:
+--   update public.profiles set banned = false where username = 'someuser';

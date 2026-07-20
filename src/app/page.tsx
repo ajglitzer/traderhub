@@ -4,6 +4,7 @@ import { AuthPage } from "@/components/auth/auth-page";
 import { UsernameSetup, UsernameSetupLocal } from "@/components/auth/username-setup";
 import SocialPage from "@/components/social/social";
 import { getMyProfile, Profile } from "@/lib/social";
+import { RulesGate } from "@/components/ui/community-rules";
 import { useEffect, useMemo, useState } from "react";
 import { useStore } from "@/store";
 import { invalidateSubscription } from "@/hooks/useSubscription";
@@ -336,8 +337,46 @@ export default function Page() {
 
   // Username gate  checks Supabase profile (with localStorage cache) before showing setup
   return <UsernameGate userId={activeUser.id} hasSupabase={hasSupabase}>
-    <AppContent activeTab={activeTab} activeUser={activeUser} d={d}/>
+    <BanGate userId={activeUser.id} hasSupabase={hasSupabase}>
+      <RulesGate userId={activeUser.id}>
+        <AppContent activeTab={activeTab} activeUser={activeUser} d={d}/>
+      </RulesGate>
+    </BanGate>
   </UsernameGate>;
+}
+
+//  Ban gate: blocks suspended accounts from using the app
+function BanGate({ userId, hasSupabase, children }: { userId: string; hasSupabase: boolean; children: React.ReactNode }) {
+  const { signOut } = useAuth();
+  const [banned, setBanned] = useState(false);
+
+  useEffect(() => {
+    if (!hasSupabase) return;
+    let cancelled = false;
+    (async () => {
+      try {
+        const { createClient } = await import("@/lib/supabase");
+        const sb = createClient();
+        const { data } = await sb.from("profiles").select("banned").eq("id", userId).maybeSingle();
+        if (!cancelled && data?.banned) setBanned(true);
+      } catch {}
+    })();
+    return () => { cancelled = true; };
+  }, [userId, hasSupabase]);
+
+  if (banned) return (
+    <div style={{minHeight:"100vh",background:"#060a0f",display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",padding:32,textAlign:"center" as const,gap:14}}>
+      <div style={{fontSize:48}}>🚫</div>
+      <div style={{fontSize:20,fontWeight:900,color:"#f0f6fc"}}>Account Suspended</div>
+      <div style={{fontSize:13,color:"#6b7280",maxWidth:380,lineHeight:1.7}}>
+        Your account has been suspended for violating TraderHub&apos;s Community Guidelines.
+      </div>
+      <button onClick={()=>signOut()} style={{marginTop:8,height:38,padding:"0 24px",borderRadius:10,border:"1px solid rgba(255,255,255,0.1)",background:"rgba(255,255,255,0.04)",color:"#9ca3af",cursor:"pointer",fontSize:13,fontWeight:700}}>
+        Sign Out
+      </button>
+    </div>
+  );
+  return <>{children}</>;
 }
 
 //  Username gate: checks Supabase profile before showing setup screen 

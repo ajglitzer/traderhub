@@ -8,6 +8,7 @@ import { useAccountStore, clearCloud, CLEARED_FLAG, markSessionCleared } from "@
 import { exportToCSV, exportToJSON, importFromJSON } from "@/lib/export";
 import { Trade } from "@/types/trade";
 import { filterMessage } from "@/lib/profanity";
+import { RulesModal } from "@/components/ui/community-rules";
 
 function ProfileEditor({ userId }: { userId?: string }) {
   const [bio, setBio] = useState("");
@@ -181,6 +182,7 @@ export default function SettingsPage() {
   const { activeAccountId, getActiveTrades, setAccountTrades, addAccountTrades } = useAccountStore();
   const allTrades = getActiveTrades() ?? [];
   const [toast, setToast] = useState<{msg:string;type:"ok"|"err"}|null>(null);
+  const [showRules, setShowRules] = useState(false);
   const jsonInputRef = useRef<HTMLInputElement>(null);
 
   const showToast = (msg: string, type: "ok"|"err" = "ok") => {
@@ -281,6 +283,7 @@ export default function SettingsPage() {
   return (
     <>
     {showUpgrade&&<PricingModal onClose={()=>setShowUpgrade(null)}/>}
+    {showRules&&<RulesModal onClose={()=>setShowRules(false)}/>}
     <div style={{ padding:20, overflowY:"auto", height:"100%", maxWidth:700 }}>
 
 
@@ -302,6 +305,14 @@ export default function SettingsPage() {
               Sign Out
             </button>
           </div>
+        </Row>
+      </Section>
+
+      <Section title="Community">
+        <Row label="Community Guidelines" desc="Rules for friending, messaging, and reporting other traders">
+          <button onClick={()=>setShowRules(true)} style={{height:32,padding:"0 16px",borderRadius:8,border:"1px solid rgba(0,229,255,0.2)",background:"rgba(0,229,255,0.06)",color:"#00e5ff",cursor:"pointer",fontSize:12,fontWeight:700}}>
+            📜 View Rules
+          </button>
         </Row>
       </Section>
 
