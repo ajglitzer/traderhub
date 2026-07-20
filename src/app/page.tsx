@@ -24,7 +24,6 @@ import PatternPage from "@/components/patterns/patterns";
 import LifestylePage from "@/components/lifestyle/lifestyle";
 import EconomicCalendar from "@/components/calendar/economic-calendar";
 import GoalsPage from "@/components/ui/goals-page";
-import LeaderboardPage from "@/components/social/leaderboard";
 import { StreakTracker } from "@/components/ui/streak-tracker";
 import { TradeCardBtn } from "@/components/ui/trade-card";
 import { TradeAlerts } from "@/components/ui/trade-alerts";

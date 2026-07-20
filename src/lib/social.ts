@@ -244,44 +244,6 @@ export async function updateProfile(userId: string, data: Partial<Profile>): Pro
   try { await sb().from("profiles").update(data).eq("id", userId); } catch {}
 }
 
-export async function getPublicStats(userId: string): Promise<{ trades: number; winRate: number; totalPnl: number; bestTrade: number; streak: number } | null> {
-  try {
-    const { data } = await sb().from("sim_leaderboard").select("*").eq("user_id", userId).order("balance", { ascending: false }).limit(1);
-    if (!data?.length) return null;
-    const d = data[0];
-    return { trades: d.total_trades || 0, winRate: d.total_trades > 0 ? (d.wins / d.total_trades) * 100 : 0, totalPnl: (d.balance || 0) - (d.start_balance || 10000), bestTrade: 0, streak: 0 };
-  } catch { return null; }
-}
-
-export async function getGlobalLeaderboard(): Promise<any[]> {
-  try {
-    // Overfetch, then filter to only users who opted in to sharing stats
-    // (profiles.show_real_stats) — same flag that gates their public profile
-    // page, so the leaderboard can't leak balance/P&L for users who turned it off.
-    const { data } = await sb().from("sim_leaderboard")
-      .select("*").order("balance", { ascending: false }).limit(200);
-    const entries = data || [];
-    if (!entries.length) return [];
-
-    const userIds = [...new Set(entries.map((e: any) => e.user_id))];
-    const { data: profiles } = await sb().from("profiles")
-      .select("id,show_real_stats").in("id", userIds);
-    const opted = new Set((profiles || []).filter((p: any) => p.show_real_stats).map((p: any) => p.id));
-
-    return entries.filter((e: any) => opted.has(e.user_id)).slice(0, 50);
-  } catch { return []; }
-}
-
-export async function upsertLeaderboardEntry(userId: string, username: string, accountName: string, balance: number, startBalance: number, totalTrades: number, wins: number): Promise<void> {
-  try {
-    await sb().from("sim_leaderboard").upsert({
-      user_id: userId, username, account_name: accountName,
-      balance, start_balance: startBalance, total_trades: totalTrades, wins,
-      updated_at: new Date().toISOString(),
-    }, { onConflict: "user_id,account_name" });
-  } catch {}
-}
-
 // ── Block / Unfriend ──────────────────────────────────────────────────────────
 
 export async function unfriendUser(myId: string, friendId: string): Promise<void> {
