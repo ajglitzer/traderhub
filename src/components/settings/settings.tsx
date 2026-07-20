@@ -9,6 +9,7 @@ import { exportToCSV, exportToJSON, importFromJSON } from "@/lib/export";
 import { Trade } from "@/types/trade";
 import { filterMessage } from "@/lib/profanity";
 import { RulesModal } from "@/components/ui/community-rules";
+import { TosModal } from "@/components/ui/terms-of-service";
 
 function ProfileEditor({ userId }: { userId?: string }) {
   const [bio, setBio] = useState("");
@@ -183,6 +184,7 @@ export default function SettingsPage() {
   const allTrades = getActiveTrades() ?? [];
   const [toast, setToast] = useState<{msg:string;type:"ok"|"err"}|null>(null);
   const [showRules, setShowRules] = useState(false);
+  const [showTos, setShowTos] = useState(false);
   const jsonInputRef = useRef<HTMLInputElement>(null);
 
   const showToast = (msg: string, type: "ok"|"err" = "ok") => {
@@ -284,6 +286,7 @@ export default function SettingsPage() {
     <>
     {showUpgrade&&<PricingModal onClose={()=>setShowUpgrade(null)}/>}
     {showRules&&<RulesModal onClose={()=>setShowRules(false)}/>}
+    {showTos&&<TosModal onAgree={()=>setShowTos(false)}/>}
     <div style={{ padding:20, overflowY:"auto", height:"100%", maxWidth:700 }}>
 
 
@@ -312,6 +315,11 @@ export default function SettingsPage() {
         <Row label="Community Guidelines" desc="Rules for friending, messaging, and reporting other traders">
           <button onClick={()=>setShowRules(true)} style={{height:32,padding:"0 16px",borderRadius:8,border:"1px solid rgba(0,229,255,0.2)",background:"rgba(0,229,255,0.06)",color:"#00e5ff",cursor:"pointer",fontSize:12,fontWeight:700}}>
             📜 View Rules
+          </button>
+        </Row>
+        <Row label="Terms of Service" desc="The agreement you accepted when you signed up">
+          <button onClick={()=>setShowTos(true)} style={{height:32,padding:"0 16px",borderRadius:8,border:"1px solid rgba(255,255,255,0.08)",background:"rgba(255,255,255,0.04)",color:"#d1d5db",cursor:"pointer",fontSize:12,fontWeight:700}}>
+            📄 View Terms
           </button>
         </Row>
       </Section>

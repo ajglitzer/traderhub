@@ -127,3 +127,6 @@ alter table public.profiles add column if not exists banned boolean default fals
 --   update public.profiles set banned = true where username = 'someuser';
 -- To unban:
 --   update public.profiles set banned = false where username = 'someuser';
+
+-- ── Terms of Service acceptance ────────────────────────────────────────────────
+alter table public.profiles add column if not exists tos_accepted_at timestamptz;

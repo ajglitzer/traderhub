@@ -5,6 +5,7 @@ import { UsernameSetup, UsernameSetupLocal } from "@/components/auth/username-se
 import SocialPage from "@/components/social/social";
 import { getMyProfile, Profile } from "@/lib/social";
 import { RulesGate } from "@/components/ui/community-rules";
+import { TosModal } from "@/components/ui/terms-of-service";
 import { useEffect, useMemo, useState } from "react";
 import { useStore } from "@/store";
 import { invalidateSubscription } from "@/hooks/useSubscription";
@@ -338,11 +339,53 @@ export default function Page() {
   // Username gate  checks Supabase profile (with localStorage cache) before showing setup
   return <UsernameGate userId={activeUser.id} hasSupabase={hasSupabase}>
     <BanGate userId={activeUser.id} hasSupabase={hasSupabase}>
-      <RulesGate userId={activeUser.id}>
-        <AppContent activeTab={activeTab} activeUser={activeUser} d={d}/>
-      </RulesGate>
+      <TosGate userId={activeUser.id} hasSupabase={hasSupabase}>
+        <RulesGate userId={activeUser.id}>
+          <AppContent activeTab={activeTab} activeUser={activeUser} d={d}/>
+        </RulesGate>
+      </TosGate>
     </BanGate>
   </UsernameGate>;
+}
+
+//  ToS gate: requires explicit acceptance before using the app
+function TosGate({ userId, hasSupabase, children }: { userId: string; hasSupabase: boolean; children: React.ReactNode }) {
+  const { signOut } = useAuth();
+  const [state, setState] = useState<"checking"|"needs-accept"|"accepted">(hasSupabase ? "checking" : "accepted");
+
+  useEffect(() => {
+    if (!hasSupabase) return;
+    let cancelled = false;
+    (async () => {
+      try {
+        const { createClient } = await import("@/lib/supabase");
+        const sb = createClient();
+        const { data } = await sb.from("profiles").select("tos_accepted_at").eq("id", userId).maybeSingle();
+        if (!cancelled) setState(data?.tos_accepted_at ? "accepted" : "needs-accept");
+      } catch {
+        if (!cancelled) setState("accepted"); // fail open — don't lock users out over a network hiccup
+      }
+    })();
+    return () => { cancelled = true; };
+  }, [userId, hasSupabase]);
+
+  const agree = async () => {
+    try {
+      const { createClient } = await import("@/lib/supabase");
+      const sb = createClient();
+      await sb.from("profiles").update({ tos_accepted_at: new Date().toISOString() }).eq("id", userId);
+    } catch {}
+    setState("accepted");
+  };
+
+  if (state === "checking") return (
+    <div style={{minHeight:"100vh",background:"#060a0f",display:"flex",alignItems:"center",justifyContent:"center"}}>
+      <div style={{width:36,height:36,borderRadius:"50%",border:"2px solid rgba(0,229,255,0.15)",borderTop:"2px solid #00e5ff",animation:"spin 0.8s linear infinite"}}/>
+      <style>{"@keyframes spin{to{transform:rotate(360deg)}}"}</style>
+    </div>
+  );
+  if (state === "needs-accept") return <TosModal onAgree={agree} onDecline={()=>signOut()}/>;
+  return <>{children}</>;
 }
 
 //  Ban gate: blocks suspended accounts from using the app
