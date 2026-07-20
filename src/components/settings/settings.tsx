@@ -192,9 +192,6 @@ export default function SettingsPage() {
     try {
       const imported = await importFromJSON(file);
       addAccountTrades(activeAccountId, imported as Trade[]);
-      const existing = getActiveTrades();
-      const merged = [...(imported as Trade[]), ...existing];
-      setAccountTrades(activeAccountId, merged);
       showToast(`✓ Restored ${imported.length} trades from backup`);
     } catch(e) {
       showToast(`Error: ${String(e)}`, "err");
