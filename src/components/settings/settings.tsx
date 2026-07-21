@@ -10,6 +10,8 @@ import { Trade } from "@/types/trade";
 import { filterMessage } from "@/lib/profanity";
 import { RulesModal } from "@/components/ui/community-rules";
 import { TosModal } from "@/components/ui/terms-of-service";
+import { getStoredUsername } from "@/lib/user-storage";
+import { filterUsername } from "@/lib/profanity";
 
 function ProfileEditor({ userId }: { userId?: string }) {
   const [bio, setBio] = useState("");
@@ -19,13 +21,13 @@ function ProfileEditor({ userId }: { userId?: string }) {
   const [saved, setSaved] = useState(false);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
-  const username = typeof window !== "undefined" ? (() => {
-    for (let i = 0; i < localStorage.length; i++) {
-      const k = localStorage.key(i);
-      if (k?.startsWith("th_username_")) return localStorage.getItem(k) || "";
-    }
-    return "";
-  })() : "";
+  const [username, setUsername] = useState(() => getStoredUsername() || "");
+  const [newUsername, setNewUsername] = useState("");
+  const [usernameErr, setUsernameErr] = useState("");
+  const [checkingUsername, setCheckingUsername] = useState(false);
+  const [usernameAvailable, setUsernameAvailable] = useState<boolean|null>(null);
+  const [savingUsername, setSavingUsername] = useState(false);
+  const [usernameSaved, setUsernameSaved] = useState(false);
 
   useEffect(() => {
     if (!userId) { setLoading(false); return; }
@@ -33,12 +35,67 @@ function ProfileEditor({ userId }: { userId?: string }) {
       try {
         const { createClient } = await import("@/lib/supabase");
         const sb = createClient();
-        const { data } = await sb.from("profiles").select("bio,show_real_stats,twitter").eq("id", userId).maybeSingle();
-        if (data) { setBio(data.bio || ""); setShowReal(data.show_real_stats || false); setTwitter(data.twitter || ""); }
+        const { data } = await sb.from("profiles").select("username,bio,show_real_stats,twitter").eq("id", userId).maybeSingle();
+        if (data) {
+          setBio(data.bio || ""); setShowReal(data.show_real_stats || false); setTwitter(data.twitter || "");
+          if (data.username) { setUsername(data.username); setNewUsername(data.username); }
+        }
       } catch {}
       setLoading(false);
     })();
   }, [userId]);
+
+  // Live availability check while editing the username
+  useEffect(() => {
+    if (!newUsername || newUsername === username) { setUsernameAvailable(null); return; }
+    if (newUsername.length < 3) { setUsernameAvailable(null); return; }
+    setCheckingUsername(true);
+    const t = setTimeout(async () => {
+      try {
+        const { createClient } = await import("@/lib/supabase");
+        const sb = createClient();
+        const { data } = await sb.from("profiles").select("id").eq("username", newUsername.toLowerCase()).maybeSingle();
+        setUsernameAvailable(!data);
+      } catch { setUsernameAvailable(true); }
+      setCheckingUsername(false);
+    }, 400);
+    return () => clearTimeout(t);
+  }, [newUsername, username]);
+
+  const saveUsername = async () => {
+    if (!userId) return;
+    setUsernameErr("");
+    const uname = newUsername.toLowerCase();
+    if (uname === username) return;
+    if (uname.length < 3 || uname.length > 20) { setUsernameErr("Must be 3-20 characters"); return; }
+    const check = filterUsername(uname);
+    if (!check.ok) { setUsernameErr(check.reason || "Username not allowed"); return; }
+    if (usernameAvailable === false) { setUsernameErr("Username already taken"); return; }
+
+    setSavingUsername(true);
+    try {
+      const { createClient } = await import("@/lib/supabase");
+      const sb = createClient();
+      const { error: updErr } = await sb.from("profiles").update({ username: uname }).eq("id", userId);
+      if (updErr) { setUsernameErr(updErr.message); setSavingUsername(false); return; }
+
+      // Keep every localStorage cache of the username in sync
+      const oldUname = username;
+      localStorage.setItem(`th_username_${userId}`, uname);
+      try {
+        const registry = JSON.parse(localStorage.getItem("th_registry") || "{}");
+        if (oldUname && registry[oldUname]) delete registry[oldUname];
+        registry[uname] = { id: userId, username: uname, display_name: localStorage.getItem(`th_displayname_${userId}`) || uname };
+        localStorage.setItem("th_registry", JSON.stringify(registry));
+      } catch {}
+
+      setUsername(uname);
+      setUsernameSaved(true); setTimeout(() => setUsernameSaved(false), 2000);
+    } catch (e: any) {
+      setUsernameErr(e.message || "Failed to update username");
+    }
+    setSavingUsername(false);
+  };
 
   const save = async () => {
     if (!userId) return;
@@ -68,8 +125,35 @@ function ProfileEditor({ userId }: { userId?: string }) {
 
   if (loading) return <div style={{ color:"#4b5563", fontSize:12 }}>Loading profile...</div>;
 
+  const usernameChanged = newUsername.length > 0 && newUsername.toLowerCase() !== username;
+  const usernameDisabled = !usernameChanged || newUsername.length < 3 || usernameAvailable === false || checkingUsername || savingUsername;
+
   return (
     <div style={{ display:"flex", flexDirection:"column", gap:14 }}>
+      {/* Username */}
+      <div>
+        <span style={LB}>Username <span style={{color:"#4b5563",fontWeight:400,textTransform:"none" as const}}>(3-20 chars, letters/numbers/underscore)</span></span>
+        <div style={{ display:"flex", gap:8 }}>
+          <input value={newUsername} maxLength={20}
+            onChange={e => setNewUsername(e.target.value.toLowerCase().replace(/[^a-z0-9_]/g,"").slice(0,20))}
+            style={{ ...IS, flex:1 }}/>
+          <button onClick={saveUsername} disabled={usernameDisabled} style={{ height:34, padding:"0 16px", borderRadius:8, border:"none", flexShrink:0,
+            background: usernameDisabled ? "rgba(255,255,255,0.05)" : usernameSaved ? "rgba(0,230,118,0.2)" : "linear-gradient(135deg,#00e5ff,#0088bb)",
+            color: usernameDisabled ? "#374151" : usernameSaved ? "#00e676" : "#000", fontSize:12, fontWeight:700, cursor: usernameDisabled ? "default" : "pointer" }}>
+            {savingUsername ? "Saving..." : usernameSaved ? "✓ Saved" : "Save"}
+          </button>
+        </div>
+        {usernameErr && <div style={{ fontSize:11, color:"#f87171", marginTop:4 }}>⚠ {usernameErr}</div>}
+        {usernameChanged && !usernameErr && newUsername.length >= 3 && (
+          <div style={{ fontSize:10, marginTop:4 }}>
+            {checkingUsername ? <span style={{color:"#4b5563"}}>Checking...</span>
+              : usernameAvailable === true ? <span style={{color:"#00e676",fontWeight:700}}>✓ Available</span>
+              : usernameAvailable === false ? <span style={{color:"#ff1744",fontWeight:700}}>✗ Already taken</span>
+              : null}
+          </div>
+        )}
+      </div>
+
       {/* Public URL */}
       {username && (
         <div>
@@ -309,6 +393,10 @@ export default function SettingsPage() {
             </button>
           </div>
         </Row>
+      </Section>
+
+      <Section title="Profile">
+        <ProfileEditor userId={user?.id}/>
       </Section>
 
       <Section title="Community">
