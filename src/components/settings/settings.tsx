@@ -7,22 +7,15 @@ import { useStore } from "@/store";
 import { useAccountStore, clearCloud, CLEARED_FLAG, markSessionCleared } from "@/store/accounts";
 import { exportToCSV, exportToJSON, importFromJSON } from "@/lib/export";
 import { Trade } from "@/types/trade";
-import { filterMessage } from "@/lib/profanity";
 import { RulesModal } from "@/components/ui/community-rules";
 import { TosModal } from "@/components/ui/terms-of-service";
 import { getStoredUsername } from "@/lib/user-storage";
 import { filterUsername } from "@/lib/profanity";
 
 function ProfileEditor({ userId }: { userId?: string }) {
-  const [bio, setBio] = useState("");
-  const [showReal, setShowReal] = useState(false);
-  const [twitter, setTwitter] = useState("");
-  const [saving, setSaving] = useState(false);
-  const [saved, setSaved] = useState(false);
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState("");
   const [username, setUsername] = useState(() => getStoredUsername() || "");
-  const [newUsername, setNewUsername] = useState("");
+  const [newUsername, setNewUsername] = useState(() => getStoredUsername() || "");
   const [usernameErr, setUsernameErr] = useState("");
   const [checkingUsername, setCheckingUsername] = useState(false);
   const [usernameAvailable, setUsernameAvailable] = useState<boolean|null>(null);
@@ -35,11 +28,8 @@ function ProfileEditor({ userId }: { userId?: string }) {
       try {
         const { createClient } = await import("@/lib/supabase");
         const sb = createClient();
-        const { data } = await sb.from("profiles").select("username,bio,show_real_stats,twitter").eq("id", userId).maybeSingle();
-        if (data) {
-          setBio(data.bio || ""); setShowReal(data.show_real_stats || false); setTwitter(data.twitter || "");
-          if (data.username) { setUsername(data.username); setNewUsername(data.username); }
-        }
+        const { data } = await sb.from("profiles").select("username").eq("id", userId).maybeSingle();
+        if (data?.username) { setUsername(data.username); setNewUsername(data.username); }
       } catch {}
       setLoading(false);
     })();
@@ -97,29 +87,6 @@ function ProfileEditor({ userId }: { userId?: string }) {
     setSavingUsername(false);
   };
 
-  const save = async () => {
-    if (!userId) return;
-    setError("");
-    if (bio) {
-      const check = filterMessage(bio);
-      if (!check.ok) { setError(`Bio: ${check.reason}`); return; }
-    }
-    if (twitter) {
-      const check = filterMessage(twitter);
-      if (!check.ok) { setError(`Twitter handle: ${check.reason}`); return; }
-    }
-    setSaving(true);
-    try {
-      const { createClient } = await import("@/lib/supabase");
-      const sb = createClient();
-      await sb.from("profiles").update({ bio, show_real_stats: showReal, twitter }).eq("id", userId);
-      setSaved(true); setTimeout(() => setSaved(false), 2000);
-    } catch {}
-    setSaving(false);
-  };
-
-  const profileUrl = username ? `https://traderhub-nine.vercel.app/u/${username}` : "";
-
   const IS = { width:"100%", background:"rgba(255,255,255,0.05)", border:"1px solid rgba(255,255,255,0.09)", borderRadius:8, color:"#d1d5db", fontSize:13, padding:"8px 12px", outline:"none", fontFamily:"inherit" } as const;
   const LB = { fontSize:10, fontWeight:700 as const, textTransform:"uppercase" as const, letterSpacing:"0.08em", color:"#3d4551", marginBottom:5, display:"block" };
 
@@ -153,51 +120,6 @@ function ProfileEditor({ userId }: { userId?: string }) {
           </div>
         )}
       </div>
-
-      {/* Public URL */}
-      {username && (
-        <div>
-          <span style={LB}>Your Public Profile URL</span>
-          <div style={{ display:"flex", alignItems:"center", gap:8 }}>
-            <div style={{ flex:1, height:34, background:"rgba(0,229,255,0.04)", border:"1px solid rgba(0,229,255,0.12)", borderRadius:8, padding:"0 12px", display:"flex", alignItems:"center", fontSize:12, color:"#00e5ff", fontFamily:"monospace", overflow:"hidden" }}>
-              {profileUrl}
-            </div>
-            <button onClick={() => { navigator.clipboard.writeText(profileUrl); }} style={{ height:34, padding:"0 14px", borderRadius:8, border:"1px solid rgba(0,229,255,0.2)", background:"rgba(0,229,255,0.06)", color:"#00e5ff", fontSize:11, fontWeight:700, cursor:"pointer", flexShrink:0 }}>Copy</button>
-            <a href={profileUrl} target="_blank" rel="noreferrer" style={{ height:34, padding:"0 14px", borderRadius:8, border:"1px solid rgba(255,255,255,0.08)", background:"rgba(255,255,255,0.03)", color:"#6b7280", fontSize:11, fontWeight:700, cursor:"pointer", display:"flex", alignItems:"center", textDecoration:"none", flexShrink:0 }}>View ↗</a>
-          </div>
-        </div>
-      )}
-
-      {/* Bio */}
-      <div>
-        <span style={LB}>Bio</span>
-        <textarea value={bio} onChange={e => setBio(e.target.value)} placeholder="Tell other traders about yourself..." rows={3} maxLength={200}
-          style={{ ...IS, resize:"vertical" as const, width:"100%", boxSizing:"border-box" as const }}/>
-        <div style={{ fontSize:10, color:"#374151", marginTop:3 }}>{bio.length}/200</div>
-      </div>
-
-      {/* Twitter */}
-      <div>
-        <span style={LB}>Twitter / X Handle</span>
-        <input value={twitter} onChange={e => setTwitter(e.target.value.replace("@",""))} placeholder="yourhandle (no @)" style={IS}/>
-      </div>
-
-      {/* Stats toggle */}
-      <div style={{ display:"flex", alignItems:"center", justifyContent:"space-between", padding:"12px 14px", background:"rgba(255,255,255,0.02)", borderRadius:10, border:"1px solid rgba(255,255,255,0.06)" }}>
-        <div>
-          <div style={{ fontSize:13, fontWeight:600, color:"#c9d1d9" }}>Show real trading stats publicly</div>
-          <div style={{ fontSize:11, color:"#4b5563", marginTop:2 }}>P&L, win rate, and trade history visible on your profile</div>
-        </div>
-        <button onClick={() => setShowReal(s => !s)} style={{ width:44, height:24, borderRadius:12, border:"none", cursor:"pointer", background: showReal ? "#00e5ff" : "rgba(255,255,255,0.1)", position:"relative" as const, flexShrink:0, transition:"background 0.2s" }}>
-          <div style={{ width:18, height:18, borderRadius:"50%", background:"#fff", position:"absolute" as const, top:3, left: showReal ? 22 : 3, transition:"left 0.2s", boxShadow:"0 1px 4px rgba(0,0,0,0.4)" }}/>
-        </button>
-      </div>
-
-      {error && <div style={{ fontSize:12, color:"#f87171" }}>{error}</div>}
-
-      <button onClick={save} disabled={saving} style={{ height:38, borderRadius:9, border:`1px solid ${saved ? "rgba(0,230,118,0.3)" : "transparent"}`, background: saved ? "rgba(0,230,118,0.2)" : "linear-gradient(135deg,#00e5ff,#0088bb)", color: saved ? "#00e676" : "#000", fontSize:13, fontWeight:800, cursor:"pointer" }}>
-        {saving ? "Saving..." : saved ? "✓ Saved" : "Save Profile"}
-      </button>
     </div>
   );
 }
@@ -395,7 +317,7 @@ export default function SettingsPage() {
         </Row>
       </Section>
 
-      <Section title="Profile">
+      <Section title="Username">
         <ProfileEditor userId={user?.id}/>
       </Section>
 
