@@ -67,7 +67,7 @@ const BARS_PAD = 15; // bars before entry and after exit
 
 // -- Main popup -----------------------------------------------------------------
 function TradeReplayPopup({ticker,entryTime,exitTime,side,entryPrice,exitPrice,stopLoss,takeProfit,netPnl,onClose,onSaveLevels}:Props) {
-  const { replayShowLevels } = useStore();
+  const { replayShowLevels, chartReplayColors: chartColors, setChartReplayColors: setChartColors, resetChartReplayColors } = useStore();
   const containerRef = useRef<HTMLDivElement>(null);
   const overlayRef   = useRef<HTMLCanvasElement>(null);
   const chartRef     = useRef<IChartApi|null>(null);
@@ -85,7 +85,6 @@ function TradeReplayPopup({ticker,entryTime,exitTime,side,entryPrice,exitPrice,s
   const [tool,        setTool]        = useState<Tool>("cursor");
   const [color,       setColor]       = useState("#00e5ff");
   const [drawings,    setDrawings]    = useState<Drawing[]>([]);
-  const [chartColors, setChartColors] = useState({up:"#26a69a",down:"#ef5350",bg:"#131722"});
   const [showColorPicker, setShowColorPicker] = useState(false);
   const [drawing,     setDrawing]     = useState<Drawing|null>(null);
   const [pendingPt,   setPendingPt]   = useState<{x:number;y:number}|null>(null); // first click for trendline
@@ -623,10 +622,11 @@ function TradeReplayPopup({ticker,entryTime,exitTime,side,entryPrice,exitPrice,s
               </button>
               {showColorPicker&&(
                 <div style={{position:"absolute",bottom:36,right:0,zIndex:9999,background:"#0f1520",border:"1px solid rgba(255,255,255,0.12)",borderRadius:12,padding:12,display:"flex",flexDirection:"column",gap:8,minWidth:170}}>
+                  <div style={{fontSize:9,color:"#3d4551",textTransform:"uppercase" as const,letterSpacing:"0.06em"}}>Saved across all replays</div>
                   {([["Bull",chartColors.up,"up"],["Bear",chartColors.down,"down"],["BG",chartColors.bg,"bg"]] as const).map(([lbl,val,key])=>(
                     <div key={key} style={{display:"flex",alignItems:"center",justifyContent:"space-between",gap:8}}>
                       <span style={{fontSize:11,color:"#8b949e"}}>{lbl}</span>
-                      <input type="color" value={val} onChange={e=>setChartColors(c=>({...c,[key]:e.target.value}))} style={{width:28,height:22,borderRadius:5,border:"none",cursor:"pointer"}}/>
+                      <input type="color" value={val} onChange={e=>setChartColors({...chartColors,[key]:e.target.value})} style={{width:28,height:22,borderRadius:5,border:"none",cursor:"pointer"}}/>
                     </div>
                   ))}
                   <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:5,marginTop:4}}>
@@ -634,6 +634,9 @@ function TradeReplayPopup({ticker,entryTime,exitTime,side,entryPrice,exitPrice,s
                       <button key={n} onClick={()=>setChartColors({up:u,down:d,bg:b})} style={{height:24,borderRadius:6,border:"1px solid rgba(255,255,255,0.08)",background:"rgba(255,255,255,0.03)",color:"#8b949e",cursor:"pointer",fontSize:10}}>{n}</button>
                     ))}
                   </div>
+                  <button onClick={resetChartReplayColors} style={{height:26,borderRadius:6,border:"1px solid rgba(255,171,0,0.2)",background:"rgba(255,171,0,0.06)",color:"#ffab00",cursor:"pointer",fontSize:10,fontWeight:700,marginTop:2}}>
+                    ↺ Restore to Defaults
+                  </button>
                 </div>
               )}
             </div>

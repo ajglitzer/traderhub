@@ -27,6 +27,7 @@ export default function JournalPage() {
   const [content, setContent] = useState("");
   const [mood, setMood] = useState("ok");
   const [view, setView] = useState<"write"|"history">("write");
+  const [editing, setEditing] = useState<JournalEntry|null>(null);
 
   const { getActiveTrades } = useAccountStore();
   const trades = getActiveTrades() ?? [];
@@ -50,6 +51,12 @@ export default function JournalPage() {
     setContent("");
     setMood("ok");
     setView("history");
+  };
+
+  const saveEdit = () => {
+    if (!editing || !editing.content.trim()) return;
+    setEntries(prev => prev.map(x => x.id === editing.id ? editing : x));
+    setEditing(null);
   };
 
   // Today stats
@@ -127,7 +134,10 @@ export default function JournalPage() {
                   {moodDef && <span style={{ fontSize:11, fontWeight:600, color:moodDef.color, padding:"2px 8px", borderRadius:20, background:`${moodDef.color}12`, border:`1px solid ${moodDef.color}30` }}>{moodDef.label}</span>}
                 </div>
                 <p style={{ fontSize:13, color:"#d1d5db", lineHeight:1.7, whiteSpace:"pre-wrap" as const }}>{e.content}</p>
-                <button onClick={() => setEntries(prev => prev.filter(x=>x.id!==e.id))} style={{ marginTop:10, padding:"3px 10px", borderRadius:6, background:"transparent", border:"1px solid rgba(248,113,113,0.15)", color:"#f87171", fontSize:11, cursor:"pointer" }}>Delete</button>
+                <div style={{ marginTop:10, display:"flex", gap:8 }}>
+                  <button onClick={() => setEditing(e)} style={{ padding:"3px 10px", borderRadius:6, background:"transparent", border:"1px solid rgba(0,180,216,0.2)", color:"#00b4d8", fontSize:11, cursor:"pointer" }}>Edit</button>
+                  <button onClick={() => setEntries(prev => prev.filter(x=>x.id!==e.id))} style={{ padding:"3px 10px", borderRadius:6, background:"transparent", border:"1px solid rgba(248,113,113,0.15)", color:"#f87171", fontSize:11, cursor:"pointer" }}>Delete</button>
+                </div>
               </div>
             );
           })}
@@ -136,6 +146,33 @@ export default function JournalPage() {
 
       {/* Daily Prompts */}
       <DailyPrompts/>
+
+      {/* Edit entry modal */}
+      {editing && (
+        <div onClick={() => setEditing(null)} style={{ position:"fixed", inset:0, zIndex:9999, background:"rgba(0,0,0,0.75)", backdropFilter:"blur(6px)", display:"flex", alignItems:"center", justifyContent:"center", padding:20 }}>
+          <div onClick={e=>e.stopPropagation()} style={{ background:"#0e1117", border:"1px solid rgba(255,255,255,0.1)", borderRadius:14, padding:20, width:"100%", maxWidth:520 }}>
+            <div style={{ fontSize:14, fontWeight:800, color:"#f0f6fc", marginBottom:14 }}>Edit Entry</div>
+            <div style={{ display:"flex", gap:8, marginBottom:12 }}>
+              {MOODS.map(m => (
+                <button key={m.v} onClick={() => setEditing(v=>v?{...v,mood:m.v}:v)} style={{ height:30, padding:"0 12px", borderRadius:8, border:"1px solid", fontSize:12, fontWeight:600, cursor:"pointer", background:editing.mood===m.v?`${m.color}18`:"transparent", borderColor:editing.mood===m.v?m.color:"rgba(255,255,255,0.07)", color:editing.mood===m.v?m.color:"#6b7280" }}>
+                  {m.label}
+                </button>
+              ))}
+            </div>
+            <textarea
+              value={editing.content}
+              onChange={(e) => setEditing(v => v ? {...v, content:e.target.value} : v)}
+              style={{ width:"100%", height:180, background:"rgba(255,255,255,0.03)", border:"1px solid rgba(255,255,255,0.07)", borderRadius:10, padding:14, color:"#d1d5db", fontSize:13, resize:"vertical" as const, outline:"none", lineHeight:1.7, boxSizing:"border-box" as const }}
+            />
+            <div style={{ marginTop:14, display:"flex", justifyContent:"flex-end", gap:8 }}>
+              <button onClick={() => setEditing(null)} style={{ height:34, padding:"0 18px", borderRadius:9, background:"rgba(255,255,255,0.04)", border:"1px solid rgba(255,255,255,0.08)", color:"#6b7280", fontSize:13, cursor:"pointer" }}>Cancel</button>
+              <button onClick={saveEdit} disabled={!editing.content.trim()} style={{ height:34, padding:"0 20px", borderRadius:9, background:"#00b4d8", border:"none", color:"#000", fontSize:13, fontWeight:700, cursor:editing.content.trim()?"pointer":"default", opacity:editing.content.trim()?1:0.4 }}>
+                Save
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

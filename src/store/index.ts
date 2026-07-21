@@ -43,12 +43,18 @@ interface Store {
   mobilePinnedIds: string[]; setMobilePinnedIds: (ids:string[])=>void;
   replayShowLevels: boolean; setReplayShowLevels: (v:boolean)=>void;
 
+  // Chart replay appearance (persists across every replay, any symbol)
+  chartReplayColors: { up:string; down:string; bg:string };
+  setChartReplayColors: (c:{ up:string; down:string; bg:string })=>void;
+  resetChartReplayColors: ()=>void;
+
   // Init
   init: ()=>void;
 }
 
 const DEFAULT_FILTERS = { status:"CLOSED", sortBy:"entryTime", sortDir:"desc" };
 const DEFAULT_GOALS: DailyGoal = { dailyProfitTarget:500, dailyMaxLoss:250, weeklyProfitTarget:2000 };
+const DEFAULT_CHART_REPLAY_COLORS = { up:"#26a69a", down:"#ef5350", bg:"#131722" };
 
 export const useStore = create<Store>()(
   subscribeWithSelector(
@@ -62,6 +68,10 @@ export const useStore = create<Store>()(
         simShowLevels: true, setSimShowLevels: (v)=>set({simShowLevels:v}),
         mobilePinnedIds: ["dashboard","trades","analytics","social"], setMobilePinnedIds: (ids)=>set({mobilePinnedIds:ids}),
         replayShowLevels: true, setReplayShowLevels: (v)=>set({replayShowLevels:v}),
+
+        chartReplayColors: DEFAULT_CHART_REPLAY_COLORS,
+        setChartReplayColors: (c)=>set({chartReplayColors:c}),
+        resetChartReplayColors: ()=>set({chartReplayColors:DEFAULT_CHART_REPLAY_COLORS}),
 
         filters: DEFAULT_FILTERS,
         setFilters: (f)=>set(s=>({filters:{...s.filters,...f},page:1})),
@@ -133,7 +143,7 @@ export const useStore = create<Store>()(
             } catch {}
           },
         },
-        partialize:(s)=>({sidebarOpen:s.sidebarOpen,activeTab:s.activeTab,theme:s.theme,goals:s.goals,playbook:s.playbook,allTags:s.allTags,simShowLevels:s.simShowLevels,replayShowLevels:s.replayShowLevels,mobilePinnedIds:s.mobilePinnedIds}),
+        partialize:(s)=>({sidebarOpen:s.sidebarOpen,activeTab:s.activeTab,theme:s.theme,goals:s.goals,playbook:s.playbook,allTags:s.allTags,simShowLevels:s.simShowLevels,replayShowLevels:s.replayShowLevels,mobilePinnedIds:s.mobilePinnedIds,chartReplayColors:s.chartReplayColors}),
         merge: (persisted, current) => {
           const p = (persisted ?? {}) as Record<string, any>;
           return {
@@ -148,6 +158,7 @@ export const useStore = create<Store>()(
             mobilePinnedIds: Array.isArray(p.mobilePinnedIds) && p.mobilePinnedIds.length
               ? p.mobilePinnedIds
               : (current.mobilePinnedIds ?? ["dashboard","trades","analytics","social"]),
+            chartReplayColors: { ...DEFAULT_CHART_REPLAY_COLORS, ...(p.chartReplayColors ?? {}) },
           };
         },
       }
@@ -172,6 +183,7 @@ export function reloadUIStore(userId: string) {
       mobilePinnedIds:  Array.isArray(s.mobilePinnedIds) && s.mobilePinnedIds.length
         ? s.mobilePinnedIds
         : ["dashboard","trades","analytics","social"],
+      chartReplayColors: { ...DEFAULT_CHART_REPLAY_COLORS, ...(s.chartReplayColors ?? {}) },
     });
   } catch {}
 }
