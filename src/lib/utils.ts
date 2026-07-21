@@ -64,7 +64,16 @@ function toNum(v: unknown): number | null {
 }
 function toTime(v: unknown): number | null {
   if (v === null || v === undefined || v === "") return null;
-  const t = new Date(v as string).getTime();
+  let s = v as string;
+  // A date-time string with no timezone designator (no "Z"/±HH:mm) is parsed
+  // as local time by native Date, not UTC — but every timestamp this app
+  // writes (Prisma, .toISOString() call sites) is UTC with a "Z" suffix. Force
+  // UTC here too, so a stray unqualified string doesn't sort out of order
+  // relative to properly-tagged ones depending on the server's local offset.
+  if (typeof s === "string" && /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}(:\d{2}(\.\d+)?)?$/.test(s)) {
+    s = s + "Z";
+  }
+  const t = new Date(s).getTime();
   return Number.isFinite(t) ? t : null;
 }
 function toStr(v: unknown): string | null {
