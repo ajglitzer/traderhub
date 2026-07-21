@@ -19,6 +19,7 @@ import { ChevronUp, ChevronDown, Trash2, Star, TrendingUp, TrendingDown, Search 
 import { CandleChartBtn } from "@/components/ui/chart-popup";
 import { AIAnalysisBtn } from "@/components/ui/ai-analysis";
 import { TradeCardBtn } from "@/components/ui/trade-card";
+import { getStoredUsername } from "@/lib/user-storage";
 import { TradeDetailPanel } from "@/components/ui/trade-detail";
 import { AddTradeModal } from "@/components/trades/add-trade-modal";
 import { exportToCSV } from "@/lib/export";
@@ -209,7 +210,7 @@ export function TradeTable() {
                     </td>
                     {/* -- SHARE CARD -- */}
                     <td style={{ padding:"6px 8px" }}>
-                      <TradeCardBtn trade={t}/>
+                      <TradeCardBtn trade={t} username={getStoredUsername()}/>
                     </td>
                     <td style={{ padding:"6px 8px" }}>
                       {isHov && (

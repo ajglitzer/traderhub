@@ -27,6 +27,15 @@ export function removeScoped(base: string): void {
   try { localStorage.removeItem(scopedKey(base)); } catch {}
 }
 
+/** The signed-in user's community username, if they've set one.
+ * Note: uses the "th_username_<uid>" convention (single underscore), set at
+ * signup — a different naming scheme than the "__uid" scopedKey() above. */
+export function getStoredUsername(): string | undefined {
+  const uid = currentUserId();
+  if (!uid) return undefined;
+  try { return localStorage.getItem(`th_username_${uid}`) || undefined; } catch { return undefined; }
+}
+
 /** Wipe every scoped key for the current user (call on logout).
  * NOTE: excludes the accounts/trades key so trades survive logout. */
 export function clearAllUserScoped(): void {

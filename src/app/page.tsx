@@ -6,6 +6,7 @@ import SocialPage from "@/components/social/social";
 import { getMyProfile, Profile } from "@/lib/social";
 import { RulesGate } from "@/components/ui/community-rules";
 import { TosModal } from "@/components/ui/terms-of-service";
+import { getStoredUsername } from "@/lib/user-storage";
 import { useEffect, useMemo, useState } from "react";
 import { useStore } from "@/store";
 import { invalidateSubscription } from "@/hooks/useSubscription";
@@ -94,18 +95,7 @@ function Stat({ label, value, color = "#c9d1d9", sub }: { label:string; value:st
   );
 }
 
-//  DASHBOARD 
-function getStoredUsername(): string | undefined {
-  if (typeof window === "undefined") return undefined;
-  // Find any th_username_* key in localStorage
-  for (let i = 0; i < localStorage.length; i++) {
-    const key = localStorage.key(i);
-    if (key && key.startsWith("th_username_")) {
-      return localStorage.getItem(key) || undefined;
-    }
-  }
-  return undefined;
-}
+//  DASHBOARD
 
 function Dashboard() {
   const { setImportOpen } = useStore();
