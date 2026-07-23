@@ -24,7 +24,7 @@ export function PricingModal({ onClose }: { onClose: () => void }) {
 
   const PERKS = [
     "📈  Chart Replay — watch every trade bar-by-bar",
-    "🤖  AI Trade Analysis — Groq-powered insights",
+    "🤖  AI Trade Analysis — 20 AI analyses/day, Groq-powered",
     "📤  Export CSV / JSON — download your data",
     "🔒  All future Pro features",
   ];
