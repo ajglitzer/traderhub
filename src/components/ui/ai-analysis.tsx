@@ -1,6 +1,7 @@
 "use client";
 import { boldOnly } from "@/lib/safe-markdown";
 import { PricingModal } from "@/components/subscription/pro-gate";
+import { AiLimitGate } from "@/components/ui/ai-limit-gate";
 import { useSubscription } from "@/hooks/useSubscription";
 import { useState, useRef, useEffect } from "react";
 
@@ -282,7 +283,11 @@ function AIAnalysisPopup({ trade, onClose, onUpgrade }: Props) {
             </div>
           )}
 
-          {status === "error" && (
+          {status === "error" && errMsg.includes("Daily AI limit") && (
+            <AiLimitGate onClose={onClose} />
+          )}
+
+          {status === "error" && !errMsg.includes("Daily AI limit") && (
             <div style={{ textAlign: "center", padding: "32px 0" }}>
               <div style={{ fontSize: 28, marginBottom: 12 }}>⚠️</div>
               <div style={{ fontSize: 13, fontWeight: 700, color: "#ff1744", marginBottom: 8 }}>Analysis failed</div>

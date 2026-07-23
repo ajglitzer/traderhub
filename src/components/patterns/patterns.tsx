@@ -9,6 +9,7 @@ function sf(n: unknown, d = 2): string {
   return Number.isFinite(v) ? v.toFixed(d) : "—";
 }
 import { boldOnly } from "@/lib/safe-markdown";
+import { AiLimitGate } from "@/components/ui/ai-limit-gate";
 import { useState, useRef, useEffect, useMemo } from "react";
 import { useAccountStore } from "@/store/accounts";
 import { Trade } from "@/types/trade";
@@ -275,12 +276,13 @@ export default function PatternPage() {
       }}>
         {/* Panel header */}
         <div style={{padding:"12px 18px",borderBottom:"1px solid rgba(255,255,255,0.05)",background:"rgba(0,0,0,0.25)",display:"flex",alignItems:"center",gap:12,flexShrink:0}}>
-          <div style={{width:8,height:8,borderRadius:"50%",background:status==="streaming"?"#00e5ff":status==="done"?"#00e676":status==="error"?"#ff1744":"#374151",boxShadow:status==="streaming"?"0 0 8px #00e5ff":status==="done"?"0 0 8px #00e676":"none"}}/>
+          <div style={{width:8,height:8,borderRadius:"50%",background:status==="streaming"?"#00e5ff":status==="done"?"#00e676":status==="error"?(errMsg.includes("Daily AI limit")?"#d500f9":"#ff1744"):"#374151",boxShadow:status==="streaming"?"0 0 8px #00e5ff":status==="done"?"0 0 8px #00e676":"none"}}/>
           <span style={{fontSize:11,color:"#4b5563"}}>
             {status==="idle"     ?"Waiting for analysis"
             :status==="loading"  ?"Preparing analysis..."
             :status==="streaming"?"Analyzing patterns in real time..."
             :status==="done"     ?"Analysis complete"
+            :errMsg.includes("Daily AI limit")?"Daily limit reached"
             :"Error"}
           </span>
           {status==="done" && (
@@ -333,7 +335,11 @@ export default function PatternPage() {
             </div>
           )}
 
-          {status==="error" && (
+          {status==="error" && errMsg.includes("Daily AI limit") && (
+            <AiLimitGate onClose={()=>setStatus("idle")} />
+          )}
+
+          {status==="error" && !errMsg.includes("Daily AI limit") && (
             <div style={{textAlign:"center" as const,padding:"40px 0"}}>
               <div style={{fontSize:26,marginBottom:12}}>⚠️</div>
               <div style={{fontSize:14,fontWeight:700,color:"#ff1744",marginBottom:10}}>Analysis failed</div>

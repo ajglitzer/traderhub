@@ -2,6 +2,7 @@
 import { useSubscription } from "@/hooks/useSubscription";
 import { PricingModal } from "@/components/subscription/pro-gate";
 import { boldOnly } from "@/lib/safe-markdown";
+import { AiLimitGate } from "@/components/ui/ai-limit-gate";
 import { scopedKey } from "@/lib/user-storage";
 import { useState, useEffect, useRef } from "react";
 import { useAccountStore } from "@/store/accounts";
@@ -182,7 +183,11 @@ export default function DailyRecapPage() {
           </div>
         )}
         {(status==="streaming"||status==="done")&&<div>{renderMd(text)}{status==="streaming"&&<span style={{display:"inline-block",width:2,height:14,background:"#d500f9",marginLeft:2,animation:"blink 0.8s infinite",verticalAlign:"middle"}}/>}</div>}
-        {status==="error"&&(
+        {status==="error"&&errMsg.includes("Daily AI limit")&&(
+          <AiLimitGate onClose={()=>setStatus("idle")} />
+        )}
+
+        {status==="error"&&!errMsg.includes("Daily AI limit")&&(
           <div style={{textAlign:"center" as const,padding:"32px 0"}}>
             <div style={{fontSize:13,fontWeight:700,color:"#ff1744",marginBottom:8}}>Generation failed</div>
             <pre style={{fontSize:11,color:"#4b5563",whiteSpace:"pre-wrap" as const,textAlign:"left" as const,maxWidth:400,margin:"0 auto"}}>{errMsg}</pre>
