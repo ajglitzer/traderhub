@@ -167,30 +167,40 @@ function queueFullSync() {
   }, 2000);
 }
 
-export async function loadFromCloud(): Promise<{ trades: any[]; accounts: Account[] | null }> {
+export async function loadFromCloud(): Promise<{ trades: any[]; accounts: Account[] | null; clearedAt: string | null }> {
   try {
     const r = await fetch("/api/sync");
     const d = await r.json();
-    return { trades: Array.isArray(d.trades) ? d.trades : [], accounts: Array.isArray(d.accounts) ? d.accounts : null };
-  } catch { return { trades: [], accounts: null }; }
+    return {
+      trades: Array.isArray(d.trades) ? d.trades : [],
+      accounts: Array.isArray(d.accounts) ? d.accounts : null,
+      clearedAt: typeof d.clearedAt === "string" ? d.clearedAt : null,
+    };
+  } catch { return { trades: [], accounts: null, clearedAt: null }; }
 }
 
 /** Pulls cloud state and merges it into the local store — the "download" half
  * of sync, run on sign-in so a second device sees trades/edits made elsewhere.
  * Per trade/account, whichever side has the newer updatedAt wins; anything
  * present on only one side is kept. Re-uploads the merged result afterward so
- * a device that missed earlier edits/deletes gets fully reconciled too. */
+ * a device that missed earlier edits/deletes gets fully reconciled too.
+ *
+ * Any trade older than the server's clearedAt marker is dropped from both
+ * sides — otherwise a device that still has pre-clear trades cached locally
+ * (and never saw the clear happen) would keep resurrecting them forever. */
 export async function mergeFromCloud(userId: string): Promise<void> {
   if (!userId || isSessionCleared()) return;
   try {
     if (localStorage.getItem(`${ACCT_CLEARED_KEY}__${userId}`)) return;
   } catch {}
 
-  const { trades: cloudTrades, accounts: cloudAccounts } = await loadFromCloud();
-  if (!cloudTrades.length && !cloudAccounts) return;
+  const { trades: cloudTrades, accounts: cloudAccounts, clearedAt } = await loadFromCloud();
+  if (!cloudTrades.length && !cloudAccounts && !clearedAt) return;
   if (isSessionCleared()) return; // user cleared data while this was in flight
 
   const newer = (a?: string, b?: string) => new Date(a || 0).getTime() >= new Date(b || 0).getTime();
+  const clearedAtMs = clearedAt ? new Date(clearedAt).getTime() : 0;
+  const isStale = (t: Trade) => clearedAtMs > 0 && new Date(t.updatedAt || t.createdAt || 0).getTime() < clearedAtMs;
 
   useAccountStore.setState(s => {
     // Merge accounts by id, newer updatedAt wins
@@ -202,12 +212,14 @@ export async function mergeFromCloud(userId: string): Promise<void> {
 
     // Merge trades per account by trade id, newer updatedAt/createdAt wins.
     // tradesById: accountId -> (tradeId -> Trade), used only as a merge scratchpad.
+    // Anything predating the last clear is dropped instead of carried forward.
     const tradesById = new Map<string, Map<string, Trade>>();
     for (const [accountId, list] of Object.entries(s.tradesByAccount)) {
-      tradesById.set(accountId, new Map((list || []).map(t => [t.id, t])));
+      tradesById.set(accountId, new Map((list || []).filter(t => !isStale(t)).map(t => [t.id, t])));
     }
     for (const raw of cloudTrades) {
       const { accountId, ...trade } = raw as Trade & { accountId?: string };
+      if (isStale(trade)) continue;
       const acctId = accountId || "default";
       if (!accountsById.has(acctId)) accountsById.set(acctId, { ...DEFAULT_ACCOUNT, id: acctId });
       if (!tradesById.has(acctId)) tradesById.set(acctId, new Map());
