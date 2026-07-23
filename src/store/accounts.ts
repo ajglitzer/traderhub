@@ -18,6 +18,7 @@ export interface Account {
   color: string;
   broker: string;
   createdAt: string;
+  updatedAt?: string;
 }
 
 interface AccountStore {
@@ -143,36 +144,98 @@ export function clearUserData() {
 }
 
 // ── Cloud sync ────────────────────────────────────────────────────────────────
+// Every trade is tagged with the account it belongs to when synced, since the
+// cloud table has no concept of accounts on its own — that lets a second
+// device reconstruct tradesByAccount correctly. Account metadata (name,
+// balance, color...) rides along as a sentinel row (see api/sync/route.ts).
 let cloudTimer: ReturnType<typeof setTimeout> | null = null;
-function queueSync(trades: Trade[]) {
+function queueFullSync() {
   if (typeof window === "undefined") return;
   if (cloudTimer) clearTimeout(cloudTimer);
   cloudTimer = setTimeout(async () => {
     try {
+      const { accounts, tradesByAccount } = useAccountStore.getState();
+      const trades = Object.entries(tradesByAccount).flatMap(([accountId, list]) =>
+        (list || []).map(t => ({ ...t, accountId }))
+      );
       await fetch("/api/sync", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ trades }),
+        body: JSON.stringify({ accounts, trades }),
       });
     } catch {}
   }, 2000);
 }
 
-export async function loadFromCloud(): Promise<any[]> {
+export async function loadFromCloud(): Promise<{ trades: any[]; accounts: Account[] | null }> {
   try {
     const r = await fetch("/api/sync");
     const d = await r.json();
-    return Array.isArray(d.trades) ? d.trades : [];
-  } catch { return []; }
+    return { trades: Array.isArray(d.trades) ? d.trades : [], accounts: Array.isArray(d.accounts) ? d.accounts : null };
+  } catch { return { trades: [], accounts: null }; }
+}
+
+/** Pulls cloud state and merges it into the local store — the "download" half
+ * of sync, run on sign-in so a second device sees trades/edits made elsewhere.
+ * Per trade/account, whichever side has the newer updatedAt wins; anything
+ * present on only one side is kept. Re-uploads the merged result afterward so
+ * a device that missed earlier edits/deletes gets fully reconciled too. */
+export async function mergeFromCloud(userId: string): Promise<void> {
+  if (!userId || isSessionCleared()) return;
+  try {
+    if (localStorage.getItem(`${ACCT_CLEARED_KEY}__${userId}`)) return;
+  } catch {}
+
+  const { trades: cloudTrades, accounts: cloudAccounts } = await loadFromCloud();
+  if (!cloudTrades.length && !cloudAccounts) return;
+  if (isSessionCleared()) return; // user cleared data while this was in flight
+
+  const newer = (a?: string, b?: string) => new Date(a || 0).getTime() >= new Date(b || 0).getTime();
+
+  useAccountStore.setState(s => {
+    // Merge accounts by id, newer updatedAt wins
+    const accountsById = new Map(s.accounts.map(a => [a.id, a]));
+    for (const cloudAcct of cloudAccounts || []) {
+      const local = accountsById.get(cloudAcct.id);
+      if (!local || newer(cloudAcct.updatedAt, local.updatedAt)) accountsById.set(cloudAcct.id, cloudAcct);
+    }
+
+    // Merge trades per account by trade id, newer updatedAt/createdAt wins.
+    // tradesById: accountId -> (tradeId -> Trade), used only as a merge scratchpad.
+    const tradesById = new Map<string, Map<string, Trade>>();
+    for (const [accountId, list] of Object.entries(s.tradesByAccount)) {
+      tradesById.set(accountId, new Map((list || []).map(t => [t.id, t])));
+    }
+    for (const raw of cloudTrades) {
+      const { accountId, ...trade } = raw as Trade & { accountId?: string };
+      const acctId = accountId || "default";
+      if (!accountsById.has(acctId)) accountsById.set(acctId, { ...DEFAULT_ACCOUNT, id: acctId });
+      if (!tradesById.has(acctId)) tradesById.set(acctId, new Map());
+      const bucket = tradesById.get(acctId)!;
+      const local = bucket.get(trade.id);
+      if (!local || newer(trade.updatedAt || trade.createdAt, local.updatedAt || local.createdAt)) {
+        bucket.set(trade.id, trade);
+      }
+    }
+
+    const accounts = Array.from(accountsById.values());
+    const tradesByAccount: Record<string, Trade[]> = {};
+    for (const [acctId, bucket] of tradesById) tradesByAccount[acctId] = Array.from(bucket.values());
+
+    const next = { ...s, accounts, tradesByAccount };
+    persist(next, userId);
+    return next;
+  });
+
+  queueFullSync(); // heal anything the cloud was missing (old edits/deletes, etc.)
 }
 
 export async function clearCloud(): Promise<void> {
   try {
-    // POST empty array to replace all cloud trades with nothing
     await fetch("/api/sync", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ trades: [], clearAll: true }),
+      body: JSON.stringify({ clearAll: true }),
     });
   } catch {}
 }
@@ -187,16 +250,27 @@ export async function deleteFromCloud(id: string) {
   } catch {}
 }
 
+async function deleteAccountFromCloud(accountId: string) {
+  try {
+    await fetch("/api/sync", {
+      method: "DELETE",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ accountId }),
+    });
+  } catch {}
+}
+
 // ── Store ─────────────────────────────────────────────────────────────────────
 export const useAccountStore = create<AccountStore>()((set, get) => ({
   ...FRESH_STATE(),
 
   addAccount: (a) => {
     const id = Date.now().toString();
-    const account: Account = { ...a, id, createdAt: new Date().toISOString() };
+    const account: Account = { ...a, id, createdAt: new Date().toISOString(), updatedAt: new Date().toISOString() };
     set(s => {
       const next = { ...s, accounts: [...s.accounts, account] };
       persist(next);
+      queueFullSync();
       return next;
     });
     return id;
@@ -204,8 +278,9 @@ export const useAccountStore = create<AccountStore>()((set, get) => ({
 
   updateAccount: (id, data) =>
     set(s => {
-      const next = { ...s, accounts: s.accounts.map(a => a.id === id ? { ...a, ...data } : a) };
+      const next = { ...s, accounts: s.accounts.map(a => a.id === id ? { ...a, ...data, updatedAt: new Date().toISOString() } : a) };
       persist(next);
+      queueFullSync();
       return next;
     }),
 
@@ -218,6 +293,8 @@ export const useAccountStore = create<AccountStore>()((set, get) => ({
     const next = { accounts: remaining, activeAccountId: newActive, tradesByAccount: restTrades };
     set(next);
     persist({ ...get(), ...next });
+    deleteAccountFromCloud(id);
+    queueFullSync();
   },
 
   setActiveAccount: (id) => {
@@ -238,7 +315,7 @@ export const useAccountStore = create<AccountStore>()((set, get) => ({
     set(s => {
       const next = { ...s, tradesByAccount: { ...s.tradesByAccount, [accountId]: trades } };
       persist(next);
-      queueSync(trades);
+      queueFullSync();
       return next;
     });
   },
@@ -259,7 +336,7 @@ export const useAccountStore = create<AccountStore>()((set, get) => ({
     set(s => {
       const next = { ...s, tradesByAccount: { ...s.tradesByAccount, [accountId]: merged } };
       persist(next);
-      queueSync(merged);
+      queueFullSync();
       // Clear the "user cleared data" flag so cloud sync resumes after import
       try {
         const u = localStorage.getItem("th_current_user_id") || "";
@@ -269,13 +346,15 @@ export const useAccountStore = create<AccountStore>()((set, get) => ({
     });
   },
 
-  deleteAccountTrade: (accountId, tradeId) =>
+  deleteAccountTrade: (accountId, tradeId) => {
+    deleteFromCloud(tradeId);
     set(s => {
       const trades = (s.tradesByAccount[accountId] || []).filter(t => t.id !== tradeId);
       const next = { ...s, tradesByAccount: { ...s.tradesByAccount, [accountId]: trades } };
       persist(next);
       return next;
-    }),
+    });
+  },
 
   updateAccountTrade: (accountId, tradeId, data) =>
     set(s => {
@@ -283,6 +362,7 @@ export const useAccountStore = create<AccountStore>()((set, get) => ({
         .map(t => t.id === tradeId ? { ...t, ...data, updatedAt: new Date().toISOString() } : t);
       const next = { ...s, tradesByAccount: { ...s.tradesByAccount, [accountId]: trades } };
       persist(next);
+      queueFullSync();
       return next;
     }),
 }));

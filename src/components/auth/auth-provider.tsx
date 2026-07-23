@@ -1,7 +1,7 @@
 "use client";
 import React, { createContext, useContext, useState, useEffect, ReactNode } from "react";
 import { User } from "@supabase/supabase-js";
-import { useAccountStore, loadUserData, clearUserData, saveUserData } from "@/store/accounts";
+import { useAccountStore, loadUserData, clearUserData, saveUserData, mergeFromCloud } from "@/store/accounts";
 import { useStore, reloadUIStore } from "@/store";
 import { clearAllUserScoped } from "@/lib/user-storage";
 
@@ -35,6 +35,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           localStorage.setItem("th_current_user_id", sessionUser.id);
           loadUserData(sessionUser.id);
           reloadUIStore(sessionUser.id);
+          mergeFromCloud(sessionUser.id);
         }
         setUser(sessionUser);
         setLoading(false);
@@ -54,6 +55,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           if (_event === "SIGNED_IN") {
             loadUserData(newUser.id);
             reloadUIStore(newUser.id);
+            mergeFromCloud(newUser.id);
           }
         } else {
           // Save before clearing so trades survive logout
