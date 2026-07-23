@@ -94,6 +94,14 @@ function TradeReplayPopup({ticker,entryTime,exitTime,side,entryPrice,exitPrice,s
   const [localTp, setLocalTp] = useState<string>(takeProfit!=null?String(takeProfit):"");
   const [localSl, setLocalSl] = useState<string>(stopLoss!=null?String(stopLoss):"");
 
+  const [isMobile, setIsMobile] = useState(() => typeof window!=="undefined" ? window.innerWidth < 768 : false);
+  useEffect(() => {
+    const check = () => setIsMobile(window.innerWidth < 768);
+    check();
+    window.addEventListener("resize", check);
+    return () => window.removeEventListener("resize", check);
+  }, []);
+
   const entryTs = useMemo(()=>Math.floor(new Date(entryTime).getTime()/1000),[entryTime]);
   const exitTs  = useMemo(()=>exitTime?Math.floor(new Date(exitTime).getTime()/1000):null,[exitTime]);
   const isPos   = (netPnl??0)>=0;
@@ -451,19 +459,19 @@ function TradeReplayPopup({ticker,entryTime,exitTime,side,entryPrice,exitPrice,s
   return(
     <div onClick={e=>{if(e.target===e.currentTarget){ onSaveLevels?.(parseFloat(localSl)||null, parseFloat(localTp)||null); onClose(); }}} style={{
       position:"fixed",inset:0,zIndex:9999,background:"rgba(0,0,0,0.9)",
-      backdropFilter:"blur(12px)",display:"flex",alignItems:"center",justifyContent:"center",padding:12,
+      backdropFilter:"blur(12px)",display:"flex",alignItems:"center",justifyContent:"center",padding:isMobile?0:12,
     }}>
       <div style={{
-        width:"100%",maxWidth:1060,height:"min(92vh,760px)",
+        width:"100%",maxWidth:1060,height:isMobile?"100%":"min(92vh,760px)",
         background:"linear-gradient(160deg,#0f1520,#0b1017)",
-        border:"1px solid rgba(255,255,255,0.09)",borderRadius:20,overflow:"hidden",
+        border:isMobile?"none":"1px solid rgba(255,255,255,0.09)",borderRadius:isMobile?0:20,overflow:"hidden",
         boxShadow:"0 0 120px rgba(0,0,0,0.95),0 0 1px rgba(0,229,255,0.15) inset",
         display:"flex",flexDirection:"column",
       }}>
 
         {/* Header */}
-        <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",padding:"12px 18px",borderBottom:"1px solid rgba(255,255,255,0.06)",background:"rgba(0,0,0,0.35)",flexShrink:0}}>
-          <div style={{display:"flex",alignItems:"center",gap:12,flexWrap:"wrap" as const}}>
+        <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",padding:isMobile?"10px 12px":"12px 18px",borderBottom:"1px solid rgba(255,255,255,0.06)",background:"rgba(0,0,0,0.35)",flexShrink:0}}>
+          <div style={{display:"flex",alignItems:"center",gap:isMobile?8:12,flexWrap:"wrap" as const,rowGap:6}}>
             <span style={{fontSize:16,fontWeight:900,fontFamily:"monospace",color:"#f0f6fc",letterSpacing:"-0.03em"}}>{ticker}</span>
             <span style={{padding:"2px 8px",borderRadius:5,fontSize:10,fontWeight:700,background:side==="LONG"?"rgba(0,230,118,0.12)":"rgba(255,23,68,0.12)",color:side==="LONG"?"#00e676":"#ff1744"}}>{side}</span>
             <div style={{width:1,height:16,background:"rgba(255,255,255,0.07)"}}/>
@@ -496,14 +504,21 @@ function TradeReplayPopup({ticker,entryTime,exitTime,side,entryPrice,exitPrice,s
         </div>
 
         {/* Body: sidebar + chart */}
-        <div style={{flex:1,display:"flex",minHeight:0}}>
+        <div style={{flex:1,display:"flex",flexDirection:isMobile?"column":"row",minHeight:0}}>
 
-          {/* Left toolbar */}
-          <div style={{width:46,display:"flex",flexDirection:"column" as const,alignItems:"center",gap:4,padding:"10px 0",borderRight:"1px solid rgba(255,255,255,0.06)",background:"rgba(0,0,0,0.3)",flexShrink:0}}>
-            <div style={{fontSize:8,color:"#3d4551",textTransform:"uppercase" as const,letterSpacing:"0.06em",marginBottom:2}}>Draw</div>
+          {/* Drawing toolbar — vertical column on desktop, horizontal scroll strip on mobile */}
+          <div style={isMobile ? {
+            width:"100%",display:"flex",flexDirection:"row",alignItems:"center",gap:6,padding:"6px 8px",
+            borderBottom:"1px solid rgba(255,255,255,0.06)",background:"rgba(0,0,0,0.3)",flexShrink:0,
+            overflowX:"auto",WebkitOverflowScrolling:"touch" as const,
+          } : {
+            width:46,display:"flex",flexDirection:"column" as const,alignItems:"center",gap:4,padding:"10px 0",
+            borderRight:"1px solid rgba(255,255,255,0.06)",background:"rgba(0,0,0,0.3)",flexShrink:0,
+          }}>
+            {!isMobile && <div style={{fontSize:8,color:"#3d4551",textTransform:"uppercase" as const,letterSpacing:"0.06em",marginBottom:2}}>Draw</div>}
             {TOOLS.map(t=>(
               <button key={t.id} onClick={()=>setTool(t.id)} title={t.tip} style={{
-                width:34,height:34,borderRadius:8,border:"1px solid",
+                width:34,height:34,borderRadius:8,border:"1px solid",flexShrink:0,
                 borderColor:tool===t.id?"rgba(0,229,255,0.5)":"rgba(255,255,255,0.07)",
                 background:tool===t.id?"rgba(0,229,255,0.14)":"rgba(255,255,255,0.03)",
                 color:tool===t.id?"#00e5ff":"#6b7280",
@@ -511,22 +526,22 @@ function TradeReplayPopup({ticker,entryTime,exitTime,side,entryPrice,exitPrice,s
                 transition:"all 0.12s",boxShadow:tool===t.id?"0 0 8px rgba(0,229,255,0.2)":"none",
               }}>{t.icon}</button>
             ))}
-            <div style={{width:28,height:1,background:"rgba(255,255,255,0.07)",margin:"6px 0"}}/>
-            <div style={{fontSize:8,color:"#3d4551",textTransform:"uppercase" as const,letterSpacing:"0.06em",marginBottom:2}}>Color</div>
+            <div style={isMobile ? {width:1,height:24,background:"rgba(255,255,255,0.07)",flexShrink:0} : {width:28,height:1,background:"rgba(255,255,255,0.07)",margin:"6px 0"}}/>
+            {!isMobile && <div style={{fontSize:8,color:"#3d4551",textTransform:"uppercase" as const,letterSpacing:"0.06em",marginBottom:2}}>Color</div>}
             {COLORS.map(c=>(
               <button key={c} onClick={()=>setColor(c)} title={c} style={{
                 width:20,height:20,borderRadius:"50%",border:`2px solid ${color===c?"#fff":"rgba(255,255,255,0.12)"}`,
-                background:c,cursor:"pointer",transition:"transform 0.1s, border 0.1s",
+                background:c,cursor:"pointer",transition:"transform 0.1s, border 0.1s",flexShrink:0,
                 transform:color===c?"scale(1.25)":"scale(1)",
               }}/>
             ))}
-            <div style={{width:28,height:1,background:"rgba(255,255,255,0.07)",margin:"6px 0"}}/>
-            <button onClick={()=>{setDrawings(d=>d.slice(0,-1));setSelected(null);setPendingPt(null);}} title="Undo last drawing" style={{width:34,height:34,borderRadius:8,border:"1px solid rgba(255,255,255,0.07)",background:"rgba(255,255,255,0.03)",color:"#6b7280",cursor:"pointer",fontSize:14,display:"flex",alignItems:"center",justifyContent:"center"}}>↩</button>
-            <button onClick={()=>{setDrawings([]);setSelected(null);setPendingPt(null);}} title="Clear all drawings" style={{width:34,height:34,borderRadius:8,border:"1px solid rgba(255,255,255,0.07)",background:"rgba(255,255,255,0.03)",color:"#6b7280",cursor:"pointer",fontSize:14,display:"flex",alignItems:"center",justifyContent:"center"}}>🗑</button>
+            <div style={isMobile ? {width:1,height:24,background:"rgba(255,255,255,0.07)",flexShrink:0} : {width:28,height:1,background:"rgba(255,255,255,0.07)",margin:"6px 0"}}/>
+            <button onClick={()=>{setDrawings(d=>d.slice(0,-1));setSelected(null);setPendingPt(null);}} title="Undo last drawing" style={{width:34,height:34,borderRadius:8,border:"1px solid rgba(255,255,255,0.07)",background:"rgba(255,255,255,0.03)",color:"#6b7280",cursor:"pointer",fontSize:14,display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0}}>↩</button>
+            <button onClick={()=>{setDrawings([]);setSelected(null);setPendingPt(null);}} title="Clear all drawings" style={{width:34,height:34,borderRadius:8,border:"1px solid rgba(255,255,255,0.07)",background:"rgba(255,255,255,0.03)",color:"#6b7280",cursor:"pointer",fontSize:14,display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0}}>🗑</button>
           </div>
 
           {/* Chart */}
-          <div style={{flex:1,position:"relative",minWidth:0,background:"#060a0f"}}>
+          <div style={{flex:1,position:"relative",minWidth:0,minHeight:isMobile?200:undefined,background:"#060a0f"}}>
             <div ref={containerRef} style={{position:"absolute",inset:0}}/>
             <canvas ref={overlayRef}
               onMouseDown={onDown} onMouseMove={onMove} onMouseUp={onUp}
@@ -554,7 +569,7 @@ function TradeReplayPopup({ticker,entryTime,exitTime,side,entryPrice,exitPrice,s
               </div>
             )}
             {status==="ok"&&tool!=="cursor"&&(
-              <div style={{position:"absolute",bottom:8,left:"50%",transform:"translateX(-50%)",background:"rgba(0,0,0,0.8)",border:"1px solid rgba(255,255,255,0.08)",borderRadius:20,padding:"4px 14px",fontSize:10,color:"#6b7280",pointerEvents:"none",zIndex:11,whiteSpace:"nowrap" as const}}>
+              <div style={{position:"absolute",bottom:8,left:"50%",transform:"translateX(-50%)",background:"rgba(0,0,0,0.8)",border:"1px solid rgba(255,255,255,0.08)",borderRadius:14,padding:"4px 14px",fontSize:10,color:"#6b7280",pointerEvents:"none",zIndex:11,whiteSpace:isMobile?"normal":"nowrap" as const,maxWidth:isMobile?"calc(100% - 24px)":undefined,textAlign:isMobile?"center":undefined}}>
                 {tool==="trendline"
                   ? (pendingPt ? "✓ First point set — click second point to complete the line" : "Click to set first point of trend line")
                   : tool==="line"?"Click and drag to draw freely"
@@ -569,7 +584,7 @@ function TradeReplayPopup({ticker,entryTime,exitTime,side,entryPrice,exitPrice,s
         </div>
 
         {/* Controls */}
-        <div style={{display:"flex",alignItems:"center",gap:12,padding:"11px 18px",borderTop:"1px solid rgba(255,255,255,0.06)",background:"rgba(0,0,0,0.35)",flexShrink:0,flexWrap:"wrap" as const}}>
+        <div style={{display:"flex",alignItems:"center",gap:isMobile?8:12,padding:isMobile?"8px 10px":"11px 18px",borderTop:"1px solid rgba(255,255,255,0.06)",background:"rgba(0,0,0,0.35)",flexShrink:0,flexWrap:"wrap" as const}}>
           <button onClick={togglePlay} disabled={status!=="ok"} style={{
             width:40,height:40,borderRadius:12,border:"1px solid rgba(0,229,255,0.3)",
             background:playing?"rgba(0,229,255,0.2)":"rgba(0,229,255,0.08)",
@@ -621,7 +636,11 @@ function TradeReplayPopup({ticker,entryTime,exitTime,side,entryPrice,exitPrice,s
                 Theme
               </button>
               {showColorPicker&&(
-                <div style={{position:"absolute",bottom:36,right:0,zIndex:9999,background:"#0f1520",border:"1px solid rgba(255,255,255,0.12)",borderRadius:12,padding:12,display:"flex",flexDirection:"column",gap:8,minWidth:170}}>
+                <div style={isMobile ? {
+                  position:"fixed",left:"50%",bottom:70,transform:"translateX(-50%)",
+                  zIndex:9999,background:"#0f1520",border:"1px solid rgba(255,255,255,0.12)",borderRadius:12,
+                  padding:12,display:"flex",flexDirection:"column",gap:8,width:"calc(100vw - 32px)",maxWidth:280,
+                } : {position:"absolute",bottom:36,right:0,zIndex:9999,background:"#0f1520",border:"1px solid rgba(255,255,255,0.12)",borderRadius:12,padding:12,display:"flex",flexDirection:"column",gap:8,minWidth:170}}>
                   <div style={{fontSize:9,color:"#3d4551",textTransform:"uppercase" as const,letterSpacing:"0.06em"}}>Saved across all replays</div>
                   {([["Bull",chartColors.up,"up"],["Bear",chartColors.down,"down"],["BG",chartColors.bg,"bg"]] as const).map(([lbl,val,key])=>(
                     <div key={key} style={{display:"flex",alignItems:"center",justifyContent:"space-between",gap:8}}>

@@ -1,5 +1,5 @@
 "use client";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { createPortal } from "react-dom";
 import { useStore } from "@/store";
 import { useAccountStore } from "@/store/accounts";
@@ -31,6 +31,13 @@ export function AddTradeModal({ onClose }: Props) {
   const now = new Date();
   const localNow = new Date(now.getTime() - now.getTimezoneOffset() * 60000).toISOString().slice(0, 16);
 
+  const [isMobile, setIsMobile] = useState(() => typeof window!=="undefined" ? window.innerWidth < 768 : false);
+  useEffect(() => {
+    const check = () => setIsMobile(window.innerWidth < 768);
+    check();
+    window.addEventListener("resize", check);
+    return () => window.removeEventListener("resize", check);
+  }, []);
   const [ticker,      setTicker]      = useState("NQ1!");
   const [side,        setSide]        = useState<"LONG"|"SHORT">("LONG");
   const [assetClass,  setAssetClass]  = useState("FUTURES");
@@ -95,7 +102,6 @@ export function AddTradeModal({ onClose }: Props) {
     };
 
     addAccountTrades(activeAccountId, [trade]);
-    addAccountTrades(activeAccountId, [trade]);
     setSaving(false);
     onClose();
   };
@@ -115,7 +121,7 @@ export function AddTradeModal({ onClose }: Props) {
         {/* Body */}
         <div style={{padding:22,display:"flex",flexDirection:"column",gap:14}}>
           {/* Row 1: Ticker + Side + Asset Class */}
-          <div style={{display:"grid",gridTemplateColumns:"2fr 1fr 2fr",gap:10}}>
+          <div style={{display:"grid",gridTemplateColumns:isMobile?"1fr":"2fr 1fr 2fr",gap:10}}>
             <div><span style={LB}>Symbol</span><input value={ticker} onChange={e=>setTicker(e.target.value.toUpperCase())} placeholder="NQ1!" style={IS}/></div>
             <div>
               <span style={LB}>Side</span>
@@ -133,20 +139,20 @@ export function AddTradeModal({ onClose }: Props) {
           </div>
 
           {/* Row 2: Entry + Exit prices */}
-          <div style={{display:"grid",gridTemplateColumns:"1fr 1fr 1fr",gap:10}}>
+          <div style={{display:"grid",gridTemplateColumns:isMobile?"1fr 1fr":"1fr 1fr 1fr",gap:10}}>
             <div><span style={LB}>Entry Price</span><input type="number" value={entryPrice} onChange={e=>setEntryPrice(e.target.value)} placeholder="29867.00" style={IS}/></div>
             <div><span style={LB}>Exit Price <span style={{color:"#374151",textTransform:"none" as const}}>(blank = open)</span></span><input type="number" value={exitPrice} onChange={e=>setExitPrice(e.target.value)} placeholder="optional" style={IS}/></div>
             <div><span style={LB}>Quantity</span><input type="number" value={quantity} onChange={e=>setQuantity(e.target.value)} placeholder="1" min="0.01" step="0.01" style={IS}/></div>
           </div>
 
           {/* Row 3: Times */}
-          <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:10}}>
+          <div style={{display:"grid",gridTemplateColumns:isMobile?"1fr":"1fr 1fr",gap:10}}>
             <div><span style={LB}>Entry Time</span><input type="datetime-local" value={entryTime} onChange={e=>setEntryTime(e.target.value)} style={IS}/></div>
             <div><span style={LB}>Exit Time</span><input type="datetime-local" value={exitTime} onChange={e=>setExitTime(e.target.value)} style={{...IS,opacity:isOpen?0.4:1}}/></div>
           </div>
 
           {/* Row 4: SL + TP + Strategy */}
-          <div style={{display:"grid",gridTemplateColumns:"1fr 1fr 2fr",gap:10}}>
+          <div style={{display:"grid",gridTemplateColumns:isMobile?"1fr 1fr":"1fr 1fr 2fr",gap:10}}>
             <div><span style={LB}>Stop Loss</span><input type="number" value={stopLoss} onChange={e=>setStopLoss(e.target.value)} placeholder="optional" style={IS}/></div>
             <div><span style={LB}>Take Profit</span><input type="number" value={takeProfit} onChange={e=>setTakeProfit(e.target.value)} placeholder="optional" style={IS}/></div>
             <div><span style={LB}>Strategy</span><input value={strategy} onChange={e=>setStrategy(e.target.value)} placeholder="e.g. SMC Breakout" style={IS}/></div>

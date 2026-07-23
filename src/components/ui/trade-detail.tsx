@@ -5,7 +5,7 @@ function sf(n: unknown, d = 2): string {
   const v = typeof n === "number" ? n : parseFloat(String(n ?? ""));
   return Number.isFinite(v) ? v.toFixed(d) : "—";
 }
-import { useState, useRef } from "react";
+import { useState, useRef, useEffect } from "react";
 import { useStore } from "@/store";
 import { useAccountStore } from "@/store/accounts";
 import { Trade } from "@/types/trade";
@@ -33,6 +33,13 @@ export function TradeDetailPanel({ trade, onClose }: Props) {
   const [slippage, setSlippage] = useState(trade.expectedEntry?.toString() || "");
   const [tagInput, setTagInput] = useState("");
   const [saved,    setSaved]    = useState(false);
+  const [isMobile, setIsMobile] = useState(() => typeof window!=="undefined" ? window.innerWidth < 768 : false);
+  useEffect(() => {
+    const check = () => setIsMobile(window.innerWidth < 768);
+    check();
+    window.addEventListener("resize", check);
+    return () => window.removeEventListener("resize", check);
+  }, []);
 
   const isPos = (trade.netPnl || 0) >= 0;
 
@@ -73,7 +80,7 @@ export function TradeDetailPanel({ trade, onClose }: Props) {
 
         <div style={S.body}>
           {/* Trade summary */}
-          <div style={{display:"grid",gridTemplateColumns:"repeat(4,1fr)",gap:10}}>
+          <div style={{display:"grid",gridTemplateColumns:isMobile?"1fr 1fr":"repeat(4,1fr)",gap:10}}>
             {[
               ["Entry",  "$"+sf(trade.entryPrice, 4),               "#c9d1d9"],
               ["Exit",   trade.exitPrice?"$"+sf(trade.exitPrice, 4):"Open", "#c9d1d9"],

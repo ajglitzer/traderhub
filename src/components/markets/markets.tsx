@@ -55,6 +55,13 @@ export default function MarketsPage() {
   useEffect(() => { setScoped("th_markets_custom", customList); }, [customList]);
   useEffect(() => { setScoped("th_markets_hidden", hidden); }, [hidden]);
   const [editMode, setEditMode] = useState(false);
+  const [isMobile, setIsMobile] = useState(() => typeof window!=="undefined" ? window.innerWidth < 768 : false);
+  useEffect(() => {
+    const check = () => setIsMobile(window.innerWidth < 768);
+    check();
+    window.addEventListener("resize", check);
+    return () => window.removeEventListener("resize", check);
+  }, []);
 
   const tf = TIMEFRAMES[tfIdx];
   const containerRef = useRef<HTMLDivElement>(null);
@@ -167,20 +174,22 @@ export default function MarketsPage() {
       </div>
 
       {/* -- Timeframe bar -- */}
-      <div style={{ display:"flex", alignItems:"center", gap:6, padding:"8px 16px", borderBottom:"1px solid rgba(255,255,255,0.05)", background:"rgba(0,0,0,0.15)", flexShrink:0 }}>
-        <span style={{ fontSize:10, color:"#3d4551", textTransform:"uppercase" as const, letterSpacing:"0.08em", marginRight:4 }}>Interval</span>
+      <div style={{ display:"flex", alignItems:"center", gap:6, padding:"8px 16px", borderBottom:"1px solid rgba(255,255,255,0.05)", background:"rgba(0,0,0,0.15)", flexShrink:0, overflowX:"auto", WebkitOverflowScrolling:"touch" as const }}>
+        <span style={{ fontSize:10, color:"#3d4551", textTransform:"uppercase" as const, letterSpacing:"0.08em", marginRight:4, flexShrink:0 }}>Interval</span>
         {TIMEFRAMES.map((t,i) => (
           <button key={t.label} onClick={() => { setTfIdx(i); setLoaded(false); }} style={{
-            height:26, padding:"0 12px", borderRadius:7, border:"1px solid",
+            height:26, padding:"0 12px", borderRadius:7, border:"1px solid", flexShrink:0,
             borderColor: tfIdx===i ? "rgba(0,229,255,0.4)" : "rgba(255,255,255,0.07)",
             background:  tfIdx===i ? "rgba(0,229,255,0.1)" : "rgba(255,255,255,0.03)",
             color:       tfIdx===i ? "#00e5ff" : "#4b5563",
             fontSize:11, fontWeight:700, cursor:"pointer", transition:"all 0.12s",
           }}>{t.label}</button>
         ))}
-        <div style={{ marginLeft:"auto", fontSize:10, color:"#3d4551" }}>
-          Powered by TradingView · Free, no login required
-        </div>
+        {!isMobile && (
+          <div style={{ marginLeft:"auto", fontSize:10, color:"#3d4551", flexShrink:0 }}>
+            Powered by TradingView · Free, no login required
+          </div>
+        )}
       </div>
 
       {/* -- Chart -- */}

@@ -1,5 +1,5 @@
 "use client";
-import { useMemo } from "react";
+import { useMemo, useState, useEffect } from "react";
 import { useAccountStore } from "@/store/accounts";
 import { calculateMetrics } from "@/lib/calculations";
 import { Trade } from "@/types/trade";
@@ -31,6 +31,14 @@ export default function AdvancedAnalyticsPage() {
   const trades = getActiveTrades();
   const closed = useMemo(()=>trades.filter(t=>t.status==="CLOSED"&&t.netPnl!==null) as Trade[],[trades]);
   const M = useMemo(()=>calculateMetrics(closed),[closed]);
+  const [isMobile, setIsMobile] = useState(() => typeof window!=="undefined" ? window.innerWidth < 768 : false);
+  useEffect(() => {
+    const check = () => setIsMobile(window.innerWidth < 768);
+    check();
+    window.addEventListener("resize", check);
+    return () => window.removeEventListener("resize", check);
+  }, []);
+  const grid2 = isMobile ? "1fr" : "1fr 1fr";
 
   // -- Time of day heatmap (hour - day) --------------------------------------
   const heatmap = useMemo(()=>{
@@ -144,7 +152,7 @@ export default function AdvancedAnalyticsPage() {
       </Panel>
 
       {/* -- Best/Worst Tickers -- */}
-      <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:14}}>
+      <div style={{display:"grid",gridTemplateColumns:grid2,gap:14}}>
         <Panel title="Best Performing Symbols" sub="By net P&L">
           {byTicker.slice(0,8).map((r,i)=>(
             <div key={r.ticker} style={{display:"flex",alignItems:"center",gap:10,padding:"7px 0",borderBottom:"1px solid rgba(255,255,255,0.04)"}}>
@@ -270,7 +278,7 @@ export default function AdvancedAnalyticsPage() {
 
           return (
             <div>
-              <div style={{display:"grid",gridTemplateColumns:"repeat(4,1fr)",gap:12,marginBottom:16}}>
+              <div style={{display:"grid",gridTemplateColumns:isMobile?"1fr 1fr":"repeat(4,1fr)",gap:12,marginBottom:16}}>
                 {[
                   ["Total Commissions",`-$${Math.abs(totalComm).toFixed(2)}`,"#ff1744"],
                   ["Gross P&L",`$${totalGross.toFixed(2)}`,totalGross>=0?"#00e676":"#ff1744"],
@@ -305,13 +313,13 @@ export default function AdvancedAnalyticsPage() {
 
       {/* -- MAE/MFE Tracker -- */}
       <Panel title="MAE / MFE Analysis" sub="Max Adverse Excursion · Max Favorable Excursion — how far trades moved before close">
-        <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:14}}>
+        <div style={{display:"grid",gridTemplateColumns:grid2,gap:14}}>
           <div>
             <div style={{fontSize:10,fontWeight:700,color:"#ff1744",textTransform:"uppercase" as const,letterSpacing:"0.08em",marginBottom:10}}>MAE — Max Adverse Excursion</div>
             <div style={{fontSize:11,color:"#4b5563",lineHeight:1.7,marginBottom:12}}>
               How far against you a trade went before you closed it. High MAE on winners means you&apos;re holding through big drawdowns. High MAE on losers means you&apos;re stopping out late.
             </div>
-            <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:8}}>
+            <div style={{display:"grid",gridTemplateColumns:grid2,gap:8}}>
               {[
                 ["Avg MAE (Winners)","Track with expected entry","#00e676"],
                 ["Avg MAE (Losers)","Track with expected entry","#ff1744"],
@@ -350,46 +358,6 @@ export default function AdvancedAnalyticsPage() {
             </ResponsiveContainer>
           </div>
         )}
-      </Panel>
-
-      <Panel title="Breakeven Win Rate" sub="What win rate you need to be profitable given your avg win/loss">
-        {(() => {
-          const beWR = M.avgLoss > 0 ? M.avgLoss / (M.avgWin + M.avgLoss) * 100 : 0;
-          const actual = M.winRate * 100;
-          const edge = actual - beWR;
-          return (
-            <div style={{display:"flex",gap:24,flexWrap:"wrap" as const}}>
-              <div>
-                <div style={{fontSize:9,color:"#4b5563",textTransform:"uppercase" as const,letterSpacing:"0.08em",marginBottom:4}}>Breakeven W/R</div>
-                <div style={{fontSize:32,fontWeight:900,fontFamily:"monospace",color:"#ffab00"}}>{beWR.toFixed(1)}%</div>
-                <div style={{fontSize:11,color:"#4b5563",marginTop:3}}>Need this win rate to break even</div>
-              </div>
-              <div>
-                <div style={{fontSize:9,color:"#4b5563",textTransform:"uppercase" as const,letterSpacing:"0.08em",marginBottom:4}}>Your Actual W/R</div>
-                <div style={{fontSize:32,fontWeight:900,fontFamily:"monospace",color:actual>=beWR?"#00e676":"#ff1744"}}>{actual.toFixed(1)}%</div>
-              </div>
-              <div>
-                <div style={{fontSize:9,color:"#4b5563",textTransform:"uppercase" as const,letterSpacing:"0.08em",marginBottom:4}}>Edge</div>
-                <div style={{fontSize:32,fontWeight:900,fontFamily:"monospace",color:edge>=0?"#00e676":"#ff1744"}}>{edge>=0?"+":""}{edge.toFixed(1)}%</div>
-                <div style={{fontSize:11,color:"#4b5563",marginTop:3}}>{edge>=0?"You have a positive edge":"You need to improve"}</div>
-              </div>
-              <div style={{flex:1,minWidth:200}}>
-                <div style={{fontSize:9,color:"#4b5563",textTransform:"uppercase" as const,letterSpacing:"0.08em",marginBottom:8}}>Visual</div>
-                <div style={{height:8,borderRadius:4,background:"rgba(255,255,255,0.05)",overflow:"hidden",marginBottom:6}}>
-                  <div style={{height:"100%",width:`${Math.min(beWR,100)}%`,background:"rgba(255,171,0,0.6)",borderRadius:4,position:"relative" as const}}>
-                    <div style={{position:"absolute" as const,right:0,top:-2,width:2,height:12,background:"#ffab00"}}/>
-                  </div>
-                </div>
-                <div style={{height:8,borderRadius:4,background:"rgba(255,255,255,0.05)",overflow:"hidden"}}>
-                  <div style={{height:"100%",width:`${Math.min(actual,100)}%`,background:actual>=beWR?"#00e676":"#ff1744",borderRadius:4}}/>
-                </div>
-                <div style={{display:"flex",justifyContent:"space-between",fontSize:9,color:"#374151",marginTop:4}}>
-                  <span>0%</span><span>50%</span><span>100%</span>
-                </div>
-              </div>
-            </div>
-          );
-        })()}
       </Panel>
     </div>
   );

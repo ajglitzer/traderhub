@@ -192,6 +192,13 @@ export default function SettingsPage() {
   const [showRules, setShowRules] = useState(false);
   const [showTos, setShowTos] = useState(false);
   const jsonInputRef = useRef<HTMLInputElement>(null);
+  const [isMobile, setIsMobile] = useState(() => typeof window!=="undefined" ? window.innerWidth < 768 : false);
+  useEffect(() => {
+    const check = () => setIsMobile(window.innerWidth < 768);
+    check();
+    window.addEventListener("resize", check);
+    return () => window.removeEventListener("resize", check);
+  }, []);
 
   const showToast = (msg: string, type: "ok"|"err" = "ok") => {
     setToast({msg, type});
@@ -410,7 +417,7 @@ export default function SettingsPage() {
           P&L is auto-calculated using these multipliers. If your broker uses different specs,
           enter the P&L manually using the override field when adding a trade.
         </p>
-        <div style={{ display:"grid", gridTemplateColumns:"repeat(4,1fr)", gap:8 }}>
+        <div style={{ display:"grid", gridTemplateColumns:isMobile?"repeat(2,1fr)":"repeat(4,1fr)", gap:8 }}>
           {[
             ["ES","$50/pt"],["MES","$5/pt"],["NQ","$20/pt"],["MNQ","$2/pt"],
             ["YM","$5/pt"],["MYM","$0.50/pt"],["RTY","$50/pt"],["M2K","$5/pt"],

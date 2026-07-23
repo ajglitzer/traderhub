@@ -23,6 +23,13 @@ function RiskCalc() {
   const [riskPct, setRiskPct] = useState("1");
   const [stopPts, setStopPts] = useState("");
   const [ticker,  setTicker]  = useState("NQ");
+  const [isMobile, setIsMobile] = useState(() => typeof window!=="undefined" ? window.innerWidth < 768 : false);
+  useEffect(() => {
+    const check = () => setIsMobile(window.innerWidth < 768);
+    check();
+    window.addEventListener("resize", check);
+    return () => window.removeEventListener("resize", check);
+  }, []);
 
   const MULTS: Record<string,number> = { NQ:20, MNQ:2, ES:50, MES:5, YM:5, MYM:0.5, RTY:50, M2K:5, GC:100, MGC:10, CL:1000, SI:5000 };
   const mult = MULTS[ticker.toUpperCase()] || 1;
@@ -36,7 +43,7 @@ function RiskCalc() {
       <div style={{ fontSize:10, fontWeight:700, textTransform:"uppercase" as const, letterSpacing:"0.08em", color:"#00e5ff", marginBottom:12 }}>
         ⚡ Position Size Calculator
       </div>
-      <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:10, marginBottom:12 }}>
+      <div style={{ display:"grid", gridTemplateColumns:isMobile?"1fr":"1fr 1fr", gap:10, marginBottom:12 }}>
         <div>
           <div style={{ fontSize:9, color:"#4b5563", marginBottom:4 }}>Account Balance ($)</div>
           <input value={balance} onChange={e=>setBalance(e.target.value)} type="number" style={IS}/>
@@ -54,7 +61,7 @@ function RiskCalc() {
           <input value={stopPts} onChange={e=>setStopPts(e.target.value)} type="number" step="0.25" placeholder="e.g. 20" style={IS}/>
         </div>
       </div>
-      <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr 1fr", gap:10 }}>
+      <div style={{ display:"grid", gridTemplateColumns:isMobile?"1fr":"1fr 1fr 1fr", gap:10 }}>
         <div style={{ background:"rgba(0,229,255,0.06)", border:"1px solid rgba(0,229,255,0.15)", borderRadius:8, padding:"10px 12px" }}>
           <div style={{ fontSize:9, color:"#4b5563", marginBottom:3 }}>Risk Amount</div>
           <div style={{ fontSize:18, fontWeight:800, fontFamily:"monospace", color:"#00e5ff" }}>${riskDollar.toFixed(0)}</div>
@@ -84,6 +91,13 @@ export default function ChecklistPage() {
   const { playbook } = useStore();
   const [items, setItems] = useState<CheckItem[]>(DEFAULT_ITEMS);
   const [loaded, setLoaded] = useState(false);
+  const [isMobile, setIsMobile] = useState(() => typeof window!=="undefined" ? window.innerWidth < 768 : false);
+  useEffect(() => {
+    const check = () => setIsMobile(window.innerWidth < 768);
+    check();
+    window.addEventListener("resize", check);
+    return () => window.removeEventListener("resize", check);
+  }, []);
 
   // Load this user's saved checklist (custom items survive refresh)
   useEffect(() => {
@@ -173,7 +187,7 @@ export default function ChecklistPage() {
         )}
       </div>
 
-      <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:14 }}>
+      <div style={{ display:"grid", gridTemplateColumns:isMobile?"1fr":"1fr 1fr", gap:14 }}>
         {/* Checklist */}
         <div style={{ background:"linear-gradient(160deg,#0f1520,#0b1017)", border:"1px solid rgba(255,255,255,0.07)", borderRadius:14, padding:18, display:"flex", flexDirection:"column", gap:4 }}>
           <div style={{ fontSize:10, fontWeight:700, textTransform:"uppercase" as const, letterSpacing:"0.08em", color:"#3d4551", marginBottom:8 }}>Checklist Items</div>

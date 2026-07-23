@@ -167,6 +167,13 @@ export default function PatternPage() {
   const { isPro } = useSubscription();
   const [showUpgrade, setShowUpgrade] = useState(false);
   const closed = useMemo(()=>trades.filter(t=>t.status==="CLOSED"&&t.netPnl!==null) as Trade[],[trades]);
+  const [isMobile, setIsMobile] = useState(() => typeof window!=="undefined" ? window.innerWidth < 768 : false);
+  useEffect(() => {
+    const check = () => setIsMobile(window.innerWidth < 768);
+    check();
+    window.addEventListener("resize", check);
+    return () => window.removeEventListener("resize", check);
+  }, []);
 
   const [status, setStatus] = useState<"idle"|"loading"|"streaming"|"done"|"error">("idle");
   const [text,   setText]   = useState("");
@@ -308,7 +315,7 @@ export default function PatternPage() {
                 </div>
               </div>
               {closed.length >= 5 && (
-                <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:10,maxWidth:400,width:"100%"}}>
+                <div style={{display:"grid",gridTemplateColumns:isMobile?"1fr":"1fr 1fr",gap:10,maxWidth:400,width:"100%"}}>
                   {["Hourly & daily performance patterns","Best and worst setups by tag","Hold time vs outcome analysis","Revenge trading detection","Optimal trading window","Personalized trading rules"].map(item=>(
                     <div key={item} style={{display:"flex",alignItems:"center",gap:8,fontSize:12,color:"#4b5563"}}>
                       <span style={{color:"#00e5ff",flexShrink:0}}>✓</span>{item}

@@ -53,6 +53,13 @@ export default function DailyRecapPage() {
   const { isPro } = useSubscription();
   const [showUpgrade, setShowUpgrade] = useState(false);
   const [date, setDate] = useState(new Date().toISOString().slice(0,10));
+  const [isMobile, setIsMobile] = useState(() => typeof window!=="undefined" ? window.innerWidth < 768 : false);
+  useEffect(() => {
+    const check = () => setIsMobile(window.innerWidth < 768);
+    check();
+    window.addEventListener("resize", check);
+    return () => window.removeEventListener("resize", check);
+  }, []);
   const [status, setStatus] = useState<"idle"|"loading"|"streaming"|"done"|"error">("idle");
   const [text, setText] = useState("");
   const [errMsg, setErrMsg] = useState("");
@@ -133,7 +140,7 @@ export default function DailyRecapPage() {
       </div>
 
       {/* Day stats */}
-      <div style={{display:"grid",gridTemplateColumns:"repeat(4,1fr)",gap:10}}>
+      <div style={{display:"grid",gridTemplateColumns:isMobile?"1fr 1fr":"repeat(4,1fr)",gap:10}}>
         {[
           ["Trades",todayTrades.length.toString(),"#c9d1d9"],
           ["Wins",wins.toString(),"#00e676"],

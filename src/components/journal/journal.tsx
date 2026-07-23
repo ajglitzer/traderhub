@@ -67,7 +67,7 @@ export default function JournalPage() {
   return (
     <div style={{ padding:20, overflowY:"auto", height:"100%", display:"flex", flexDirection:"column", gap:14, maxWidth:760 }}>
       {/* Today summary */}
-      <div style={{ background:"#0e1117", border:"1px solid rgba(255,255,255,0.06)", borderRadius:12, padding:"14px 18px", display:"flex", gap:24 }}>
+      <div style={{ background:"#0e1117", border:"1px solid rgba(255,255,255,0.06)", borderRadius:12, padding:"14px 18px", display:"flex", gap:24, flexWrap:"wrap" as const }}>
         <div>
           <div style={{ fontSize:10, color:"#4b5563", textTransform:"uppercase" as const, letterSpacing:"0.08em", marginBottom:3 }}>Today</div>
           <div style={{ fontSize:13, color:"#d1d5db" }}>{format(new Date(), "EEEE, MMMM d")}</div>
@@ -97,7 +97,7 @@ export default function JournalPage() {
         <div style={{ background:"#0e1117", border:"1px solid rgba(255,255,255,0.06)", borderRadius:12, padding:18 }}>
           <div style={{ marginBottom:14 }}>
             <div style={{ fontSize:10, color:"#4b5563", textTransform:"uppercase" as const, letterSpacing:"0.08em", marginBottom:8 }}>How did trading go today?</div>
-            <div style={{ display:"flex", gap:8 }}>
+            <div style={{ display:"flex", gap:8, flexWrap:"wrap" as const }}>
               {MOODS.map(m => (
                 <button key={m.v} onClick={() => setMood(m.v)} style={{ height:30, padding:"0 12px", borderRadius:8, border:"1px solid", fontSize:12, fontWeight:600, cursor:"pointer", background:mood===m.v?`${m.color}18`:"transparent", borderColor:mood===m.v?m.color:"rgba(255,255,255,0.07)", color:mood===m.v?m.color:"#6b7280" }}>
                   {m.label}
@@ -152,7 +152,7 @@ export default function JournalPage() {
         <div onClick={() => setEditing(null)} style={{ position:"fixed", inset:0, zIndex:9999, background:"rgba(0,0,0,0.75)", backdropFilter:"blur(6px)", display:"flex", alignItems:"center", justifyContent:"center", padding:20 }}>
           <div onClick={e=>e.stopPropagation()} style={{ background:"#0e1117", border:"1px solid rgba(255,255,255,0.1)", borderRadius:14, padding:20, width:"100%", maxWidth:520 }}>
             <div style={{ fontSize:14, fontWeight:800, color:"#f0f6fc", marginBottom:14 }}>Edit Entry</div>
-            <div style={{ display:"flex", gap:8, marginBottom:12 }}>
+            <div style={{ display:"flex", gap:8, marginBottom:12, flexWrap:"wrap" as const }}>
               {MOODS.map(m => (
                 <button key={m.v} onClick={() => setEditing(v=>v?{...v,mood:m.v}:v)} style={{ height:30, padding:"0 12px", borderRadius:8, border:"1px solid", fontSize:12, fontWeight:600, cursor:"pointer", background:editing.mood===m.v?`${m.color}18`:"transparent", borderColor:editing.mood===m.v?m.color:"rgba(255,255,255,0.07)", color:editing.mood===m.v?m.color:"#6b7280" }}>
                   {m.label}

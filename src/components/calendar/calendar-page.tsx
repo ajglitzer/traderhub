@@ -1,5 +1,5 @@
 "use client";
-import { useMemo, useState } from "react";
+import { useMemo, useState, useEffect } from "react";
 import { useAccountStore } from "@/store/accounts";
 import { Trade } from "@/types/trade";
 import {
@@ -24,6 +24,13 @@ export default function CalendarPage() {
   const { getActiveTrades } = useAccountStore();
   const trades = getActiveTrades();
   const [month, setMonth] = useState(new Date());
+  const [isMobile, setIsMobile] = useState(() => typeof window!=="undefined" ? window.innerWidth < 768 : false);
+  useEffect(() => {
+    const check = () => setIsMobile(window.innerWidth < 768);
+    check();
+    window.addEventListener("resize", check);
+    return () => window.removeEventListener("resize", check);
+  }, []);
 
   const closed = useMemo(() =>
     trades.filter(t => t.status === "CLOSED" && t.netPnl !== null) as Trade[],
@@ -79,15 +86,15 @@ export default function CalendarPage() {
 
       {/* -- Month header + stats -- */}
       <div style={{ background:"linear-gradient(160deg,#0f1520,#0b1017)", border:"1px solid rgba(255,255,255,0.07)", borderRadius:16, padding:"18px 22px" }}>
-        <div style={{ display:"flex", alignItems:"center", justifyContent:"space-between", marginBottom:16 }}>
+        <div style={{ display:"flex", alignItems:"center", justifyContent:"space-between", marginBottom:16, flexWrap:"wrap" as const, gap:10 }}>
           {/* Month nav */}
-          <div style={{ display:"flex", alignItems:"center", gap:14 }}>
-            <button onClick={() => setMonth(subMonths(month, 1))} style={{ width:32, height:32, borderRadius:9, border:"1px solid rgba(255,255,255,0.08)", background:"rgba(255,255,255,0.04)", color:"#6b7280", cursor:"pointer", fontSize:16, display:"flex", alignItems:"center", justifyContent:"center" }}>‹</button>
-            <h2 style={{ fontSize:18, fontWeight:800, color:"#f0f6fc", letterSpacing:"-0.03em", minWidth:180, textAlign:"center" as const }}>
+          <div style={{ display:"flex", alignItems:"center", gap:14, flexWrap:"wrap" as const }}>
+            <button onClick={() => setMonth(subMonths(month, 1))} style={{ width:32, height:32, borderRadius:9, border:"1px solid rgba(255,255,255,0.08)", background:"rgba(255,255,255,0.04)", color:"#6b7280", cursor:"pointer", fontSize:16, display:"flex", alignItems:"center", justifyContent:"center", flexShrink:0 }}>‹</button>
+            <h2 style={{ fontSize:18, fontWeight:800, color:"#f0f6fc", letterSpacing:"-0.03em", minWidth:isMobile?undefined:180, textAlign:"center" as const }}>
               {format(month, "MMMM yyyy")}
             </h2>
-            <button onClick={() => setMonth(addMonths(month, 1))} style={{ width:32, height:32, borderRadius:9, border:"1px solid rgba(255,255,255,0.08)", background:"rgba(255,255,255,0.04)", color:"#6b7280", cursor:"pointer", fontSize:16, display:"flex", alignItems:"center", justifyContent:"center" }}>›</button>
-            <button onClick={() => setMonth(new Date())} style={{ height:28, padding:"0 12px", borderRadius:7, border:"1px solid rgba(0,229,255,0.2)", background:"rgba(0,229,255,0.06)", color:"#00e5ff", cursor:"pointer", fontSize:11, fontWeight:700 }}>Today</button>
+            <button onClick={() => setMonth(addMonths(month, 1))} style={{ width:32, height:32, borderRadius:9, border:"1px solid rgba(255,255,255,0.08)", background:"rgba(255,255,255,0.04)", color:"#6b7280", cursor:"pointer", fontSize:16, display:"flex", alignItems:"center", justifyContent:"center", flexShrink:0 }}>›</button>
+            <button onClick={() => setMonth(new Date())} style={{ height:28, padding:"0 12px", borderRadius:7, border:"1px solid rgba(0,229,255,0.2)", background:"rgba(0,229,255,0.06)", color:"#00e5ff", cursor:"pointer", fontSize:11, fontWeight:700, flexShrink:0 }}>Today</button>
           </div>
 
           {/* Month P&L */}
@@ -196,7 +203,7 @@ export default function CalendarPage() {
       </div>
 
       {/* -- Legend -- */}
-      <div style={{ display:"flex", alignItems:"center", gap:20, fontSize:10, color:"#3d4551" }}>
+      <div style={{ display:"flex", alignItems:"center", gap:20, fontSize:10, color:"#3d4551", flexWrap:"wrap" as const }}>
         <div style={{ display:"flex", alignItems:"center", gap:6 }}>
           <div style={{ width:12, height:12, borderRadius:3, background:"rgba(0,230,118,0.25)", border:"1px solid rgba(0,230,118,0.4)" }}/>
           Profit day

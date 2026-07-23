@@ -1,5 +1,5 @@
 "use client";
-import { useMemo, useState } from "react";
+import { useMemo, useState, useEffect } from "react";
 import { useAccountStore } from "@/store/accounts";
 import { calculateMetrics, buildEquityCurve, runMonteCarlo } from "@/lib/calculations";
 import { EquityChart } from "@/components/charts/equity-chart";
@@ -45,6 +45,14 @@ export default function AnalyticsPage() {
   const equity = useMemo(()=>buildEquityCurve(closed as Trade[], startBal),[closed, startBal]);
   const mc = useMemo(()=>closed.length>5?runMonteCarlo(closed as Trade[],500):null,[closed]);
   const [tab, setTab] = useState<"analytics"|"deep">("analytics");
+  const [isMobile, setIsMobile] = useState(() => typeof window!=="undefined" ? window.innerWidth < 768 : false);
+  useEffect(() => {
+    const check = () => setIsMobile(window.innerWidth < 768);
+    check();
+    window.addEventListener("resize", check);
+    return () => window.removeEventListener("resize", check);
+  }, []);
+  const grid2 = { display:"grid" as const, gridTemplateColumns: isMobile ? "1fr" : "1fr 1fr", gap:14 };
 
   const rDist = useMemo(()=>{
     // Use rMultiple if available, otherwise estimate from netPnl / avgLoss
@@ -149,7 +157,7 @@ export default function AnalyticsPage() {
 
       {/* Analytics tab content */}
       {tab==="analytics" && <>
-      <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:14 }}>
+      <div style={grid2}>
         <Panel title="Equity Curve" sub={"Total: "+fmt$(equity[equity.length-1]?.equity||0)}>
           <EquityChart data={equity} height={195} startingBalance={startBal}/>
         </Panel>
@@ -167,7 +175,7 @@ export default function AnalyticsPage() {
         </Panel>
       </div>
 
-      <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:14 }}>
+      <div style={grid2}>
         <Panel title="R-Multiple Distribution" sub="How often each R outcome occurred">
           <ResponsiveContainer width="100%" height={185}>
             <BarChart data={rDist} margin={{top:4,right:4,left:0,bottom:0}}>
@@ -197,7 +205,7 @@ export default function AnalyticsPage() {
         </Panel>
       </div>
 
-      <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:14 }}>
+      <div style={grid2}>
         <Panel title="Monthly P&L">
           <ResponsiveContainer width="100%" height={185}>
             <BarChart data={monthly} margin={{top:4,right:4,left:0,bottom:0}}>
@@ -232,9 +240,9 @@ export default function AnalyticsPage() {
         </Panel>
       </div>
 
-      <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:14 }}>
+      <div style={grid2}>
         <Panel title="P&L by Asset Class">
-          <div style={{ display:"flex", alignItems:"center", gap:20 }}>
+          <div style={{ display:"flex", flexDirection: isMobile ? "column" : "row", alignItems:"center", gap:20 }}>
             <ResponsiveContainer width={160} height={160}>
               <PieChart>
                 <Pie data={byAsset} dataKey="count" nameKey="name" cx="50%" cy="50%" outerRadius={70} innerRadius={35}>
@@ -269,7 +277,7 @@ export default function AnalyticsPage() {
         </Panel>
       </div>
 
-      <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:14 }}>
+      <div style={grid2}>
         <Panel title="Hold Time vs P&L Scatter" sub="Each dot = 1 trade">
           <ResponsiveContainer width="100%" height={185}>
             <ScatterChart margin={{top:4,right:4,left:0,bottom:16}}>
@@ -304,7 +312,7 @@ export default function AnalyticsPage() {
 
       {mc && (
         <Panel title="Monte Carlo Simulation" sub="500 runs — range of possible outcomes">
-          <div style={{ display:"flex", gap:20, marginBottom:12 }}>
+          <div style={{ display:"flex", gap:20, marginBottom:12, flexWrap:"wrap" as const }}>
             {([["Worst 5%",mc.percentiles.p5,"#f87171"],["P25",mc.percentiles.p25,"#fbbf24"],["Median",mc.percentiles.p50,"#60a5fa"],["P75",mc.percentiles.p75,"#34d399"],["Best 5%",mc.percentiles.p95,"#6ee7b7"]] as [string,number,string][]).map(([l,v,c])=>(
               <div key={l}><div style={{fontSize:9,color:"#4b5563",marginBottom:2,textTransform:"uppercase" as const,letterSpacing:"0.06em"}}>{l}</div><div style={{fontFamily:"monospace",fontWeight:700,color:c,fontSize:13}}>{fmt$(v)}</div></div>
             ))}
@@ -323,7 +331,7 @@ export default function AnalyticsPage() {
           </ResponsiveContainer>
         </Panel>
       )}
-      <div style={{ display:"grid", gridTemplateColumns:"300px 1fr", gap:14 }}>
+      <div style={{ display:"grid", gridTemplateColumns: isMobile ? "1fr" : "300px 1fr", gap:14 }}>
         <Panel title="P&L by Day of Week">
           <ResponsiveContainer width="100%" height={155}>
             <BarChart data={byDay} margin={{top:4,right:0,left:0,bottom:0}}>

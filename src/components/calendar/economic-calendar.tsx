@@ -100,7 +100,7 @@ export default function EconomicCalendar() {
             color:       filter===f ? (IMPACT_COLOR[f]||"#00e5ff") : "#4b5563",
           }}>{f === "All" ? "All Impact" : `🔴 ${f}`.replace("🔴 Medium","🟡 Medium").replace("🔴 Low","⚪ Low")}</button>
         ))}
-        <div style={{ height:28, display:"flex", alignItems:"center", gap:6, marginLeft:"auto" }}>
+        <div style={{ minHeight:28, display:"flex", alignItems:"center", gap:6, marginLeft:"auto", flexWrap:"wrap" as const }}>
           <span style={{ fontSize:10,color:"#4b5563" }}>Currency:</span>
           {["USD","EUR","GBP","All"].map(c => (
             <button key={c} onClick={() => setCountryFilter(c)} style={{ height:26, padding:"0 10px", borderRadius:7, border:"1px solid", fontSize:10, fontWeight:700, cursor:"pointer",

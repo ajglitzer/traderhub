@@ -1,5 +1,5 @@
 "use client";
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import { useStore } from "@/store";
 import { useAccountStore } from "@/store/accounts";
 
@@ -9,6 +9,13 @@ export default function GoalsPage() {
   const trades = getActiveTrades();
   const [editing, setEditing] = useState(false);
   const [form, setForm] = useState(goals);
+  const [isMobile, setIsMobile] = useState(() => typeof window!=="undefined" ? window.innerWidth < 768 : false);
+  useEffect(() => {
+    const check = () => setIsMobile(window.innerWidth < 768);
+    check();
+    window.addEventListener("resize", check);
+    return () => window.removeEventListener("resize", check);
+  }, []);
 
   const today = new Date().toISOString().slice(0, 10);
   const thisWeek = useMemo(() => {
@@ -88,7 +95,7 @@ export default function GoalsPage() {
       {/* Custom goals */}
       <div style={{ background:"linear-gradient(160deg,#0f1520,#0b1017)", border:"1px solid rgba(255,255,255,0.07)", borderRadius:14, padding:18 }}>
         <div style={{ fontSize:10, fontWeight:700, textTransform:"uppercase" as const, letterSpacing:"0.08em", color:"#4b5563", marginBottom:12 }}>Quick Stats</div>
-        <div style={{ display:"grid", gridTemplateColumns:"repeat(3,1fr)", gap:10 }}>
+        <div style={{ display:"grid", gridTemplateColumns:isMobile?"1fr":"repeat(3,1fr)", gap:10 }}>
           {[
             { l:"Today's P&L", v:`${todayPnl >= 0 ? "+" : ""}$${todayPnl.toFixed(2)}`, c: todayPnl >= 0 ? "#00e676" : "#ff1744" },
             { l:"Week's P&L",  v:`${weekPnl >= 0 ? "+" : ""}$${weekPnl.toFixed(2)}`,   c: weekPnl >= 0 ? "#00e676" : "#ff1744" },
