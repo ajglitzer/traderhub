@@ -8,6 +8,9 @@ interface Store {
   sidebarOpen: boolean; setSidebarOpen: (v:boolean)=>void;
   importOpen: boolean;  setImportOpen: (v:boolean)=>void;
   activeTab: string;    setActiveTab: (t:string)=>void;
+  // One-shot signal: set right before navigating to the AI Recap tab (e.g. from
+  // a Calendar day's AI button) so it opens pre-loaded for that date instead of today.
+  recapRequestDate: string|null; setRecapRequestDate: (d:string|null)=>void;
   theme: "dark"|"light"; setTheme: (t:"dark"|"light")=>void;
   communityBadge: number; setCommunityBadge: (v:number)=>void;
 
@@ -63,6 +66,7 @@ export const useStore = create<Store>()(
         sidebarOpen: true, setSidebarOpen: (v)=>set({sidebarOpen:v}),
         importOpen: false,  setImportOpen:  (v)=>set({importOpen:v}),
         activeTab: "dashboard", setActiveTab: (t)=>set({activeTab:t}),
+        recapRequestDate: null, setRecapRequestDate: (d)=>set({recapRequestDate:d}),
         theme: "dark", setTheme: (t)=>{ set({theme:t}); if(typeof document!=="undefined") document.documentElement.setAttribute("data-theme",t); },
         communityBadge: 0, setCommunityBadge: (v)=>set({communityBadge:v}),
         simShowLevels: true, setSimShowLevels: (v)=>set({simShowLevels:v}),

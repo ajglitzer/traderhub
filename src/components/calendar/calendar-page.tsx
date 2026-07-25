@@ -1,6 +1,7 @@
 "use client";
 import { useMemo, useState, useEffect } from "react";
 import { useAccountStore } from "@/store/accounts";
+import { useStore } from "@/store";
 import { Trade } from "@/types/trade";
 import {
   startOfMonth, endOfMonth, eachDayOfInterval, startOfWeek, endOfWeek,
@@ -23,6 +24,7 @@ const DAYS = ["Sun","Mon","Tue","Wed","Thu","Fri","Sat"];
 export default function CalendarPage() {
   const { getActiveTrades } = useAccountStore();
   const trades = getActiveTrades();
+  const { setActiveTab, setRecapRequestDate } = useStore();
   const [month, setMonth] = useState(new Date());
   const [isMobile, setIsMobile] = useState(() => typeof window!=="undefined" ? window.innerWidth < 768 : false);
   useEffect(() => {
@@ -173,6 +175,21 @@ export default function CalendarPage() {
                 <div style={{ fontSize:11, fontWeight: isToday ? 800 : 500, color: isToday ? "#00e5ff" : inMonth ? "#6b7280" : "#3d4551", marginBottom:4 }}>
                   {format(day, "d")}
                 </div>
+
+                {hasTrades && (
+                  <button
+                    onClick={(e) => { e.stopPropagation(); setRecapRequestDate(k); setActiveTab("recap"); }}
+                    title={`AI recap for ${format(day, "MMM d, yyyy")}`}
+                    style={{
+                      position:"absolute" as const, top:6, right:6, width:18, height:18, borderRadius:5,
+                      background:"rgba(213,0,249,0.1)", border:"1px solid rgba(213,0,249,0.3)",
+                      color:"#d500f9", fontSize:10, cursor:"pointer", display:"flex",
+                      alignItems:"center", justifyContent:"center", padding:0, lineHeight:1, zIndex:1,
+                    }}
+                    onMouseEnter={e=>{const el=e.currentTarget as HTMLElement;el.style.background="rgba(213,0,249,0.22)";el.style.borderColor="rgba(213,0,249,0.6)";}}
+                    onMouseLeave={e=>{const el=e.currentTarget as HTMLElement;el.style.background="rgba(213,0,249,0.1)";el.style.borderColor="rgba(213,0,249,0.3)";}}
+                  >✦</button>
+                )}
 
                 {hasTrades && (
                   <>

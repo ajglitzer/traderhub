@@ -7,6 +7,7 @@ import { AiUsageBadge } from "@/components/ui/ai-usage-badge";
 import { scopedKey } from "@/lib/user-storage";
 import { useState, useEffect, useRef } from "react";
 import { useAccountStore } from "@/store/accounts";
+import { useStore } from "@/store";
 import { Trade } from "@/types/trade";
 
 const fmt$ = (n:number) => (n>=0?"+":"")+`$${Math.abs(n).toLocaleString("en-US",{minimumFractionDigits:2,maximumFractionDigits:2})}`;
@@ -52,8 +53,17 @@ export default function DailyRecapPage() {
   const { getActiveTrades } = useAccountStore();
   const trades = getActiveTrades();
   const { isPro } = useSubscription();
+  const { recapRequestDate, setRecapRequestDate } = useStore();
   const [showUpgrade, setShowUpgrade] = useState(false);
-  const [date, setDate] = useState(new Date().toISOString().slice(0,10));
+  const [date, setDate] = useState(() => recapRequestDate || new Date().toISOString().slice(0,10));
+
+  // Consume the one-shot "open on this date" signal (e.g. from a Calendar day's
+  // AI button) exactly once, then clear it so a normal visit later defaults to today.
+  useEffect(() => {
+    if (!recapRequestDate) return;
+    setDate(recapRequestDate);
+    setRecapRequestDate(null);
+  }, [recapRequestDate, setRecapRequestDate]);
   const [isMobile, setIsMobile] = useState(() => typeof window!=="undefined" ? window.innerWidth < 768 : false);
   useEffect(() => {
     const check = () => setIsMobile(window.innerWidth < 768);
