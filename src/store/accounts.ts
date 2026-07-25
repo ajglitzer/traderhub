@@ -195,8 +195,13 @@ export async function mergeFromCloud(userId: string): Promise<void> {
   } catch {}
 
   const { trades: cloudTrades, accounts: cloudAccounts, clearedAt } = await loadFromCloud();
-  if (!cloudTrades.length && !cloudAccounts && !clearedAt) return;
   if (isSessionCleared()) return; // user cleared data while this was in flight
+  // NOTE: deliberately no "cloud is empty, nothing to do" early return here.
+  // If cloud is empty but this device has local-only trades (e.g. they were
+  // never uploaded due to an earlier bug, or this is simply the first device
+  // to ever sync), skipping the merge also skips the heal upload below —
+  // leaving that device's data permanently stuck local-only. Always run the
+  // (possibly no-op) merge and always heal-upload afterward.
 
   const newer = (a?: string, b?: string) => new Date(a || 0).getTime() >= new Date(b || 0).getTime();
   const clearedAtMs = clearedAt ? new Date(clearedAt).getTime() : 0;
