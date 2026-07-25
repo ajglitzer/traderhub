@@ -470,8 +470,8 @@ function TradeReplayPopup({ticker,entryTime,exitTime,side,entryPrice,exitPrice,s
       }}>
 
         {/* Header */}
-        <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",padding:isMobile?"10px 12px":"12px 18px",borderBottom:"1px solid rgba(255,255,255,0.06)",background:"rgba(0,0,0,0.35)",flexShrink:0}}>
-          <div style={{display:"flex",alignItems:"center",gap:isMobile?8:12,flexWrap:"wrap" as const,rowGap:6}}>
+        <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",padding:isMobile?"10px 12px":"12px 18px",borderBottom:"1px solid rgba(255,255,255,0.06)",background:"rgba(0,0,0,0.35)",flexShrink:0,gap:8}}>
+          <div style={{display:"flex",alignItems:"center",gap:isMobile?8:12,flexWrap:"wrap" as const,rowGap:6,minWidth:0,flex:"1 1 auto"}}>
             <span style={{fontSize:16,fontWeight:900,fontFamily:"monospace",color:"#f0f6fc",letterSpacing:"-0.03em"}}>{ticker}</span>
             <span style={{padding:"2px 8px",borderRadius:5,fontSize:10,fontWeight:700,background:side==="LONG"?"rgba(0,230,118,0.12)":"rgba(255,23,68,0.12)",color:side==="LONG"?"#00e676":"#ff1744"}}>{side}</span>
             <div style={{width:1,height:16,background:"rgba(255,255,255,0.07)"}}/>
@@ -498,7 +498,7 @@ function TradeReplayPopup({ticker,entryTime,exitTime,side,entryPrice,exitPrice,s
                 style={{width:72,height:20,background:"rgba(0,230,118,0.1)",border:"1px solid rgba(0,230,118,0.25)",borderRadius:4,color:"#00e676",fontSize:10,fontFamily:"monospace",fontWeight:700,padding:"0 5px",outline:"none"}}/>
             </div>
           </div>
-          <button onClick={()=>{ onSaveLevels?.(parseFloat(localSl)||null, parseFloat(localTp)||null); onClose(); }} style={{width:28,height:28,borderRadius:8,background:"rgba(255,255,255,0.05)",border:"1px solid rgba(255,255,255,0.08)",color:"#4b5563",cursor:"pointer",fontSize:17,display:"flex",alignItems:"center",justifyContent:"center"}}
+          <button onClick={()=>{ onSaveLevels?.(parseFloat(localSl)||null, parseFloat(localTp)||null); onClose(); }} style={{width:28,height:28,borderRadius:8,background:"rgba(255,255,255,0.05)",border:"1px solid rgba(255,255,255,0.08)",color:"#4b5563",cursor:"pointer",fontSize:17,display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0}}
             onMouseEnter={e=>{const el=e.currentTarget as HTMLElement;el.style.background="rgba(255,255,255,0.1)";el.style.color="#c9d1d9";}}
             onMouseLeave={e=>{const el=e.currentTarget as HTMLElement;el.style.background="rgba(255,255,255,0.05)";el.style.color="#4b5563";}}>×</button>
         </div>

@@ -157,7 +157,7 @@ export function ImportDialog() {
             <div style={{ fontWeight:700, fontSize:15, color:"#e6edf3" }}>Import Trades</div>
             <div style={{ fontSize:11, color:"#484f58", marginTop:1 }}>Auto-detect · TradingView · Webull · IBKR · NinjaTrader · Generic</div>
           </div>
-          <button onClick={close} style={{ width:26, height:26, borderRadius:8, background:"rgba(255,255,255,0.06)", border:"1px solid rgba(255,255,255,0.08)", color:"#6e7681", cursor:"pointer", fontSize:16 }}>×</button>
+          <button onClick={close} style={{ width:26, height:26, borderRadius:8, background:"rgba(255,255,255,0.06)", border:"1px solid rgba(255,255,255,0.08)", color:"#6e7681", cursor:"pointer", fontSize:16, flexShrink:0 }}>×</button>
         </div>
 
         <div style={S.body}>

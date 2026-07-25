@@ -115,7 +115,7 @@ export function AddTradeModal({ onClose }: Props) {
             <div style={{fontSize:15,fontWeight:800,color:"#f0f6fc"}}>Add Trade Manually</div>
             <div style={{fontSize:11,color:"#4b5563",marginTop:2}}>Log a trade that wasn't imported from a CSV</div>
           </div>
-          <button onClick={onClose} style={{width:28,height:28,borderRadius:"50%",border:"1px solid rgba(255,255,255,0.08)",background:"rgba(255,255,255,0.04)",color:"#6b7280",cursor:"pointer",fontSize:16,display:"flex",alignItems:"center",justifyContent:"center"}}>✕</button>
+          <button onClick={onClose} style={{width:28,height:28,borderRadius:"50%",border:"1px solid rgba(255,255,255,0.08)",background:"rgba(255,255,255,0.04)",color:"#6b7280",cursor:"pointer",fontSize:16,display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0}}>✕</button>
         </div>
 
         {/* Body */}

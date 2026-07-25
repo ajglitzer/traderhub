@@ -351,14 +351,14 @@ export default function SocialPage({ myProfile }: { myProfile: Profile }) {
           <>
             <div style={{padding:"12px 16px",borderBottom:"1px solid rgba(255,255,255,0.06)",display:"flex",alignItems:"center",gap:10,background:"rgba(0,0,0,0.2)"}}>
               <Avatar profile={chatWith} size={32}/>
-              <div style={{flex:1}}>
-                <div style={{fontSize:13,fontWeight:800,color:"#f0f6fc"}}>@{chatWith.username}</div>
-                <div style={{fontSize:10,color:"#4b5563"}}>{chatWith.display_name}</div>
+              <div style={{flex:1,minWidth:0,overflow:"hidden"}}>
+                <div style={{fontSize:13,fontWeight:800,color:"#f0f6fc",overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>@{chatWith.username}</div>
+                <div style={{fontSize:10,color:"#4b5563",overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{chatWith.display_name}</div>
               </div>
-              <button onClick={shareLastTrade} title="Share your last trade" style={{height:28,padding:"0 10px",borderRadius:8,background:"rgba(0,229,255,0.08)",border:"1px solid rgba(0,229,255,0.15)",color:"#00e5ff",cursor:"pointer",fontSize:11,fontWeight:700,display:isMob?"none":"flex"}}>📊 Share Trade</button>
+              <button onClick={shareLastTrade} title="Share your last trade" style={{height:28,padding:"0 10px",borderRadius:8,background:"rgba(0,229,255,0.08)",border:"1px solid rgba(0,229,255,0.15)",color:"#00e5ff",cursor:"pointer",fontSize:11,fontWeight:700,display:isMob?"none":"flex",flexShrink:0}}>📊 Share Trade</button>
 
               <button onClick={()=>setFriendActionTarget(chatWith)} title="More options" style={{width:32,height:32,borderRadius:8,background:"rgba(255,255,255,0.05)",border:"1px solid rgba(255,255,255,0.08)",color:"#9ca3af",cursor:"pointer",fontSize:18,display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0}}>⋯</button>
-              <button onClick={()=>setChatWith(null)} style={{width:28,height:28,borderRadius:8,background:"rgba(255,255,255,0.05)",border:"1px solid rgba(255,255,255,0.08)",color:"#4b5563",cursor:"pointer",fontSize:17,display:"flex",alignItems:"center",justifyContent:"center"}}>×</button>
+              <button onClick={()=>setChatWith(null)} style={{width:28,height:28,borderRadius:8,background:"rgba(255,255,255,0.05)",border:"1px solid rgba(255,255,255,0.08)",color:"#4b5563",cursor:"pointer",fontSize:17,display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0}}>×</button>
             </div>
 
             <div style={{flex:1,overflowY:"auto",padding:"12px 16px",display:"flex",flexDirection:"column",gap:8}}>

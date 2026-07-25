@@ -93,8 +93,8 @@ export default function PlaybookPage() {
         <div onClick={e=>{if(e.target===e.currentTarget)setEditing(null);}} style={{ position:"fixed",inset:0,zIndex:9999,background:"rgba(0,0,0,0.85)",backdropFilter:"blur(10px)",display:"flex",alignItems:"center",justifyContent:"center",padding:16 }}>
           <div style={{ width:"100%",maxWidth:620,background:"linear-gradient(160deg,#0f1520,#0b1017)",border:"1px solid rgba(255,255,255,0.09)",borderRadius:18,overflow:"hidden",maxHeight:"90vh",display:"flex",flexDirection:"column" as const }}>
             <div style={{ display:"flex",alignItems:"center",justifyContent:"space-between",padding:"14px 20px",borderBottom:"1px solid rgba(255,255,255,0.06)",background:"rgba(0,0,0,0.3)",flexShrink:0 }}>
-              <span style={{ fontSize:14,fontWeight:800,color:"#f0f6fc" }}>{editing.name||"New Setup"}</span>
-              <button onClick={()=>setEditing(null)} style={{ width:28,height:28,borderRadius:8,background:"rgba(255,255,255,0.05)",border:"1px solid rgba(255,255,255,0.08)",color:"#4b5563",cursor:"pointer",fontSize:17,display:"flex",alignItems:"center",justifyContent:"center" }}
+              <span style={{ fontSize:14,fontWeight:800,color:"#f0f6fc",overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap" as const,minWidth:0 }}>{editing.name||"New Setup"}</span>
+              <button onClick={()=>setEditing(null)} style={{ width:28,height:28,borderRadius:8,background:"rgba(255,255,255,0.05)",border:"1px solid rgba(255,255,255,0.08)",color:"#4b5563",cursor:"pointer",fontSize:17,display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0 }}
                 onMouseEnter={e=>{(e.currentTarget as HTMLElement).style.background="rgba(255,255,255,0.1)";(e.currentTarget as HTMLElement).style.color="#c9d1d9";}}
                 onMouseLeave={e=>{(e.currentTarget as HTMLElement).style.background="rgba(255,255,255,0.05)";(e.currentTarget as HTMLElement).style.color="#4b5563";}}>×</button>
             </div>
@@ -133,8 +133,8 @@ export default function PlaybookPage() {
         <div onClick={e=>{if(e.target===e.currentTarget)setViewing(null);}} style={{ position:"fixed",inset:0,zIndex:9999,background:"rgba(0,0,0,0.85)",backdropFilter:"blur(10px)",display:"flex",alignItems:"center",justifyContent:"center",padding:16 }}>
           <div style={{ width:"100%",maxWidth:560,background:"linear-gradient(160deg,#0f1520,#0b1017)",border:"1px solid rgba(255,255,255,0.09)",borderRadius:18,overflow:"hidden",maxHeight:"85vh",display:"flex",flexDirection:"column" as const }}>
             <div style={{ display:"flex",alignItems:"center",justifyContent:"space-between",padding:"14px 20px",borderBottom:"1px solid rgba(255,255,255,0.06)",background:"rgba(0,0,0,0.3)",flexShrink:0 }}>
-              <span style={{ fontSize:15,fontWeight:800,color:"#f0f6fc" }}>{viewing.name}</span>
-              <button onClick={()=>setViewing(null)} style={{ width:28,height:28,borderRadius:8,background:"rgba(255,255,255,0.05)",border:"1px solid rgba(255,255,255,0.08)",color:"#4b5563",cursor:"pointer",fontSize:17,display:"flex",alignItems:"center",justifyContent:"center" }}>×</button>
+              <span style={{ fontSize:15,fontWeight:800,color:"#f0f6fc",overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap" as const,minWidth:0 }}>{viewing.name}</span>
+              <button onClick={()=>setViewing(null)} style={{ width:28,height:28,borderRadius:8,background:"rgba(255,255,255,0.05)",border:"1px solid rgba(255,255,255,0.08)",color:"#4b5563",cursor:"pointer",fontSize:17,display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0 }}>×</button>
             </div>
             <div style={{ flex:1,overflowY:"auto",padding:20,display:"flex",flexDirection:"column" as const,gap:14 }}>
               {viewing.description && <p style={{ fontSize:13,color:"#8b949e",lineHeight:1.7 }}>{viewing.description}</p>}

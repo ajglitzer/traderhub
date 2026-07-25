@@ -68,12 +68,12 @@ export function TradeDetailPanel({ trade, onClose }: Props) {
       <div style={S.modal}>
         {/* Header */}
         <div style={S.header}>
-          <div style={{display:"flex",alignItems:"center",gap:10}}>
+          <div style={{display:"flex",alignItems:"center",gap:10,flexWrap:"wrap" as const,minWidth:0,flex:"1 1 auto"}}>
             <span style={{fontSize:16,fontWeight:900,fontFamily:"monospace",color:"#f0f6fc"}}>{trade.ticker}</span>
             <span style={{padding:"2px 8px",borderRadius:5,fontSize:10,fontWeight:700,background:trade.side==="LONG"?"rgba(0,230,118,0.12)":"rgba(255,23,68,0.12)",color:trade.side==="LONG"?"#00e676":"#ff1744"}}>{trade.side}</span>
             <span style={{fontSize:13,fontWeight:800,fontFamily:"monospace",color:isPos?"#00e676":"#ff1744"}}>{fmt$(trade.netPnl||0)}</span>
           </div>
-          <button onClick={onClose} style={{width:28,height:28,borderRadius:8,background:"rgba(255,255,255,0.05)",border:"1px solid rgba(255,255,255,0.08)",color:"#4b5563",cursor:"pointer",fontSize:17,display:"flex",alignItems:"center",justifyContent:"center"}}
+          <button onClick={onClose} style={{width:28,height:28,borderRadius:8,background:"rgba(255,255,255,0.05)",border:"1px solid rgba(255,255,255,0.08)",color:"#4b5563",cursor:"pointer",fontSize:17,display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0}}
             onMouseEnter={e=>{(e.currentTarget as HTMLElement).style.background="rgba(255,255,255,0.1)";(e.currentTarget as HTMLElement).style.color="#c9d1d9";}}
             onMouseLeave={e=>{(e.currentTarget as HTMLElement).style.background="rgba(255,255,255,0.05)";(e.currentTarget as HTMLElement).style.color="#4b5563";}}>×</button>
         </div>

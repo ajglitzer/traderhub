@@ -132,7 +132,7 @@ export function TradeCardModal({ trade, username, onClose }: Props) {
 
   const card = (
     <div ref={cardRef} style={{
-      width: 400, background: isWin
+      width: "min(400px, calc(100vw - 40px))", background: isWin
         ? "linear-gradient(135deg,#0a1a0f,#061210,#0a1a1a)"
         : "linear-gradient(135deg,#1a0a0a,#120606,#1a0a10)",
       borderRadius: 20, padding: 24, fontFamily: "monospace",
@@ -200,10 +200,10 @@ export function TradeCardModal({ trade, username, onClose }: Props) {
 
   if (!mounted) return null;
   return createPortal(
-    <div onClick={e => { if (e.target === e.currentTarget) onClose(); }} style={{ position:"fixed", inset:0, zIndex:99999, background:"rgba(0,0,0,0.85)", backdropFilter:"blur(12px)", display:"flex", alignItems:"center", justifyContent:"center", padding:20 }}>
-      <div style={{ display:"flex", flexDirection:"column" as const, alignItems:"center", gap:16 }}>
+    <div onClick={e => { if (e.target === e.currentTarget) onClose(); }} style={{ position:"fixed", inset:0, zIndex:99999, background:"rgba(0,0,0,0.85)", backdropFilter:"blur(12px)", display:"flex", alignItems:"center", justifyContent:"center", padding:20, overflowY:"auto" }}>
+      <div style={{ display:"flex", flexDirection:"column" as const, alignItems:"center", gap:16, maxWidth:"100%" }}>
         {card}
-        <div style={{ display:"flex", gap:10 }}>
+        <div style={{ display:"flex", gap:10, flexWrap:"wrap" as const, justifyContent:"center" as const }}>
           <button onClick={download} disabled={downloading} style={{ height:40, padding:"0 24px", borderRadius:10, border:"none", background: isWin ? "#00e676" : "#ff1744", color:"#000", fontSize:13, fontWeight:800, cursor:"pointer", opacity: downloading ? 0.7 : 1 }}>
             {downloading ? "Generating..." : "⬇ Download PNG"}
           </button>

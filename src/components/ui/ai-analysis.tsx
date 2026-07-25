@@ -233,8 +233,8 @@ function AIAnalysisPopup({ trade, onClose, onUpgrade }: Props) {
       }}>
 
         {/* Header */}
-        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "14px 20px", borderBottom: "1px solid rgba(255,255,255,0.06)", background: "rgba(0,0,0,0.3)", flexShrink: 0 }}>
-          <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "14px 20px", borderBottom: "1px solid rgba(255,255,255,0.06)", background: "rgba(0,0,0,0.3)", flexShrink: 0, gap: 8 }}>
+          <div style={{ display: "flex", alignItems: "center", gap: 12, flexWrap: "wrap" as const, rowGap: 6, minWidth: 0, flex: "1 1 auto" }}>
             {/* AI icon */}
             <div style={{ width: 34, height: 34, borderRadius: 10, background: "rgba(213,0,249,0.1)", border: "1px solid rgba(213,0,249,0.3)", display: "flex", alignItems: "center", justifyContent: "center", boxShadow: "0 0 16px rgba(213,0,249,0.15)" }}>
               <svg width="16" height="16" viewBox="0 0 13 13" fill="none">
@@ -255,7 +255,7 @@ function AIAnalysisPopup({ trade, onClose, onUpgrade }: Props) {
               )}
             </div>
           </div>
-          <button onClick={onClose} style={{ width: 28, height: 28, borderRadius: 8, background: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.08)", color: "#4b5563", cursor: "pointer", fontSize: 17, display: "flex", alignItems: "center", justifyContent: "center" }}
+          <button onClick={onClose} style={{ width: 28, height: 28, borderRadius: 8, background: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.08)", color: "#4b5563", cursor: "pointer", fontSize: 17, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}
             onMouseEnter={e => { (e.currentTarget as HTMLElement).style.background = "rgba(255,255,255,0.1)"; (e.currentTarget as HTMLElement).style.color = "#c9d1d9"; }}
             onMouseLeave={e => { (e.currentTarget as HTMLElement).style.background = "rgba(255,255,255,0.05)"; (e.currentTarget as HTMLElement).style.color = "#4b5563"; }}>×</button>
         </div>
