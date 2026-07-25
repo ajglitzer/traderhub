@@ -77,6 +77,11 @@ export default function DailyRecapPage() {
   const scrollRef = useRef<HTMLDivElement>(null);
 
   const todayTrades = trades.filter(t => t.status==="CLOSED" && t.entryTime?.slice(0,10)===date) as Trade[];
+  const isToday = date === new Date().toISOString().slice(0,10);
+  const tradesLabel = isToday ? "Today's Trades" : (() => {
+    const [y,m,d] = date.split("-").map(Number);
+    return `Trades on ${new Date(y, m-1, d).toLocaleDateString("en-US", { month:"short", day:"numeric", year:"numeric" })}`;
+  })();
   const pnl = todayTrades.reduce((a,t)=>a+(t.netPnl||0),0);
   const wins = todayTrades.filter(t=>(t.netPnl||0)>0).length;
   const losses = todayTrades.filter(t=>(t.netPnl||0)<0).length;
@@ -169,7 +174,7 @@ export default function DailyRecapPage() {
       {/* Trade list */}
       {todayTrades.length > 0 && (
         <div style={{background:"linear-gradient(160deg,#0f1520,#0b1017)",border:"1px solid rgba(255,255,255,0.07)",borderRadius:14,padding:16}}>
-          <div style={{fontSize:10,fontWeight:700,textTransform:"uppercase" as const,letterSpacing:"0.08em",color:"#3d4551",marginBottom:10}}>Today's Trades</div>
+          <div style={{fontSize:10,fontWeight:700,textTransform:"uppercase" as const,letterSpacing:"0.08em",color:"#3d4551",marginBottom:10}}>{tradesLabel}</div>
           <div style={{display:"flex",flexDirection:"column" as const,gap:4}}>
             {todayTrades.map(t=>(
               <div key={t.id} style={{display:"flex",alignItems:"center",gap:12,padding:"8px 10px",borderRadius:8,background:"rgba(255,255,255,0.02)"}}>
