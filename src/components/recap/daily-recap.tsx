@@ -3,6 +3,7 @@ import { useSubscription } from "@/hooks/useSubscription";
 import { PricingModal } from "@/components/subscription/pro-gate";
 import { boldOnly } from "@/lib/safe-markdown";
 import { AiLimitGate } from "@/components/ui/ai-limit-gate";
+import { AiUsageBadge } from "@/components/ui/ai-usage-badge";
 import { scopedKey } from "@/lib/user-storage";
 import { useState, useEffect, useRef } from "react";
 import { useAccountStore } from "@/store/accounts";
@@ -124,7 +125,8 @@ export default function DailyRecapPage() {
           <h2 style={{fontSize:16,fontWeight:800,color:"#f0f6fc"}}>Daily AI Recap</h2>
           <p style={{fontSize:11,color:"#4b5563",marginTop:2}}>End-of-day analysis powered by Groq AI · Free</p>
         </div>
-        <div style={{display:"flex",gap:10,alignItems:"center"}}>
+        <div style={{display:"flex",gap:10,alignItems:"center",flexWrap:"wrap" as const}}>
+          <AiUsageBadge color="#d500f9"/>
           <input type="date" value={date} onChange={e=>{ setDate(e.target.value); setStatus("idle"); setText(""); }}
             style={{height:34,padding:"0 10px",background:"rgba(255,255,255,0.05)",border:"1px solid rgba(255,255,255,0.09)",borderRadius:9,color:"#d1d5db",fontSize:12,outline:"none"}}/>
           <button onClick={generate} disabled={status==="loading"||status==="streaming"} style={{

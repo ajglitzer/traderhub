@@ -10,6 +10,7 @@ function sf(n: unknown, d = 2): string {
 }
 import { boldOnly } from "@/lib/safe-markdown";
 import { AiLimitGate } from "@/components/ui/ai-limit-gate";
+import { AiUsageBadge } from "@/components/ui/ai-usage-badge";
 import { useState, useRef, useEffect, useMemo } from "react";
 import { useAccountStore } from "@/store/accounts";
 import { Trade } from "@/types/trade";
@@ -239,6 +240,8 @@ export default function PatternPage() {
           <h2 style={{fontSize:16,fontWeight:800,color:"#f0f6fc"}}>AI Pattern Recognition</h2>
           <p style={{fontSize:11,color:"#4b5563",marginTop:2}}>Claude analyzes all {closed.length} of your trades to find hidden patterns · Powered by Groq · Free</p>
         </div>
+        <div style={{display:"flex",alignItems:"center",gap:10,flexWrap:"wrap" as const}}>
+        <AiUsageBadge color="#00e5ff"/>
         <button onClick={analyze} disabled={status==="loading"||status==="streaming"||closed.length<5} style={{
           height:40,padding:"0 28px",borderRadius:12,border:"none",
           background:closed.length<5?"rgba(255,255,255,0.05)":"linear-gradient(135deg,#00e5ff,#0088bb)",
@@ -253,6 +256,7 @@ export default function PatternPage() {
             : <>✦ Analyze My Patterns</>
           }
         </button>
+        </div>
       </div>
 
       {/* Quick stat strip */}

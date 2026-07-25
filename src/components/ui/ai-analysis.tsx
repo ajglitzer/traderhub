@@ -133,6 +133,13 @@ function AIAnalysisPopup({ trade, onClose, onUpgrade }: Props) {
   const [errMsg, setErrMsg] = useState("");
   const scrollRef = useRef<HTMLDivElement>(null);
   const isPos = (trade.netPnl ?? 0) >= 0;
+  const [isMobile, setIsMobile] = useState(() => typeof window!=="undefined" ? window.innerWidth < 768 : false);
+  useEffect(() => {
+    const check = () => setIsMobile(window.innerWidth < 768);
+    check();
+    window.addEventListener("resize", check);
+    return () => window.removeEventListener("resize", check);
+  }, []);
 
   // Auto-start analysis on mount
   useEffect(() => { startAnalysis(); }, []);
@@ -233,31 +240,47 @@ function AIAnalysisPopup({ trade, onClose, onUpgrade }: Props) {
       }}>
 
         {/* Header */}
-        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "14px 20px", borderBottom: "1px solid rgba(255,255,255,0.06)", background: "rgba(0,0,0,0.3)", flexShrink: 0, gap: 8 }}>
-          <div style={{ display: "flex", alignItems: "center", gap: 12, flexWrap: "wrap" as const, rowGap: 6, minWidth: 0, flex: "1 1 auto" }}>
-            {/* AI icon */}
-            <div style={{ width: 34, height: 34, borderRadius: 10, background: "rgba(213,0,249,0.1)", border: "1px solid rgba(213,0,249,0.3)", display: "flex", alignItems: "center", justifyContent: "center", boxShadow: "0 0 16px rgba(213,0,249,0.15)" }}>
-              <svg width="16" height="16" viewBox="0 0 13 13" fill="none">
-                <path d="M6.5 1L7.5 5.5L12 6.5L7.5 7.5L6.5 12L5.5 7.5L1 6.5L5.5 5.5L6.5 1Z" fill="#d500f9"/>
-              </svg>
+        <div style={{ display: "flex", flexDirection: isMobile?"column":"row", alignItems: isMobile?"stretch":"center", justifyContent: "space-between", padding: "14px 20px", borderBottom: "1px solid rgba(255,255,255,0.06)", background: "rgba(0,0,0,0.3)", flexShrink: 0, gap: 8 }}>
+          {/* Icon/title + close button always share their own row, isolated from the trade
+              summary below so it can never push the button off-screen on mobile. */}
+          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 8 }}>
+            <div style={{ display: "flex", alignItems: "center", gap: 12, minWidth: 0 }}>
+              {/* AI icon */}
+              <div style={{ width: 34, height: 34, borderRadius: 10, background: "rgba(213,0,249,0.1)", border: "1px solid rgba(213,0,249,0.3)", display: "flex", alignItems: "center", justifyContent: "center", boxShadow: "0 0 16px rgba(213,0,249,0.15)", flexShrink: 0 }}>
+                <svg width="16" height="16" viewBox="0 0 13 13" fill="none">
+                  <path d="M6.5 1L7.5 5.5L12 6.5L7.5 7.5L6.5 12L5.5 7.5L1 6.5L5.5 5.5L6.5 1Z" fill="#d500f9"/>
+                </svg>
+              </div>
+              <div style={{ minWidth: 0 }}>
+                <div style={{ fontSize: 14, fontWeight: 800, color: "#f0f6fc" }}>AI Trade Analysis</div>
+                <div style={{ fontSize: 10, color: "#4b5563", marginTop: 1 }}>Powered by Groq · Free</div>
+              </div>
+              {!isMobile && (<>
+                <div style={{ width: 1, height: 20, background: "rgba(255,255,255,0.07)" }} />
+                <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                  <span style={{ fontSize: 13, fontWeight: 800, fontFamily: "monospace", color: "#f0f6fc" }}>{trade.ticker}</span>
+                  <span style={{ padding: "1px 7px", borderRadius: 4, fontSize: 10, fontWeight: 700, background: trade.side === "LONG" ? "rgba(0,230,118,0.1)" : "rgba(255,23,68,0.1)", color: trade.side === "LONG" ? "#00e676" : "#ff1744" }}>{trade.side}</span>
+                  {trade.netPnl != null && (
+                    <span style={{ fontSize: 12, fontWeight: 800, fontFamily: "monospace", color: isPos ? "#00e676" : "#ff1744" }}>{f$(trade.netPnl)}</span>
+                  )}
+                </div>
+              </>)}
             </div>
-            <div>
-              <div style={{ fontSize: 14, fontWeight: 800, color: "#f0f6fc" }}>AI Trade Analysis</div>
-              <div style={{ fontSize: 10, color: "#4b5563", marginTop: 1 }}>Powered by Groq · Free</div>
-            </div>
-            <div style={{ width: 1, height: 20, background: "rgba(255,255,255,0.07)" }} />
-            {/* Trade summary */}
-            <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+            <button onClick={onClose} style={{ width: 28, height: 28, borderRadius: 8, background: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.08)", color: "#4b5563", cursor: "pointer", fontSize: 17, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}
+              onMouseEnter={e => { (e.currentTarget as HTMLElement).style.background = "rgba(255,255,255,0.1)"; (e.currentTarget as HTMLElement).style.color = "#c9d1d9"; }}
+              onMouseLeave={e => { (e.currentTarget as HTMLElement).style.background = "rgba(255,255,255,0.05)"; (e.currentTarget as HTMLElement).style.color = "#4b5563"; }}>×</button>
+          </div>
+
+          {/* Mobile-only second row: trade summary, fully isolated from the button above */}
+          {isMobile && (
+            <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" as const }}>
               <span style={{ fontSize: 13, fontWeight: 800, fontFamily: "monospace", color: "#f0f6fc" }}>{trade.ticker}</span>
               <span style={{ padding: "1px 7px", borderRadius: 4, fontSize: 10, fontWeight: 700, background: trade.side === "LONG" ? "rgba(0,230,118,0.1)" : "rgba(255,23,68,0.1)", color: trade.side === "LONG" ? "#00e676" : "#ff1744" }}>{trade.side}</span>
               {trade.netPnl != null && (
                 <span style={{ fontSize: 12, fontWeight: 800, fontFamily: "monospace", color: isPos ? "#00e676" : "#ff1744" }}>{f$(trade.netPnl)}</span>
               )}
             </div>
-          </div>
-          <button onClick={onClose} style={{ width: 28, height: 28, borderRadius: 8, background: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.08)", color: "#4b5563", cursor: "pointer", fontSize: 17, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}
-            onMouseEnter={e => { (e.currentTarget as HTMLElement).style.background = "rgba(255,255,255,0.1)"; (e.currentTarget as HTMLElement).style.color = "#c9d1d9"; }}
-            onMouseLeave={e => { (e.currentTarget as HTMLElement).style.background = "rgba(255,255,255,0.05)"; (e.currentTarget as HTMLElement).style.color = "#4b5563"; }}>×</button>
+          )}
         </div>
 
         {/* Content */}

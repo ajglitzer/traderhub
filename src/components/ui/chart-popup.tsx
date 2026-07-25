@@ -470,37 +470,68 @@ function TradeReplayPopup({ticker,entryTime,exitTime,side,entryPrice,exitPrice,s
       }}>
 
         {/* Header */}
-        <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",padding:isMobile?"10px 12px":"12px 18px",borderBottom:"1px solid rgba(255,255,255,0.06)",background:"rgba(0,0,0,0.35)",flexShrink:0,gap:8}}>
-          <div style={{display:"flex",alignItems:"center",gap:isMobile?8:12,flexWrap:"wrap" as const,rowGap:6,minWidth:0,flex:"1 1 auto"}}>
-            <span style={{fontSize:16,fontWeight:900,fontFamily:"monospace",color:"#f0f6fc",letterSpacing:"-0.03em"}}>{ticker}</span>
-            <span style={{padding:"2px 8px",borderRadius:5,fontSize:10,fontWeight:700,background:side==="LONG"?"rgba(0,230,118,0.12)":"rgba(255,23,68,0.12)",color:side==="LONG"?"#00e676":"#ff1744"}}>{side}</span>
-            <div style={{width:1,height:16,background:"rgba(255,255,255,0.07)"}}/>
-            {([
-              ["Entry","$"+fP(entryPrice),"#00e5ff"],
-              ["Exit",exitPrice?"$"+fP(exitPrice):"Open","#ff6b35"],
-              ["P&L",netPnl!=null?f$(netPnl):"—",isPos?"#00e676":"#ff1744"],
-              ] as [string,string,string][]).map(([l,v,c])=>(
-              <div key={l}>
-                <div style={{fontSize:9,color:"#3d4551",textTransform:"uppercase" as const,letterSpacing:"0.07em",marginBottom:1}}>{l}</div>
-                <div style={{fontSize:11,fontWeight:700,fontFamily:"monospace",color:c}}>{v}</div>
-              </div>
-            ))}
-            <div style={{width:1,height:16,background:"rgba(255,255,255,0.07)"}}/>
-            {/* Editable SL/TP inputs */}
-            <div>
-              <div style={{fontSize:9,color:"#ff1744",textTransform:"uppercase" as const,letterSpacing:"0.07em",marginBottom:1}}>SL</div>
-              <input type="number" value={localSl} onChange={e=>setLocalSl(e.target.value)} placeholder="price"
-                style={{width:72,height:20,background:"rgba(255,23,68,0.1)",border:"1px solid rgba(255,23,68,0.25)",borderRadius:4,color:"#ff1744",fontSize:10,fontFamily:"monospace",fontWeight:700,padding:"0 5px",outline:"none"}}/>
+        <div style={{display:"flex",flexDirection:isMobile?"column":"row",alignItems:isMobile?"stretch":"center",justifyContent:"space-between",padding:isMobile?"10px 12px":"12px 18px",borderBottom:"1px solid rgba(255,255,255,0.06)",background:"rgba(0,0,0,0.35)",flexShrink:0,gap:isMobile?8:8}}>
+          {/* Mobile: ticker/side + close button always share their own top row, isolated from the
+              info content below so wrapping stats/inputs can never push the button off-screen. */}
+          <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",gap:8}}>
+            <div style={{display:"flex",alignItems:"center",gap:isMobile?8:12,minWidth:0}}>
+              <span style={{fontSize:16,fontWeight:900,fontFamily:"monospace",color:"#f0f6fc",letterSpacing:"-0.03em",flexShrink:0}}>{ticker}</span>
+              <span style={{padding:"2px 8px",borderRadius:5,fontSize:10,fontWeight:700,background:side==="LONG"?"rgba(0,230,118,0.12)":"rgba(255,23,68,0.12)",color:side==="LONG"?"#00e676":"#ff1744",flexShrink:0}}>{side}</span>
+              {!isMobile && (<>
+                <div style={{width:1,height:16,background:"rgba(255,255,255,0.07)"}}/>
+                {([
+                  ["Entry","$"+fP(entryPrice),"#00e5ff"],
+                  ["Exit",exitPrice?"$"+fP(exitPrice):"Open","#ff6b35"],
+                  ["P&L",netPnl!=null?f$(netPnl):"—",isPos?"#00e676":"#ff1744"],
+                  ] as [string,string,string][]).map(([l,v,c])=>(
+                  <div key={l}>
+                    <div style={{fontSize:9,color:"#3d4551",textTransform:"uppercase" as const,letterSpacing:"0.07em",marginBottom:1}}>{l}</div>
+                    <div style={{fontSize:11,fontWeight:700,fontFamily:"monospace",color:c}}>{v}</div>
+                  </div>
+                ))}
+                <div style={{width:1,height:16,background:"rgba(255,255,255,0.07)"}}/>
+                <div>
+                  <div style={{fontSize:9,color:"#ff1744",textTransform:"uppercase" as const,letterSpacing:"0.07em",marginBottom:1}}>SL</div>
+                  <input type="number" value={localSl} onChange={e=>setLocalSl(e.target.value)} placeholder="price"
+                    style={{width:72,height:20,background:"rgba(255,23,68,0.1)",border:"1px solid rgba(255,23,68,0.25)",borderRadius:4,color:"#ff1744",fontSize:10,fontFamily:"monospace",fontWeight:700,padding:"0 5px",outline:"none"}}/>
+                </div>
+                <div>
+                  <div style={{fontSize:9,color:"#00e676",textTransform:"uppercase" as const,letterSpacing:"0.07em",marginBottom:1}}>TP</div>
+                  <input type="number" value={localTp} onChange={e=>setLocalTp(e.target.value)} placeholder="price"
+                    style={{width:72,height:20,background:"rgba(0,230,118,0.1)",border:"1px solid rgba(0,230,118,0.25)",borderRadius:4,color:"#00e676",fontSize:10,fontFamily:"monospace",fontWeight:700,padding:"0 5px",outline:"none"}}/>
+                </div>
+              </>)}
             </div>
-            <div>
-              <div style={{fontSize:9,color:"#00e676",textTransform:"uppercase" as const,letterSpacing:"0.07em",marginBottom:1}}>TP</div>
-              <input type="number" value={localTp} onChange={e=>setLocalTp(e.target.value)} placeholder="price"
-                style={{width:72,height:20,background:"rgba(0,230,118,0.1)",border:"1px solid rgba(0,230,118,0.25)",borderRadius:4,color:"#00e676",fontSize:10,fontFamily:"monospace",fontWeight:700,padding:"0 5px",outline:"none"}}/>
-            </div>
+            <button onClick={()=>{ onSaveLevels?.(parseFloat(localSl)||null, parseFloat(localTp)||null); onClose(); }} style={{width:28,height:28,borderRadius:8,background:"rgba(255,255,255,0.05)",border:"1px solid rgba(255,255,255,0.08)",color:"#4b5563",cursor:"pointer",fontSize:17,display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0}}
+              onMouseEnter={e=>{const el=e.currentTarget as HTMLElement;el.style.background="rgba(255,255,255,0.1)";el.style.color="#c9d1d9";}}
+              onMouseLeave={e=>{const el=e.currentTarget as HTMLElement;el.style.background="rgba(255,255,255,0.05)";el.style.color="#4b5563";}}>×</button>
           </div>
-          <button onClick={()=>{ onSaveLevels?.(parseFloat(localSl)||null, parseFloat(localTp)||null); onClose(); }} style={{width:28,height:28,borderRadius:8,background:"rgba(255,255,255,0.05)",border:"1px solid rgba(255,255,255,0.08)",color:"#4b5563",cursor:"pointer",fontSize:17,display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0}}
-            onMouseEnter={e=>{const el=e.currentTarget as HTMLElement;el.style.background="rgba(255,255,255,0.1)";el.style.color="#c9d1d9";}}
-            onMouseLeave={e=>{const el=e.currentTarget as HTMLElement;el.style.background="rgba(255,255,255,0.05)";el.style.color="#4b5563";}}>×</button>
+
+          {/* Mobile-only second row: everything that can wrap, fully isolated from the button above */}
+          {isMobile && (
+            <div style={{display:"flex",alignItems:"center",gap:8,flexWrap:"wrap" as const,rowGap:6}}>
+              {([
+                ["Entry","$"+fP(entryPrice),"#00e5ff"],
+                ["Exit",exitPrice?"$"+fP(exitPrice):"Open","#ff6b35"],
+                ["P&L",netPnl!=null?f$(netPnl):"—",isPos?"#00e676":"#ff1744"],
+                ] as [string,string,string][]).map(([l,v,c])=>(
+                <div key={l}>
+                  <div style={{fontSize:9,color:"#3d4551",textTransform:"uppercase" as const,letterSpacing:"0.07em",marginBottom:1}}>{l}</div>
+                  <div style={{fontSize:11,fontWeight:700,fontFamily:"monospace",color:c}}>{v}</div>
+                </div>
+              ))}
+              <div>
+                <div style={{fontSize:9,color:"#ff1744",textTransform:"uppercase" as const,letterSpacing:"0.07em",marginBottom:1}}>SL</div>
+                <input type="number" value={localSl} onChange={e=>setLocalSl(e.target.value)} placeholder="price"
+                  style={{width:72,height:20,background:"rgba(255,23,68,0.1)",border:"1px solid rgba(255,23,68,0.25)",borderRadius:4,color:"#ff1744",fontSize:10,fontFamily:"monospace",fontWeight:700,padding:"0 5px",outline:"none"}}/>
+              </div>
+              <div>
+                <div style={{fontSize:9,color:"#00e676",textTransform:"uppercase" as const,letterSpacing:"0.07em",marginBottom:1}}>TP</div>
+                <input type="number" value={localTp} onChange={e=>setLocalTp(e.target.value)} placeholder="price"
+                  style={{width:72,height:20,background:"rgba(0,230,118,0.1)",border:"1px solid rgba(0,230,118,0.25)",borderRadius:4,color:"#00e676",fontSize:10,fontFamily:"monospace",fontWeight:700,padding:"0 5px",outline:"none"}}/>
+              </div>
+            </div>
+          )}
         </div>
 
         {/* Body: sidebar + chart */}

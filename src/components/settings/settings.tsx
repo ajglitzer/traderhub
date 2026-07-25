@@ -11,6 +11,7 @@ import { RulesModal } from "@/components/ui/community-rules";
 import { TosModal } from "@/components/ui/terms-of-service";
 import { getStoredUsername } from "@/lib/user-storage";
 import { filterUsername } from "@/lib/profanity";
+import { AiUsageBadge } from "@/components/ui/ai-usage-badge";
 
 function ProfileEditor({ userId }: { userId?: string }) {
   const [loading, setLoading] = useState(true);
@@ -344,6 +345,14 @@ export default function SettingsPage() {
       <Section title="Subscription">
         <ManageSubscription/>
       </Section>
+
+      {isPro && (
+        <Section title="AI Usage">
+          <Row label="Today's AI analyses" desc="Shared across AI Recap, AI Patterns, and per-trade analysis · resets at midnight UTC">
+            <AiUsageBadge/>
+          </Row>
+        </Section>
+      )}
 
 
       <Section title="Appearance">

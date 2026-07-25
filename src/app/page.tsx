@@ -5,6 +5,7 @@ import { UsernameSetup, UsernameSetupLocal } from "@/components/auth/username-se
 import SocialPage from "@/components/social/social";
 import { getMyProfile, Profile } from "@/lib/social";
 import { RulesGate } from "@/components/ui/community-rules";
+import { MobileNoticeGate } from "@/components/ui/mobile-notice";
 import { TosModal } from "@/components/ui/terms-of-service";
 import { getStoredUsername } from "@/lib/user-storage";
 import { useEffect, useMemo, useState } from "react";
@@ -327,15 +328,17 @@ export default function Page() {
   if (!activeUser) return <AuthPage onAuth={()=>{ try{const s=localStorage.getItem("th_user");if(s)setLocalUser(JSON.parse(s));}catch{} }}/>;
 
   // Username gate  checks Supabase profile (with localStorage cache) before showing setup
-  return <UsernameGate userId={activeUser.id} hasSupabase={hasSupabase}>
-    <BanGate userId={activeUser.id} hasSupabase={hasSupabase}>
-      <TosGate userId={activeUser.id} hasSupabase={hasSupabase}>
-        <RulesGate userId={activeUser.id}>
-          <AppContent activeTab={activeTab} activeUser={activeUser} d={d}/>
-        </RulesGate>
-      </TosGate>
-    </BanGate>
-  </UsernameGate>;
+  return <MobileNoticeGate>
+    <UsernameGate userId={activeUser.id} hasSupabase={hasSupabase}>
+      <BanGate userId={activeUser.id} hasSupabase={hasSupabase}>
+        <TosGate userId={activeUser.id} hasSupabase={hasSupabase}>
+          <RulesGate userId={activeUser.id}>
+            <AppContent activeTab={activeTab} activeUser={activeUser} d={d}/>
+          </RulesGate>
+        </TosGate>
+      </BanGate>
+    </UsernameGate>
+  </MobileNoticeGate>;
 }
 
 //  ToS gate: requires explicit acceptance before using the app
