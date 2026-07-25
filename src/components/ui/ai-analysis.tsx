@@ -142,9 +142,6 @@ function AIAnalysisPopup({ trade, onClose, onUpgrade }: Props) {
     return () => window.removeEventListener("resize", check);
   }, []);
 
-  // Auto-start analysis on mount
-  useEffect(() => { startAnalysis(); }, []);
-
   // Auto-scroll as text streams in
   useEffect(() => {
     if (scrollRef.current) scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
@@ -286,6 +283,21 @@ function AIAnalysisPopup({ trade, onClose, onUpgrade }: Props) {
 
         {/* Content */}
         <div ref={scrollRef} style={{ flex: 1, overflowY: "auto", padding: "18px 22px", minHeight: 0 }}>
+          {status === "idle" && (
+            <div style={{ display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", padding: "48px 0", gap: 14, textAlign: "center" as const }}>
+              <div style={{ width: 48, height: 48, borderRadius: "50%", background: "rgba(213,0,249,0.08)", border: "1px solid rgba(213,0,249,0.25)", display: "flex", alignItems: "center", justifyContent: "center" }}>
+                <svg width="18" height="18" viewBox="0 0 13 13" fill="none"><path d="M6.5 1L7.5 5.5L12 6.5L7.5 7.5L6.5 12L5.5 7.5L1 6.5L5.5 5.5L6.5 1Z" fill="#d500f9"/></svg>
+              </div>
+              <div>
+                <div style={{ fontSize: 13, fontWeight: 700, color: "#c9d1d9", marginBottom: 4 }}>Get an AI breakdown of this trade</div>
+                <div style={{ fontSize: 11, color: "#4b5563" }}>This uses 1 of your daily AI analyses.</div>
+              </div>
+              <button onClick={startAnalysis} style={{ height: 34, padding: "0 20px", borderRadius: 9, border: "none", background: "linear-gradient(135deg,#d500f9,#9900b3)", color: "#fff", fontSize: 12, fontWeight: 800, cursor: "pointer", boxShadow: "0 0 20px rgba(213,0,249,0.3)" }}>
+                ✦ Run Analysis
+              </button>
+            </div>
+          )}
+
           {status === "loading" && (
             <div style={{ display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", padding: "48px 0", gap: 14 }}>
               <div style={{ position: "relative", width: 48, height: 48 }}>
