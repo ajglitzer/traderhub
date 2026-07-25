@@ -2,6 +2,7 @@
 import { boldOnly } from "@/lib/safe-markdown";
 import { PricingModal } from "@/components/subscription/pro-gate";
 import { AiLimitGate } from "@/components/ui/ai-limit-gate";
+import { AiUsageBadge } from "@/components/ui/ai-usage-badge";
 import { useSubscription } from "@/hooks/useSubscription";
 import { useState, useRef, useEffect } from "react";
 
@@ -328,10 +329,13 @@ function AIAnalysisPopup({ trade, onClose, onUpgrade }: Props) {
         </div>
 
         {/* Footer */}
-        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "10px 20px", borderTop: "1px solid rgba(255,255,255,0.05)", background: "rgba(0,0,0,0.25)", flexShrink: 0 }}>
-          <span style={{ fontSize: 10, color: "#374151" }}>
-            {status === "streaming" ? "Analyzing..." : status === "done" ? "Analysis complete" : ""}
-          </span>
+        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "10px 20px", borderTop: "1px solid rgba(255,255,255,0.05)", background: "rgba(0,0,0,0.25)", flexShrink: 0, gap: 10, flexWrap: "wrap" as const }}>
+          <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+            <AiUsageBadge color="#d500f9"/>
+            <span style={{ fontSize: 10, color: "#374151" }}>
+              {status === "streaming" ? "Analyzing..." : status === "done" ? "Analysis complete" : ""}
+            </span>
+          </div>
           <div style={{ display: "flex", gap: 8 }}>
             {status === "done" && (
               <button onClick={startAnalysis} style={{ height: 28, padding: "0 12px", borderRadius: 7, border: "1px solid rgba(213,0,249,0.25)", background: "rgba(213,0,249,0.08)", color: "#d500f9", fontSize: 11, fontWeight: 700, cursor: "pointer" }}>

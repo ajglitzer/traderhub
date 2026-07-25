@@ -3,6 +3,7 @@ import { getScoped, setScoped, scopedKey } from "@/lib/user-storage";
 import { useState, useEffect } from "react";
 import { useStore } from "@/store";
 import { useAccountStore } from "@/store/accounts";
+import { TradeTable } from "@/components/trades/trade-table";
 import { format } from "date-fns";
 
 interface JournalEntry {
@@ -31,6 +32,14 @@ export default function JournalPage() {
 
   const { getActiveTrades } = useAccountStore();
   const trades = getActiveTrades() ?? [];
+
+  const [isMobile, setIsMobile] = useState(() => typeof window!=="undefined" ? window.innerWidth < 768 : false);
+  useEffect(() => {
+    const check = () => setIsMobile(window.innerWidth < 768);
+    check();
+    window.addEventListener("resize", check);
+    return () => window.removeEventListener("resize", check);
+  }, []);
 
   const mounted = typeof window !== "undefined";
   useEffect(() => {
@@ -65,7 +74,8 @@ export default function JournalPage() {
   const todayPnl = todayTrades.reduce((a,t) => a + (t.netPnl||0), 0);
 
   return (
-    <div style={{ padding:20, overflowY:"auto", height:"100%", display:"flex", flexDirection:"column", gap:14, maxWidth:760 }}>
+    <div style={{ padding:20, height:"100%", display:"flex", flexDirection:isMobile?"column":"row", gap:16, overflowY:isMobile?"auto":"hidden" }}>
+    <div style={{ overflowY:isMobile?"visible":"auto", height:isMobile?undefined:"100%", display:"flex", flexDirection:"column", gap:14, flex:isMobile?"none":"1 1 0", minWidth:0, maxWidth:isMobile?undefined:760 }}>
       {/* Today summary */}
       <div style={{ background:"#0e1117", border:"1px solid rgba(255,255,255,0.06)", borderRadius:12, padding:"14px 18px", display:"flex", gap:24, flexWrap:"wrap" as const }}>
         <div>
@@ -173,6 +183,22 @@ export default function JournalPage() {
           </div>
         </div>
       )}
+    </div>
+
+    {/* Trade log — quick reference alongside journaling, without leaving the tab */}
+    <div style={{
+      flex:isMobile?"none":"1 1 0", minWidth:0, height:isMobile?500:"100%",
+      display:"flex", flexDirection:"column", background:"#0e1117",
+      border:"1px solid rgba(255,255,255,0.06)", borderRadius:12, overflow:"hidden", flexShrink:0,
+    }}>
+      <div style={{ padding:"14px 18px", borderBottom:"1px solid rgba(255,255,255,0.06)", flexShrink:0 }}>
+        <div style={{ fontSize:13, fontWeight:800, color:"#f0f6fc" }}>Trade Log</div>
+        <div style={{ fontSize:11, color:"#4b5563", marginTop:2 }}>Quick reference while you journal</div>
+      </div>
+      <div style={{ flex:1, minHeight:0 }}>
+        <TradeTable/>
+      </div>
+    </div>
     </div>
   );
 }
