@@ -448,8 +448,9 @@ export default function SettingsPage() {
       <Section title="About">
         <div style={{ fontSize:12, color:"#6b7280", lineHeight:1.8 }}>
           <div><strong style={{color:"#d1d5db"}}>TraderHub</strong> — Professional Trading Journal</div>
-          <div>All data is stored locally in your browser. Nothing is sent to any server.</div>
-          <div>Trades are automatically saved when you close or switch tabs.</div>
+          <div>Your trades are saved to your account and synced to the cloud, so they're available across every device you log into.</div>
+          <div>Changes save automatically as you make them — no manual save needed.</div>
+          <div>Currently in beta — see the Terms of Service for details.</div>
           <div style={{marginTop:8, color:"#374151"}}>Supports: Stocks · ETFs · Futures · Forex · Crypto · Options · CFDs</div>
         </div>
       </Section>
