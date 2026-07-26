@@ -1,5 +1,5 @@
 import { NextRequest } from "next/server";
-import { requirePro, rateLimit, checkAiLimit } from "@/lib/api-guard";
+import { requirePro, rateLimit, checkAiLimit, incrementAiUsage } from "@/lib/api-guard";
 
 const SYSTEM = "You are a professional trading coach. Be direct, specific, and honest. Give real actionable feedback.";
 
@@ -63,6 +63,7 @@ export async function POST(req: NextRequest) {
             }),
           });
           if (res.ok && res.body) {
+            await incrementAiUsage(guard.userId);
             return new Response(res.body, {
               headers: { "Content-Type": "text/event-stream", "Cache-Control": "no-cache" },
             });
@@ -85,6 +86,7 @@ export async function POST(req: NextRequest) {
           const j = await res.json();
           const text = j?.choices?.[0]?.message?.content || "";
           if (text) {
+            await incrementAiUsage(guard.userId);
             const sse = `data: ${JSON.stringify({ choices: [{ delta: { content: text } }] })}\n\ndata: [DONE]\n\n`;
             return new Response(sse, { headers: { "Content-Type": "text/event-stream", "Cache-Control": "no-cache" } });
           }
@@ -109,6 +111,7 @@ export async function POST(req: NextRequest) {
           }),
         });
         if (res.ok && res.body) {
+          await incrementAiUsage(guard.userId);
           return new Response(res.body, {
             headers: { "Content-Type": "text/event-stream", "Cache-Control": "no-cache" },
           });

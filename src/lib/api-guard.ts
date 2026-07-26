@@ -65,6 +65,10 @@ export function rateLimit(userId: string, max = 20, windowMs = 60_000): boolean 
 /**
  * Per-user daily AI rate limit (default 20/day).
  * Uses the ai_usage table in Supabase; requires service role.
+ *
+ * Read-only — does NOT increment. Call incrementAiUsage() separately, and
+ * only once a provider call actually succeeds, so a Groq/Anthropic outage
+ * or missing API key doesn't silently burn a user's daily quota.
  */
 export async function checkAiLimit(userId: string, limit = 20): Promise<
   { ok: true; remaining: number } | { ok: false; status: number; error: string }
@@ -89,14 +93,35 @@ export async function checkAiLimit(userId: string, limit = 20): Promise<
       return { ok: false, status: 429, error: `Daily AI limit reached (${limit}/day). Resets at midnight UTC.` };
     }
 
-    await admin.from("ai_usage").upsert(
-      { user_id: userId, day: today, count: count + 1 },
-      { onConflict: "user_id,day" }
-    );
-
-    return { ok: true, remaining: limit - count - 1 };
+    return { ok: true, remaining: limit - count };
   } catch {
     // Fail open — a rate-limit outage shouldn't break AI for paying users
     return { ok: true, remaining: -1 };
+  }
+}
+
+/** Call only after a provider call has actually succeeded. */
+export async function incrementAiUsage(userId: string): Promise<void> {
+  try {
+    const { createClient } = await import("@supabase/supabase-js");
+    const admin = createClient(
+      process.env.NEXT_PUBLIC_SUPABASE_URL!,
+      process.env.SUPABASE_SERVICE_ROLE_KEY!
+    );
+    const today = new Date().toISOString().slice(0, 10);
+
+    const { data } = await admin
+      .from("ai_usage")
+      .select("count")
+      .eq("user_id", userId)
+      .eq("day", today)
+      .single();
+
+    await admin.from("ai_usage").upsert(
+      { user_id: userId, day: today, count: (data?.count ?? 0) + 1 },
+      { onConflict: "user_id,day" }
+    );
+  } catch {
+    // Non-fatal — worst case a use goes uncounted, which is the safe direction to fail in
   }
 }
