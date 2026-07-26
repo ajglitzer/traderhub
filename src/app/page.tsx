@@ -298,7 +298,12 @@ export default function Page() {
   const { activeTab, init } = useStore();
   const { user, loading, passwordRecovery } = useAuth();
   useEffect(() => {
-    if (typeof window !== "undefined" && window.location.search.includes("subscribed=1")) {
+    if (typeof window === "undefined") return;
+    // "subscribed=1" comes back from Stripe Checkout, "billing=1" from the
+    // Stripe billing portal (cancel/plan change) — either one means the
+    // subscription may have just changed server-side, so drop the client
+    // cache and re-fetch instead of showing stale Pro status.
+    if (window.location.search.includes("subscribed=1") || window.location.search.includes("billing=1")) {
       invalidateSubscription();
       window.history.replaceState({}, "", window.location.pathname);
     }
