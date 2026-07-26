@@ -62,9 +62,19 @@ export function AuthPage({ onAuth }: { onAuth: () => void }) {
         if (mode === "signup") {
           if (pass !== confirm) { setError("Passwords don't match"); setLoading(false); return; }
           if (pass.length < 6)  { setError("Password must be at least 6 characters"); setLoading(false); return; }
-          const { error: e } = await sb.auth.signUp({ email, password: pass });
+          const { data: d, error: e } = await sb.auth.signUp({ email, password: pass });
           if (e) { setError(e.message); setLoading(false); return; }
-          // onAuthStateChange fires automatically
+          // If the Supabase project requires email confirmation, signUp
+          // succeeds but returns no session — nothing else happens on its
+          // own, so tell the user to check their inbox instead of leaving
+          // them staring at an unresponsive button.
+          if (!d.session) {
+            setMessage("Account created — check your email to confirm before signing in.");
+            setMode("login");
+            setLoading(false);
+            return;
+          }
+          // Otherwise onAuthStateChange fires automatically
         } else if (mode === "login") {
           const { error: e } = await sb.auth.signInWithPassword({ email, password: pass });
           if (e) { setError(e.message); setLoading(false); return; }
