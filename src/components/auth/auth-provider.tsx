@@ -9,9 +9,17 @@ interface AuthCtx {
   user: User | null;
   loading: boolean;
   signOut: () => Promise<void>;
+  passwordRecovery: boolean;
+  completePasswordRecovery: (newPassword: string) => Promise<{ error?: string }>;
+  cancelPasswordRecovery: () => void;
 }
 
-const Ctx = createContext<AuthCtx>({ user: null, loading: true, signOut: async () => {} });
+const Ctx = createContext<AuthCtx>({
+  user: null, loading: true, signOut: async () => {},
+  passwordRecovery: false,
+  completePasswordRecovery: async () => ({ error: "Not available" }),
+  cancelPasswordRecovery: () => {},
+});
 
 const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL || "";
 const hasSupabase = SUPABASE_URL.length > 0 && !SUPABASE_URL.includes("placeholder");
@@ -19,6 +27,11 @@ const hasSupabase = SUPABASE_URL.length > 0 && !SUPABASE_URL.includes("placehold
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(hasSupabase);
+  // Set when Supabase redirects the user back after clicking a password-reset
+  // email link. Blocks normal app access until they set a new password —
+  // otherwise the recovery session just silently logs them in with no way
+  // to actually change the password they forgot.
+  const [passwordRecovery, setPasswordRecovery] = useState(false);
 
   useEffect(() => {
     if (!hasSupabase) return;
@@ -49,6 +62,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         if (!mounted.current) return;
         const newUser = session?.user ?? null;
         setLoading(false);
+
+        if (_event === "PASSWORD_RECOVERY") {
+          setPasswordRecovery(true);
+        }
 
         if (newUser) {
           localStorage.setItem("th_current_user_id", newUser.id);
@@ -89,7 +106,28 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setUser(null);
   };
 
-  return <Ctx.Provider value={{ user, loading, signOut }}>{children}</Ctx.Provider>;
+  const completePasswordRecovery = async (newPassword: string) => {
+    if (!hasSupabase) return { error: "Not available" };
+    const { createClient } = await import("@/lib/supabase");
+    const supabase = createClient();
+    const { error } = await supabase.auth.updateUser({ password: newPassword });
+    if (error) return { error: error.message };
+    setPasswordRecovery(false);
+    return {};
+  };
+
+  const cancelPasswordRecovery = () => {
+    // User backed out — sign them out of the recovery session rather than
+    // leaving them stuck on the "set new password" screen.
+    setPasswordRecovery(false);
+    signOut();
+  };
+
+  return (
+    <Ctx.Provider value={{ user, loading, signOut, passwordRecovery, completePasswordRecovery, cancelPasswordRecovery }}>
+      {children}
+    </Ctx.Provider>
+  );
 }
 
 export const useAuth = () => useContext(Ctx);

@@ -296,7 +296,7 @@ function SocialPageWrapper({ userId }: { userId: string }) {
 //  PAGE SHELL 
 export default function Page() {
   const { activeTab, init } = useStore();
-  const { user, loading } = useAuth();
+  const { user, loading, passwordRecovery } = useAuth();
   useEffect(() => {
     if (typeof window !== "undefined" && window.location.search.includes("subscribed=1")) {
       invalidateSubscription();
@@ -327,6 +327,10 @@ export default function Page() {
   const activeUser = hasSupabase ? user : localUser;
   if (!activeUser) return <AuthPage onAuth={()=>{ try{const s=localStorage.getItem("th_user");if(s)setLocalUser(JSON.parse(s));}catch{} }}/>;
 
+  // Password-recovery gate: user clicked a "reset password" email link.
+  // Block everything else until they actually set a new password.
+  if (passwordRecovery) return <PasswordRecoveryForm/>;
+
   // Username gate  checks Supabase profile (with localStorage cache) before showing setup
   return <MobileNoticeGate>
     <UsernameGate userId={activeUser.id} hasSupabase={hasSupabase}>
@@ -339,6 +343,66 @@ export default function Page() {
       </BanGate>
     </UsernameGate>
   </MobileNoticeGate>;
+}
+
+//  Password recovery: shown after the user follows a "reset password" email link
+function PasswordRecoveryForm() {
+  const { completePasswordRecovery, cancelPasswordRecovery } = useAuth();
+  const [pass, setPass] = useState("");
+  const [confirm, setConfirm] = useState("");
+  const [error, setError] = useState("");
+  const [loading, setLoading] = useState(false);
+
+  const submit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setError("");
+    if (pass.length < 6) { setError("Password must be at least 6 characters"); return; }
+    if (pass !== confirm) { setError("Passwords don't match"); return; }
+    setLoading(true);
+    const { error: err } = await completePasswordRecovery(pass);
+    setLoading(false);
+    if (err) setError(err);
+  };
+
+  return (
+    <div style={{ minHeight:"100vh", background:"#060a0f", display:"flex", alignItems:"center", justifyContent:"center", padding:24 }}>
+      <form onSubmit={submit} style={{
+        maxWidth:380, width:"100%",
+        background:"linear-gradient(160deg,#0f1520,#0b1017)",
+        border:"1px solid rgba(255,255,255,0.09)", borderRadius:18, padding:32,
+      }}>
+        <div style={{ fontSize:17, fontWeight:800, color:"#f0f6fc", marginBottom:6 }}>Set a new password</div>
+        <div style={{ fontSize:12, color:"#6b7280", marginBottom:22, lineHeight:1.6 }}>
+          You're resetting your password. Choose a new one to finish.
+        </div>
+        <input
+          type="password" placeholder="New password" value={pass}
+          onChange={e=>setPass(e.target.value)} autoFocus
+          style={{ width:"100%", height:40, padding:"0 12px", marginBottom:10, borderRadius:9, background:"rgba(255,255,255,0.05)", border:"1px solid rgba(255,255,255,0.09)", color:"#d1d5db", fontSize:13, outline:"none", boxSizing:"border-box" as const }}
+        />
+        <input
+          type="password" placeholder="Confirm new password" value={confirm}
+          onChange={e=>setConfirm(e.target.value)}
+          style={{ width:"100%", height:40, padding:"0 12px", marginBottom:14, borderRadius:9, background:"rgba(255,255,255,0.05)", border:"1px solid rgba(255,255,255,0.09)", color:"#d1d5db", fontSize:13, outline:"none", boxSizing:"border-box" as const }}
+        />
+        {error && <div style={{ fontSize:12, color:"#f87171", marginBottom:14 }}>{error}</div>}
+        <button type="submit" disabled={loading} style={{
+          width:"100%", height:40, borderRadius:10, border:"none",
+          background:"linear-gradient(135deg,#00e5ff,#0088bb)",
+          color:"#000", fontWeight:800, fontSize:13, cursor:"pointer",
+          opacity: loading ? 0.6 : 1, marginBottom:10,
+        }}>
+          {loading ? "Saving..." : "Set password"}
+        </button>
+        <button type="button" onClick={cancelPasswordRecovery} style={{
+          width:"100%", height:36, borderRadius:10, border:"1px solid rgba(255,255,255,0.1)",
+          background:"rgba(255,255,255,0.04)", color:"#6b7280", fontSize:12, cursor:"pointer",
+        }}>
+          Cancel
+        </button>
+      </form>
+    </div>
+  );
 }
 
 //  ToS gate: requires explicit acceptance before using the app
