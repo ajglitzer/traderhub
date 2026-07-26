@@ -3,6 +3,7 @@ import "./globals.css";
 import { Providers } from "./providers";
 import { Sidebar } from "@/components/layout/sidebar";
 import { Topbar } from "@/components/layout/topbar";
+import { ErrorBoundary } from "@/components/error-boundary";
 
 const SITE_URL = "https://traderhub-nine.vercel.app";
 const TITLE = "TraderHub — Professional Trading Journal";
@@ -43,17 +44,19 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         <meta name="theme-color" content="#060a0f"/>
       </head>
       <body className="antialiased">
-        <Providers>
-          <div style={{ display:"flex", height:"100dvh", overflow:"hidden", background:"var(--bg)" }}>
-            <Sidebar />
-            <div style={{ display:"flex", flexDirection:"column", flex:1, overflow:"hidden", minWidth:0 }}>
-              <Topbar />
-              <main style={{ flex:1, overflow:"auto" }} className="main-content">
-                {children}
-              </main>
+        <ErrorBoundary>
+          <Providers>
+            <div style={{ display:"flex", height:"100dvh", overflow:"hidden", background:"var(--bg)" }}>
+              <Sidebar />
+              <div style={{ display:"flex", flexDirection:"column", flex:1, overflow:"hidden", minWidth:0 }}>
+                <Topbar />
+                <main style={{ flex:1, overflow:"auto" }} className="main-content">
+                  {children}
+                </main>
+              </div>
             </div>
-          </div>
-        </Providers>
+          </Providers>
+        </ErrorBoundary>
       </body>
     </html>
   );
