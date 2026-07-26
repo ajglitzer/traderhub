@@ -9,6 +9,12 @@ function getStripe() {
   return new Stripe(key, { apiVersion: "2026-06-24.dahlia" });
 }
 
+const ALLOWED_ORIGINS = ["https://traderhub-nine.vercel.app", "http://localhost:3000"];
+function safeOrigin(req: NextRequest): string {
+  const origin = req.headers.get("origin") || "";
+  return ALLOWED_ORIGINS.includes(origin) ? origin : ALLOWED_ORIGINS[0];
+}
+
 export async function POST(req: NextRequest) {
   try {
     const cookieStore = await cookies();
@@ -30,7 +36,7 @@ export async function POST(req: NextRequest) {
     if (!sub?.stripe_customer_id)
       return NextResponse.json({ error: "No subscription found" }, { status: 404 });
 
-    const origin = req.headers.get("origin") || "https://traderhub-nine.vercel.app";
+    const origin = safeOrigin(req);
     const session = await getStripe().billingPortal.sessions.create({
       customer: sub.stripe_customer_id,
       return_url: origin,
