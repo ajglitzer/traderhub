@@ -19,7 +19,17 @@ export async function GET(req: NextRequest) {
   if (!sym || !from || !to)
     return NextResponse.json({ error: "Missing params" }, { status: 400 });
 
-  const fromNum = parseInt(from);
+  // Validate strictly — `from`/`to` are rebuilt as plain numbers (never the raw
+  // string) before going into the upstream URL, so a client can't smuggle extra
+  // query params (e.g. an embedded "&") into the Yahoo request. `sym` is
+  // allow-listed to the character set Yahoo tickers actually use.
+  const fromNum = Number(from);
+  const toNum   = Number(to);
+  if (!Number.isInteger(fromNum) || !Number.isInteger(toNum) || fromNum < 0 || toNum < fromNum)
+    return NextResponse.json({ error: "Invalid from/to" }, { status: 400 });
+  if (!/^[A-Za-z0-9.\-=^]{1,20}$/.test(sym))
+    return NextResponse.json({ error: "Invalid symbol" }, { status: 400 });
+
   const thirtyDaysAgo = Math.floor(Date.now() / 1000) - 30 * 24 * 60 * 60;
 
   // Pick interval based on age — Yahoo only keeps 1m for last 30 days
@@ -29,7 +39,11 @@ export async function GET(req: NextRequest) {
 
   for (const interval of intervals) {
     for (const host of ["query1", "query2"]) {
-      const url = `https://${host}.finance.yahoo.com/v8/finance/chart/${encodeURIComponent(sym)}?interval=${interval}&period1=${from}&period2=${to}&includePrePost=true`;
+      const url = new URL(`https://${host}.finance.yahoo.com/v8/finance/chart/${encodeURIComponent(sym)}`);
+      url.searchParams.set("interval", interval);
+      url.searchParams.set("period1", String(fromNum));
+      url.searchParams.set("period2", String(toNum));
+      url.searchParams.set("includePrePost", "true");
       try {
         const res = await fetch(url, {
           headers: { "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36", "Accept": "application/json" },

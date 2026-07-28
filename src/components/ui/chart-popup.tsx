@@ -94,6 +94,7 @@ function TradeReplayPopup({ticker,entryTime,exitTime,side,entryPrice,exitPrice,s
   const [localTp, setLocalTp] = useState<string>(takeProfit!=null?String(takeProfit):"");
   const [localSl, setLocalSl] = useState<string>(stopLoss!=null?String(stopLoss):"");
 
+  const [resizeTick,  setResizeTick]  = useState(0);
   const [isMobile, setIsMobile] = useState(() => typeof window!=="undefined" ? window.innerWidth < 768 : false);
   useEffect(() => {
     const check = () => setIsMobile(window.innerWidth < 768);
@@ -132,6 +133,9 @@ function TradeReplayPopup({ticker,entryTime,exitTime,side,entryPrice,exitPrice,s
 
     const ro=new ResizeObserver(()=>{
       if(containerRef.current) chart.resize(containerRef.current.offsetWidth,containerRef.current.offsetHeight);
+      // The overlay canvas shares the same box but has its own bitmap resolution;
+      // without this it stretches instead of redrawing when the container resizes.
+      setResizeTick(t=>t+1);
     });
     if(containerRef.current) ro.observe(containerRef.current);
     return()=>{ ro.disconnect(); chart.remove(); chartRef.current=null; serRef.current=null; markersRef.current=null; };
@@ -206,20 +210,26 @@ function TradeReplayPopup({ticker,entryTime,exitTime,side,entryPrice,exitPrice,s
 
     // Entry / exit arrow markers
     const mks: Parameters<typeof markers.setMarkers>[0]=[];
-    // Find the candle that CONTAINS the timestamp (last bar with open time <= ts).
-    // Candle timestamps are bar-open times, so a fill mid-bar belongs to that bar.
-    const findBar=(ts:number)=>{
-      let match=slice[0];
-      for(const c of slice){
-        if(c.t<=ts) match=c;
+    // Find the index of the candle that CONTAINS the timestamp (last bar with open
+    // time <= ts). Candle timestamps are bar-open times, so a fill mid-bar belongs
+    // to that bar. This must search the FULL dataset, not the replay-visible slice —
+    // searching only the visible slice clamps the match to whatever is currently the
+    // last revealed candle whenever the real bar hasn't played yet, which collapses
+    // both the entry and exit arrows onto the same candle regardless of how long the
+    // trade actually lasted.
+    const lastIdx=Math.max(1,visible)-1;
+    const findBarIdx=(ts:number)=>{
+      let idx=0;
+      for(let i=0;i<allCandles.length;i++){
+        if(allCandles[i].t<=ts) idx=i;
         else break;
       }
-      // If ts is before all candles, use the first; if after, use the last
-      return match||slice[slice.length-1];
+      return idx;
     };
-    const entryC=findBar(entryTs);
-    if(entryC) mks.push({
-      time:entryC.t as Time,
+    const entryIdx=findBarIdx(entryTs);
+    // Only reveal the arrow once replay has actually reached that bar.
+    if(entryIdx<=lastIdx) mks.push({
+      time:allCandles[entryIdx].t as Time,
       position:side==="LONG"?"belowBar":"aboveBar",
       color:"#00e5ff",
       shape:side==="LONG"?"arrowUp":"arrowDown",
@@ -227,9 +237,9 @@ function TradeReplayPopup({ticker,entryTime,exitTime,side,entryPrice,exitPrice,s
       size:2,
     });
     if(exitTs&&exitPrice){
-      const exitC=findBar(exitTs);
-      if(exitC) mks.push({
-        time:exitC.t as Time,
+      const exitIdx=findBarIdx(exitTs);
+      if(exitIdx<=lastIdx) mks.push({
+        time:allCandles[exitIdx].t as Time,
         position:side==="LONG"?"aboveBar":"belowBar",
         color:"#ff6b35",
         shape:side==="LONG"?"arrowDown":"arrowUp",
@@ -241,7 +251,7 @@ function TradeReplayPopup({ticker,entryTime,exitTime,side,entryPrice,exitPrice,s
 
     // Auto-fit when replay finishes
     if(visible>=allCandles.length) chart.timeScale().fitContent();
-  },[allCandles,visible,entryTs,exitTs,entryPrice,exitPrice,stopLoss,takeProfit,side,replayShowLevels,localSl,localTp]);
+  },[allCandles,visible,entryTs,exitTs,entryPrice,exitPrice,stopLoss,takeProfit,side,replayShowLevels,localSl,localTp,chartColors]);
 
   // -- Replay timer ----------------------------------------------------------
   useEffect(()=>{
@@ -331,7 +341,7 @@ function TradeReplayPopup({ticker,entryTime,exitTime,side,entryPrice,exitPrice,s
       ctx.beginPath(); ctx.arc(pendingPt.x,pendingPt.y,12,0,Math.PI*2); ctx.stroke();
       ctx.setLineDash([]);
     }
-  },[drawings,drawing,selected,pendingPt,tool]);
+  },[drawings,drawing,selected,pendingPt,tool,resizeTick]);
 
   // -- Overlay mouse handlers ------------------------------------------------
   const getPos=(e:React.MouseEvent<HTMLCanvasElement>)=>{
