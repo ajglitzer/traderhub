@@ -86,9 +86,12 @@ export function ImportDialog() {
   const doImport = () => {
     const enriched: Trade[] = parsed.map((t, i) => {
       const { grossPnl, netPnl, rMultiple } = calculateTradePnl(t);
-      const hold = t.exitTime && t.entryTime
+      // entryTime === exitTime means the parser had no real fill time to work with
+      // (balance-history-only import) — leave hold time unknown rather than
+      // recording a fabricated 0-second hold.
+      const hold = t.exitTime && t.entryTime && t.exitTime !== t.entryTime
         ? Math.round((new Date(t.exitTime).getTime() - new Date(t.entryTime).getTime()) / 1000)
-        : null;
+        : (t.holdTimeSeconds ?? null);
       return {
         id: `imp_${Date.now()}_${i}`,
         createdAt: new Date().toISOString(), updatedAt: new Date().toISOString(),

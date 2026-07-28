@@ -106,6 +106,12 @@ function TradeReplayPopup({ticker,entryTime,exitTime,side,entryPrice,exitPrice,s
   const entryTs = useMemo(()=>Math.floor(new Date(entryTime).getTime()/1000),[entryTime]);
   const exitTs  = useMemo(()=>exitTime?Math.floor(new Date(exitTime).getTime()/1000):null,[exitTime]);
   const isPos   = (netPnl??0)>=0;
+  // Some CSV imports (TradingView balance-history uploaded without its matching
+  // order-history file) don't have a real entry fill time, so the parser falls
+  // back to entryTime = exitTime as a placeholder. When that's the case the
+  // "same candle" arrows below are accurately reflecting the data we have, not
+  // a rendering bug — surface it instead of letting it look broken.
+  const unknownEntryTime = exitTs!=null && exitTs===entryTs;
 
   // -- Init chart ------------------------------------------------------------
   useEffect(()=>{
@@ -543,6 +549,12 @@ function TradeReplayPopup({ticker,entryTime,exitTime,side,entryPrice,exitPrice,s
             </div>
           )}
         </div>
+
+        {unknownEntryTime && (
+          <div style={{padding:"7px 18px",background:"rgba(255,171,0,0.08)",borderBottom:"1px solid rgba(255,171,0,0.15)",fontSize:11,color:"#ffab00",flexShrink:0,lineHeight:1.5}}>
+            ⚠ This trade doesn&apos;t have a real entry fill time — it was likely imported from a balance-history CSV without the matching order-history file, so entry/exit are placed on the same candle by default. Re-import with both files together for an accurate replay.
+          </div>
+        )}
 
         {/* Body: sidebar + chart */}
         <div style={{flex:1,display:"flex",flexDirection:isMobile?"column":"row",minHeight:0}}>
