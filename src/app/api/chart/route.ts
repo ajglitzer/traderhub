@@ -12,9 +12,10 @@ export async function GET(req: NextRequest) {
   }
 
   const { searchParams } = new URL(req.url);
-  const sym  = searchParams.get("sym");
-  const from = searchParams.get("from");
-  const to   = searchParams.get("to");
+  const sym          = searchParams.get("sym");
+  const from         = searchParams.get("from");
+  const to           = searchParams.get("to");
+  const reqInterval  = searchParams.get("interval");
 
   if (!sym || !from || !to)
     return NextResponse.json({ error: "Missing params" }, { status: 400 });
@@ -30,12 +31,22 @@ export async function GET(req: NextRequest) {
   if (!/^[A-Za-z0-9.\-=^]{1,20}$/.test(sym))
     return NextResponse.json({ error: "Invalid symbol" }, { status: 400 });
 
+  const ALLOWED_INTERVALS = ["1m", "5m", "15m", "30m", "1h", "1d"];
+  if (reqInterval && !ALLOWED_INTERVALS.includes(reqInterval))
+    return NextResponse.json({ error: "Invalid interval" }, { status: 400 });
+
   const thirtyDaysAgo = Math.floor(Date.now() / 1000) - 30 * 24 * 60 * 60;
 
-  // Pick interval based on age — Yahoo only keeps 1m for last 30 days
-  const intervals = fromNum < thirtyDaysAgo
-    ? ["1h", "1d"]
-    : ["1m", "5m", "1h"];
+  // Caller picked a specific timeframe (chart replay's timeframe selector) —
+  // honor it exactly rather than silently substituting a different one, so
+  // the client can tell the user plainly when Yahoo has no data for it instead
+  // of the UI quietly showing the wrong granularity.
+  // Otherwise fall back to the original age-based auto-selection.
+  const intervals = reqInterval
+    ? [reqInterval]
+    : fromNum < thirtyDaysAgo
+      ? ["1h", "1d"]
+      : ["1m", "5m", "1h"];
 
   for (const interval of intervals) {
     for (const host of ["query1", "query2"]) {

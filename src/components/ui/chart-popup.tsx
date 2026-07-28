@@ -34,9 +34,21 @@ function toYahoo(ticker: string): string {
   return m[root]||root;
 }
 
+// -- Timeframes -----------------------------------------------------------------
+type Interval = "1m"|"5m"|"15m"|"30m"|"1h"|"1d";
+const TIMEFRAMES: {id:Interval; label:string}[] = [
+  {id:"1m", label:"1m"}, {id:"5m", label:"5m"}, {id:"15m", label:"15m"},
+  {id:"30m", label:"30m"}, {id:"1h", label:"1H"}, {id:"1d", label:"1D"},
+];
+// How far to fetch on either side of entry/exit for each timeframe, generous
+// enough to cover BARS_PAD bars of padding even across weekends/closed markets.
+const TF_MARGIN_SECONDS: Record<Interval, number> = {
+  "1m": 2*3600, "5m": 8*3600, "15m": 2*86400, "30m": 4*86400, "1h": 8*86400, "1d": 120*86400,
+};
+
 // -- Fetch via server-side proxy (no CORS issues) ------------------------------
-async function fetchCandles(sym:string,from:number,to:number): Promise<Candle[]> {
-  const url = `/api/chart?sym=${encodeURIComponent(sym)}&from=${from}&to=${to}`;
+async function fetchCandles(sym:string,from:number,to:number,interval:Interval): Promise<Candle[]> {
+  const url = `/api/chart?sym=${encodeURIComponent(sym)}&from=${from}&to=${to}&interval=${interval}`;
   try {
     const r = await fetch(url, { signal: AbortSignal.timeout(15000) });
     if (!r.ok) {
@@ -50,7 +62,9 @@ async function fetchCandles(sym:string,from:number,to:number): Promise<Candle[]>
     const q = res.indicators?.quote?.[0] || {};
     const out = ts.map((t,i)=>({t,o:q.open?.[i],h:q.high?.[i],l:q.low?.[i],c:q.close?.[i]}))
                    .filter(c=>c.o!=null&&isFinite(c.o)&&c.h!=null&&c.l!=null&&c.c!=null) as Candle[];
-    if (!out.length) throw new Error("No candles in response — data may be too old (Yahoo Finance only keeps 30 days of 1-min data)");
+    if (!out.length) throw new Error(interval==="1m"||interval==="5m"
+      ? `No candles in response — data may be too old (Yahoo Finance only keeps intraday ${interval} data for ~30-60 days)`
+      : "No candles in response for this timeframe/date range");
     return out;
   } catch(e) {
     throw new Error(String(e).replace("Error: ",""));
@@ -82,6 +96,7 @@ function TradeReplayPopup({ticker,entryTime,exitTime,side,entryPrice,exitPrice,s
   const [visible,     setVisible]     = useState(1);
   const [playing,     setPlaying]     = useState(false);
   const [speed,       setSpeed]       = useState(1);
+  const [interval,    setInterval_]   = useState<Interval>("1m");
   const [tool,        setTool]        = useState<Tool>("cursor");
   const [color,       setColor]       = useState("#00e5ff");
   const [drawings,    setDrawings]    = useState<Drawing[]>([]);
@@ -152,8 +167,8 @@ function TradeReplayPopup({ticker,entryTime,exitTime,side,entryPrice,exitPrice,s
     let dead=false;
     setStatus("loading"); setAllCandles([]); setPlaying(false);
     const sym=toYahoo(ticker);
-    // Fetch generous window: 2h before entry, 2h after exit
-    fetchCandles(sym,entryTs-7200,(exitTs??entryTs)+7200)
+    const margin=TF_MARGIN_SECONDS[interval];
+    fetchCandles(sym,entryTs-margin,(exitTs??entryTs)+margin,interval)
       .then(data=>{
         if(dead) return;
         if(!data.length){setStatus("error");setErrMsg("Empty response");return;}
@@ -170,7 +185,7 @@ function TradeReplayPopup({ticker,entryTime,exitTime,side,entryPrice,exitPrice,s
       })
       .catch(e=>{if(!dead){setStatus("error");setErrMsg(String(e));}});
     return()=>{dead=true;};
-  },[ticker,entryTs,exitTs]);
+  },[ticker,entryTs,exitTs,interval]);
 
   // -- Update chart data as replay advances ----------------------------------
   useEffect(()=>{
@@ -607,7 +622,7 @@ function TradeReplayPopup({ticker,entryTime,exitTime,side,entryPrice,exitPrice,s
             {status==="loading"&&(
               <div style={{position:"absolute",inset:0,display:"flex",flexDirection:"column" as const,alignItems:"center",justifyContent:"center",gap:12,background:"rgba(6,10,15,0.97)",zIndex:20}}>
                 <div style={{width:36,height:36,borderRadius:"50%",border:"2px solid rgba(0,229,255,0.15)",borderTop:"2px solid #00e5ff",animation:"spin 0.8s linear infinite"}}/>
-                <span style={{fontSize:13,color:"#4b5563"}}>Fetching 1-min data for {toYahoo(ticker)}...</span>
+                <span style={{fontSize:13,color:"#4b5563"}}>Fetching {interval} data for {toYahoo(ticker)}...</span>
                 <span style={{fontSize:11,color:"#374151"}}>Trying multiple sources...</span>
               </div>
             )}
@@ -668,6 +683,20 @@ function TradeReplayPopup({ticker,entryTime,exitTime,side,entryPrice,exitPrice,s
                 <span>+{BARS_PAD} {fT(allCandles[allCandles.length-1].t)}</span>
               </>:<span style={{margin:"0 auto"}}>—</span>}
             </div>
+          </div>
+
+          <div style={{display:"flex",alignItems:"center",gap:6,flexShrink:0}}>
+            <span style={{fontSize:10,color:"#3d4551",textTransform:"uppercase" as const,letterSpacing:"0.06em"}}>TF</span>
+            {TIMEFRAMES.map(tf=>(
+              <button key={tf.id} onClick={()=>setInterval_(tf.id)} disabled={status==="loading"} title={`${tf.label} candles`} style={{
+                height:30,padding:"0 9px",borderRadius:8,border:"1px solid",
+                borderColor:interval===tf.id?"rgba(0,229,255,0.45)":"rgba(255,255,255,0.08)",
+                background:interval===tf.id?"rgba(0,229,255,0.12)":"rgba(255,255,255,0.03)",
+                color:interval===tf.id?"#00e5ff":"#4b5563",
+                fontSize:11,fontWeight:700,cursor:status==="loading"?"default":"pointer",transition:"all 0.12s",
+                opacity:status==="loading"?0.5:1,
+              }}>{tf.label}</button>
+            ))}
           </div>
 
           <div style={{display:"flex",alignItems:"center",gap:6,flexShrink:0}}>
