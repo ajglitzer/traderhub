@@ -87,7 +87,7 @@ export function AuthPage({ onAuth }: { onAuth: () => void }) {
   if (!hasSupabase) {
     return (
       <div style={{ minHeight:"100vh", background:"#060a0f", display:"flex", alignItems:"center", justifyContent:"center", padding:20 }}>
-        <div style={{ width:"100%", maxWidth:420, background:"#0d1219", border:"1px solid rgba(255,23,68,0.25)", borderLeft:"3px solid #ff1744", borderRadius:22, padding:"36px 32px", textAlign:"center", boxShadow:"0 30px 70px rgba(0,0,0,0.6), inset 0 2px 0 rgba(255,23,68,0.4)" }}>
+        <div style={{ width:"100%", maxWidth:420, background:"#0d1219", border:"1px solid rgba(255,23,68,0.25)", borderRadius:22, padding:"36px 32px", textAlign:"center", boxShadow:"0 30px 70px rgba(0,0,0,0.6), inset 0 1px 0 rgba(255,255,255,0.05)" }}>
           <div style={{ fontSize:28, marginBottom:14 }}>⚠️</div>
           <div style={{ fontSize:16, fontWeight:800, color:"#f0f6fc", marginBottom:8 }}>App not configured</div>
           <div style={{ fontSize:13, color:"#8b949e", lineHeight:1.7 }}>
@@ -116,7 +116,7 @@ export function AuthPage({ onAuth }: { onAuth: () => void }) {
 
       </div>
 
-      <div style={{ width:"100%", maxWidth:420, background:"#0d1219", border:"1px solid rgba(255,255,255,0.09)", borderLeft:"3px solid #00e5ff", borderRadius:22, overflow:"hidden", boxShadow:"0 30px 70px rgba(0,0,0,0.6), inset 0 1px 0 rgba(255,255,255,0.05)", position:"relative" }}>
+      <div style={{ width:"100%", maxWidth:420, background:"#0d1219", border:"1px solid rgba(255,255,255,0.09)", borderRadius:22, overflow:"hidden", boxShadow:"0 30px 70px rgba(0,0,0,0.6), inset 0 1px 0 rgba(255,255,255,0.05)", position:"relative" }}>
         <div style={{ height:2, background:"#00e5ff", boxShadow:"0 0 12px rgba(0,229,255,0.6)" }}/>
 
         <div style={{ padding:"36px 36px 32px" }}>
