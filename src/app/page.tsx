@@ -540,7 +540,7 @@ function AppContent({ activeTab, activeUser, d }: { activeTab: string; activeUse
 
   if (activeTab === "trades") return (
     <><div style={{height:"calc(100vh - 54px)",display:"flex",flexDirection:"column",padding:20}}>
-      <div style={{flex:1,borderRadius:16,overflow:"hidden",background:"linear-gradient(160deg,#0f1520,#0b1017)",border:"1px solid rgba(255,255,255,0.07)"}}>
+      <div style={{flex:1,borderRadius:16,overflow:"hidden",background:"#0d1219",border:"1px solid rgba(255,255,255,0.07)",boxShadow:"0 20px 50px rgba(0,0,0,0.45), inset 0 1px 0 rgba(255,255,255,0.04)"}}>
         <TradeTable/>
       </div>
     </div>{d}</>
