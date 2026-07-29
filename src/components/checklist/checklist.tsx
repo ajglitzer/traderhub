@@ -172,7 +172,7 @@ export default function ChecklistPage() {
       </div>
 
       {/* Progress */}
-      <div style={{ background:"linear-gradient(160deg,#0f1520,#0b1017)", border:"1px solid rgba(255,255,255,0.07)", borderRadius:14, padding:"16px 20px" }}>
+      <div style={{ background:"#0d1219",boxShadow:"0 16px 40px rgba(0,0,0,0.4), inset 0 1px 0 rgba(255,255,255,0.04)", border:"1px solid rgba(255,255,255,0.07)", borderRadius:14, padding:"16px 20px" }}>
         <div style={{ display:"flex", justifyContent:"space-between", marginBottom:8 }}>
           <span style={{ fontSize:13, fontWeight:700, color: allChecked ? "#00e676" : "#f0f6fc" }}>
             {allChecked ? "✅ Ready to trade!" : `${checked} / ${total} complete`}
@@ -189,7 +189,7 @@ export default function ChecklistPage() {
 
       <div style={{ display:"grid", gridTemplateColumns:isMobile?"1fr":"1fr 1fr", gap:14 }}>
         {/* Checklist */}
-        <div style={{ background:"linear-gradient(160deg,#0f1520,#0b1017)", border:"1px solid rgba(255,255,255,0.07)", borderRadius:14, padding:18, display:"flex", flexDirection:"column", gap:4 }}>
+        <div style={{ background:"#0d1219",boxShadow:"0 16px 40px rgba(0,0,0,0.4), inset 0 1px 0 rgba(255,255,255,0.04)", border:"1px solid rgba(255,255,255,0.07)", borderRadius:14, padding:18, display:"flex", flexDirection:"column", gap:4 }}>
           <div style={{ fontSize:10, fontWeight:700, textTransform:"uppercase" as const, letterSpacing:"0.08em", color:"#3d4551", marginBottom:8 }}>Checklist Items</div>
           {items.length === 0 && (
             <div style={{ padding:"18px 12px", textAlign:"center", fontSize:12, color:"#4b5563", lineHeight:1.6 }}>
@@ -236,7 +236,7 @@ export default function ChecklistPage() {
         </div>
 
         {/* Risk Calculator */}
-        <div style={{ background:"linear-gradient(160deg,#0f1520,#0b1017)", border:"1px solid rgba(255,255,255,0.07)", borderRadius:14, padding:18 }}>
+        <div style={{ background:"#0d1219",boxShadow:"0 16px 40px rgba(0,0,0,0.4), inset 0 1px 0 rgba(255,255,255,0.04)", border:"1px solid rgba(255,255,255,0.07)", borderRadius:14, padding:18 }}>
           <div style={{ fontSize:10, fontWeight:700, textTransform:"uppercase" as const, letterSpacing:"0.08em", color:"#3d4551", marginBottom:12 }}>Position Size Calculator</div>
           <RiskCalc/>
         </div>

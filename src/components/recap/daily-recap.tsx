@@ -164,7 +164,7 @@ export default function DailyRecapPage() {
           ["Losses",losses.toString(),"#ff1744"],
           ["Net P&L",pnl!==0?fmt$(pnl):"$0.00",pnl>=0?"#00e676":"#ff1744"],
         ].map(([l,v,c])=>(
-          <div key={l as string} style={{background:"linear-gradient(160deg,#0f1520,#0b1017)",border:"1px solid rgba(255,255,255,0.07)",borderRadius:12,padding:"14px 16px"}}>
+          <div key={l as string} style={{background:"#0d1219",boxShadow:"0 16px 40px rgba(0,0,0,0.4), inset 0 1px 0 rgba(255,255,255,0.04)",border:"1px solid rgba(255,255,255,0.07)",borderRadius:12,padding:"14px 16px"}}>
             <div style={{fontSize:9,color:"#4b5563",textTransform:"uppercase" as const,letterSpacing:"0.08em",marginBottom:4}}>{l}</div>
             <div style={{fontSize:22,fontWeight:900,fontFamily:"monospace",color:c as string}}>{v}</div>
           </div>
@@ -173,7 +173,7 @@ export default function DailyRecapPage() {
 
       {/* Trade list */}
       {todayTrades.length > 0 && (
-        <div style={{background:"linear-gradient(160deg,#0f1520,#0b1017)",border:"1px solid rgba(255,255,255,0.07)",borderRadius:14,padding:16}}>
+        <div style={{background:"#0d1219",boxShadow:"0 16px 40px rgba(0,0,0,0.4), inset 0 1px 0 rgba(255,255,255,0.04)",border:"1px solid rgba(255,255,255,0.07)",borderRadius:14,padding:16}}>
           <div style={{fontSize:10,fontWeight:700,textTransform:"uppercase" as const,letterSpacing:"0.08em",color:"#3d4551",marginBottom:10}}>{tradesLabel}</div>
           <div style={{display:"flex",flexDirection:"column" as const,gap:4}}>
             {todayTrades.map(t=>(
@@ -190,7 +190,7 @@ export default function DailyRecapPage() {
       )}
 
       {/* AI Output */}
-      <div style={{background:"linear-gradient(160deg,#0f1520,#0b1017)",border:"1px solid rgba(213,0,249,0.15)",borderRadius:14,padding:20,overflowWrap:"break-word" as const,wordBreak:"break-word" as const,width:"100%",boxSizing:"border-box" as const}}>
+      <div style={{background:"#0d1219",boxShadow:"0 16px 40px rgba(0,0,0,0.4), inset 0 1px 0 rgba(255,255,255,0.04)",border:"1px solid rgba(213,0,249,0.15)",borderRadius:14,padding:20,overflowWrap:"break-word" as const,wordBreak:"break-word" as const,width:"100%",boxSizing:"border-box" as const}}>
         <div ref={scrollRef}>
         {status==="idle"&&(
           <div style={{display:"flex",flexDirection:"column" as const,alignItems:"center",justifyContent:"center",height:"100%",gap:12,padding:"40px 0"}}>
@@ -254,7 +254,7 @@ function JournalPrompts({ trades }: { trades: import("@/types/trade").Trade[] })
   };
 
   return (
-    <div style={{ background:"linear-gradient(160deg,#0f1520,#0b1017)", border:"1px solid rgba(255,171,0,0.15)", borderRadius:14, padding:18, marginTop:4 }}>
+    <div style={{ background:"#0d1219",boxShadow:"0 16px 40px rgba(0,0,0,0.4), inset 0 1px 0 rgba(255,255,255,0.04)", border:"1px solid rgba(255,171,0,0.15)", borderRadius:14, padding:18, marginTop:4 }}>
       <div style={{ fontSize:10, fontWeight:700, textTransform:"uppercase" as const, letterSpacing:"0.08em", color:"#ffab00", marginBottom:14 }}>📝 Journal Prompts</div>
       <div style={{ display:"flex", flexDirection:"column", gap:12 }}>
         {prompts.map((p, i) => (

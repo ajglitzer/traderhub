@@ -579,7 +579,7 @@ function AppContent({ activeTab, activeUser, d }: { activeTab: string; activeUse
         <div style={{fontSize:48,marginBottom:16,filter:"drop-shadow(0 0 20px rgba(0,229,255,0.4))"}}>📂</div>
         <h2 style={{fontSize:22,fontWeight:900,color:"#f0f6fc",marginBottom:8,letterSpacing:"-0.03em"}}>Import Trades</h2>
         <p style={{fontSize:13,color:"#4b5563",marginBottom:24}}>TradingView · Webull · IBKR · NinjaTrader · Generic CSV</p>
-        <button onClick={()=>setImportOpen(true)} style={{height:42,padding:"0 32px",borderRadius:12,background:"linear-gradient(135deg,#00e5ff,#0088bb)",border:"none",color:"#000",fontSize:14,fontWeight:900,cursor:"pointer",boxShadow:"0 0 30px rgba(0,229,255,0.4), 0 8px 20px rgba(0,0,0,0.4)"}}>
+        <button onClick={()=>setImportOpen(true)} style={{height:42,padding:"0 32px",borderRadius:12,background:"linear-gradient(135deg,#00e5ff 0%,#00c2e6 45%,#0088bb 100%)",border:"none",color:"#000",fontSize:14,fontWeight:900,cursor:"pointer",boxShadow:"0 0 30px rgba(0,229,255,0.4), 0 8px 20px rgba(0,0,0,0.4)"}}>
           Choose File
         </button>
       </div>

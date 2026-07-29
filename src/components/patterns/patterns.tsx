@@ -269,7 +269,7 @@ export default function PatternPage() {
             ["Best Hour",       bestHour?`${bestHour[0]}:00 (${fmt$(+bestHour[1])})`:"—","#00e676"],
             ["Worst Hour",      worstHour?`${worstHour[0]}:00 (${fmt$(+worstHour[1])})`:"—","#ff1744"],
           ].map(([l,v,c])=>(
-            <div key={l as string} style={{background:"linear-gradient(160deg,#0f1520,#0b1017)",border:"1px solid rgba(255,255,255,0.07)",borderRadius:12,padding:"12px 14px"}}>
+            <div key={l as string} style={{background:"#0d1219",boxShadow:"0 16px 40px rgba(0,0,0,0.4), inset 0 1px 0 rgba(255,255,255,0.04)",border:"1px solid rgba(255,255,255,0.07)",borderRadius:12,padding:"12px 14px"}}>
               <div style={{fontSize:9,color:"#4b5563",textTransform:"uppercase" as const,letterSpacing:"0.08em",marginBottom:4}}>{l}</div>
               <div style={{fontSize:15,fontWeight:800,fontFamily:"monospace",color:c as string,wordBreak:"break-all" as const}}>{v}</div>
             </div>
@@ -279,10 +279,10 @@ export default function PatternPage() {
 
       {/* AI Output panel */}
       <div style={{
-        background:"linear-gradient(160deg,#0f1520,#0b1017)",
+        background:"#0d1219",
         border:"1px solid rgba(0,229,255,0.12)",
         borderRadius:16,flex:1,minHeight:300,overflow:"hidden",
-        boxShadow:"0 0 40px rgba(0,229,255,0.04)",
+        boxShadow:"0 0 40px rgba(0,229,255,0.04), 0 16px 40px rgba(0,0,0,0.4), inset 0 1px 0 rgba(255,255,255,0.04)",
         display:"flex",flexDirection:"column",
       }}>
         {/* Panel header */}
