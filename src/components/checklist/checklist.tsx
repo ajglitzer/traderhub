@@ -172,7 +172,7 @@ export default function ChecklistPage() {
       </div>
 
       {/* Progress */}
-      <div style={{ background:"#0d1219",boxShadow:"0 16px 40px rgba(0,0,0,0.4), inset 0 1px 0 rgba(255,255,255,0.04)", border:"1px solid rgba(255,255,255,0.07)", borderRadius:14, padding:"16px 20px" }}>
+      <div style={{ background:"#0d1219",boxShadow:"0 16px 40px rgba(0,0,0,0.4), inset 0 2px 0 rgba(0,230,118,0.45)", border:"1px solid rgba(255,255,255,0.07)", borderLeft:"3px solid #00e676", borderRadius:14, padding:"16px 20px" }}>
         <div style={{ display:"flex", justifyContent:"space-between", marginBottom:8 }}>
           <span style={{ fontSize:13, fontWeight:700, color: allChecked ? "#00e676" : "#f0f6fc" }}>
             {allChecked ? "✅ Ready to trade!" : `${checked} / ${total} complete`}
@@ -180,7 +180,7 @@ export default function ChecklistPage() {
           <span style={{ fontSize:13, fontWeight:800, fontFamily:"monospace", color: allChecked ? "#00e676" : "#ffab00" }}>{pct.toFixed(0)}%</span>
         </div>
         <div style={{ height:8, borderRadius:4, background:"rgba(255,255,255,0.05)", overflow:"hidden" }}>
-          <div style={{ height:"100%", width:`${pct}%`, borderRadius:4, background: allChecked ? "#00e676" : "linear-gradient(90deg,#ffab00,#00e5ff)", transition:"width 0.4s ease", boxShadow: allChecked ? "0 0 12px rgba(0,230,118,0.4)" : "none" }}/>
+          <div style={{ height:"100%", width:`${pct}%`, borderRadius:4, background: allChecked ? "#00e676" : "#ffab00", transition:"width 0.4s ease", boxShadow: allChecked ? "0 0 12px rgba(0,230,118,0.4)" : "0 0 12px rgba(255,171,0,0.4)" }}/>
         </div>
         {!allChecked && checked > 0 && (
           <div style={{ fontSize:11, color:"#4b5563", marginTop:6 }}>{total-checked} item{total-checked!==1?"s":""} remaining</div>
@@ -189,7 +189,7 @@ export default function ChecklistPage() {
 
       <div style={{ display:"grid", gridTemplateColumns:isMobile?"1fr":"1fr 1fr", gap:14 }}>
         {/* Checklist */}
-        <div style={{ background:"#0d1219",boxShadow:"0 16px 40px rgba(0,0,0,0.4), inset 0 1px 0 rgba(255,255,255,0.04)", border:"1px solid rgba(255,255,255,0.07)", borderRadius:14, padding:18, display:"flex", flexDirection:"column", gap:4 }}>
+        <div style={{ background:"#0d1219",boxShadow:"0 16px 40px rgba(0,0,0,0.4), inset 0 2px 0 rgba(0,230,118,0.45)", border:"1px solid rgba(255,255,255,0.07)", borderLeft:"3px solid #00e676", borderRadius:14, padding:18, display:"flex", flexDirection:"column", gap:4 }}>
           <div style={{ fontSize:10, fontWeight:700, textTransform:"uppercase" as const, letterSpacing:"0.08em", color:"#3d4551", marginBottom:8 }}>Checklist Items</div>
           {items.length === 0 && (
             <div style={{ padding:"18px 12px", textAlign:"center", fontSize:12, color:"#4b5563", lineHeight:1.6 }}>
@@ -236,7 +236,7 @@ export default function ChecklistPage() {
         </div>
 
         {/* Risk Calculator */}
-        <div style={{ background:"#0d1219",boxShadow:"0 16px 40px rgba(0,0,0,0.4), inset 0 1px 0 rgba(255,255,255,0.04)", border:"1px solid rgba(255,255,255,0.07)", borderRadius:14, padding:18 }}>
+        <div style={{ background:"#0d1219",boxShadow:"0 16px 40px rgba(0,0,0,0.4), inset 0 2px 0 rgba(0,230,118,0.45)", border:"1px solid rgba(255,255,255,0.07)", borderLeft:"3px solid #00e676", borderRadius:14, padding:18 }}>
           <div style={{ fontSize:10, fontWeight:700, textTransform:"uppercase" as const, letterSpacing:"0.08em", color:"#3d4551", marginBottom:12 }}>Position Size Calculator</div>
           <RiskCalc/>
         </div>

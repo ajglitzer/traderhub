@@ -8,7 +8,7 @@ function empty(): PlaybookEntry {
 }
 
 function Panel({ children, p=16 }: { children:React.ReactNode; p?:number }) {
-  return <div style={{ background:"#0d1219",boxShadow:"0 16px 40px rgba(0,0,0,0.4), inset 0 1px 0 rgba(255,255,255,0.04)", border:"1px solid rgba(255,255,255,0.07)", borderRadius:14, padding:p }}>{children}</div>;
+  return <div style={{ background:"#0d1219",boxShadow:"0 16px 40px rgba(0,0,0,0.4), inset 0 2px 0 rgba(255,171,0,0.45)", border:"1px solid rgba(255,255,255,0.07)", borderLeft:"3px solid #ffab00", borderRadius:14, padding:p }}>{children}</div>;
 }
 
 function Label({ children }: { children:React.ReactNode }) {
@@ -36,7 +36,7 @@ export default function PlaybookPage() {
           <h2 style={{ fontSize:16, fontWeight:800, color:"#f0f6fc", letterSpacing:"-0.02em" }}>Trading Playbook</h2>
           <p style={{ fontSize:11, color:"#4b5563", marginTop:2 }}>Save your best setups, rules, and entry criteria</p>
         </div>
-        <button onClick={() => setEditing(empty())} style={{ height:34, padding:"0 16px", borderRadius:10, background:"linear-gradient(135deg,#00e5ff,#0088bb)", border:"none", color:"#000", fontSize:12, fontWeight:800, cursor:"pointer", boxShadow:"0 0 16px rgba(0,229,255,0.25)" }}>
+        <button onClick={() => setEditing(empty())} style={{ height:34, padding:"0 16px", borderRadius:10, background:"#00d0ec", border:"none", color:"#000", fontSize:12, fontWeight:800, cursor:"pointer", boxShadow:"0 0 16px rgba(0,229,255,0.25)" }}>
           + New Setup
         </button>
       </div>
@@ -47,7 +47,7 @@ export default function PlaybookPage() {
             <div style={{ fontSize:40, marginBottom:12 }}>📋</div>
             <div style={{ fontSize:14, fontWeight:700, color:"#f0f6fc", marginBottom:8 }}>No setups yet</div>
             <div style={{ fontSize:13, color:"#4b5563", marginBottom:20 }}>Document your trading strategies so you can reference them before taking a trade</div>
-            <button onClick={()=>setEditing(empty())} style={{ height:36, padding:"0 20px", borderRadius:10, background:"linear-gradient(135deg,#00e5ff,#0088bb)", border:"none", color:"#000", fontSize:13, fontWeight:800, cursor:"pointer" }}>Create First Setup</button>
+            <button onClick={()=>setEditing(empty())} style={{ height:36, padding:"0 20px", borderRadius:10, background:"#00d0ec", border:"none", color:"#000", fontSize:13, fontWeight:800, cursor:"pointer" }}>Create First Setup</button>
           </div>
         </Panel>
       )}
@@ -91,7 +91,7 @@ export default function PlaybookPage() {
       {/* Edit modal */}
       {editing && (
         <div onClick={e=>{if(e.target===e.currentTarget)setEditing(null);}} style={{ position:"fixed",inset:0,zIndex:9999,background:"rgba(0,0,0,0.85)",backdropFilter:"blur(10px)",display:"flex",alignItems:"center",justifyContent:"center",padding:16 }}>
-          <div style={{ width:"100%",maxWidth:620,background:"#0d1219",boxShadow:"0 16px 40px rgba(0,0,0,0.4), inset 0 1px 0 rgba(255,255,255,0.04)",border:"1px solid rgba(255,255,255,0.09)",borderRadius:18,overflow:"hidden",maxHeight:"90vh",display:"flex",flexDirection:"column" as const }}>
+          <div style={{ width:"100%",maxWidth:620,background:"#0d1219",boxShadow:"0 16px 40px rgba(0,0,0,0.4), inset 0 2px 0 rgba(255,171,0,0.45)",border:"1px solid rgba(255,255,255,0.09)",borderLeft:"3px solid #ffab00",borderRadius:18,overflow:"hidden",maxHeight:"90vh",display:"flex",flexDirection:"column" as const }}>
             <div style={{ display:"flex",alignItems:"center",justifyContent:"space-between",padding:"14px 20px",borderBottom:"1px solid rgba(255,255,255,0.06)",background:"rgba(0,0,0,0.3)",flexShrink:0 }}>
               <span style={{ fontSize:14,fontWeight:800,color:"#f0f6fc",overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap" as const,minWidth:0 }}>{editing.name||"New Setup"}</span>
               <button onClick={()=>setEditing(null)} style={{ width:28,height:28,borderRadius:8,background:"rgba(255,255,255,0.05)",border:"1px solid rgba(255,255,255,0.08)",color:"#4b5563",cursor:"pointer",fontSize:17,display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0 }}
@@ -122,7 +122,7 @@ export default function PlaybookPage() {
             </div>
             <div style={{ display:"flex",gap:8,padding:"12px 20px",borderTop:"1px solid rgba(255,255,255,0.05)",background:"rgba(0,0,0,0.2)",flexShrink:0 }}>
               <button onClick={()=>setEditing(null)} style={{ flex:1,height:34,borderRadius:8,border:"1px solid rgba(255,255,255,0.08)",background:"rgba(255,255,255,0.04)",color:"#6b7280",cursor:"pointer",fontSize:12 }}>Cancel</button>
-              <button onClick={save} style={{ flex:2,height:34,borderRadius:8,border:"none",background:"linear-gradient(135deg,#00e5ff,#0088bb)",color:"#000",cursor:"pointer",fontSize:12,fontWeight:700 }}>Save Setup</button>
+              <button onClick={save} style={{ flex:2,height:34,borderRadius:8,border:"none",background:"#00d0ec",color:"#000",cursor:"pointer",fontSize:12,fontWeight:700 }}>Save Setup</button>
             </div>
           </div>
         </div>
@@ -131,7 +131,7 @@ export default function PlaybookPage() {
       {/* View modal */}
       {viewing && (
         <div onClick={e=>{if(e.target===e.currentTarget)setViewing(null);}} style={{ position:"fixed",inset:0,zIndex:9999,background:"rgba(0,0,0,0.85)",backdropFilter:"blur(10px)",display:"flex",alignItems:"center",justifyContent:"center",padding:16 }}>
-          <div style={{ width:"100%",maxWidth:560,background:"#0d1219",boxShadow:"0 16px 40px rgba(0,0,0,0.4), inset 0 1px 0 rgba(255,255,255,0.04)",border:"1px solid rgba(255,255,255,0.09)",borderRadius:18,overflow:"hidden",maxHeight:"85vh",display:"flex",flexDirection:"column" as const }}>
+          <div style={{ width:"100%",maxWidth:560,background:"#0d1219",boxShadow:"0 16px 40px rgba(0,0,0,0.4), inset 0 2px 0 rgba(255,171,0,0.45)",border:"1px solid rgba(255,255,255,0.09)",borderLeft:"3px solid #ffab00",borderRadius:18,overflow:"hidden",maxHeight:"85vh",display:"flex",flexDirection:"column" as const }}>
             <div style={{ display:"flex",alignItems:"center",justifyContent:"space-between",padding:"14px 20px",borderBottom:"1px solid rgba(255,255,255,0.06)",background:"rgba(0,0,0,0.3)",flexShrink:0 }}>
               <span style={{ fontSize:15,fontWeight:800,color:"#f0f6fc",overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap" as const,minWidth:0 }}>{viewing.name}</span>
               <button onClick={()=>setViewing(null)} style={{ width:28,height:28,borderRadius:8,background:"rgba(255,255,255,0.05)",border:"1px solid rgba(255,255,255,0.08)",color:"#4b5563",cursor:"pointer",fontSize:17,display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0 }}>×</button>

@@ -244,7 +244,7 @@ export default function PatternPage() {
         <AiUsageBadge color="#00e5ff"/>
         <button onClick={analyze} disabled={status==="loading"||status==="streaming"||closed.length<5} style={{
           height:40,padding:"0 28px",borderRadius:12,border:"none",
-          background:closed.length<5?"rgba(255,255,255,0.05)":"linear-gradient(135deg,#00e5ff,#0088bb)",
+          background:closed.length<5?"rgba(255,255,255,0.05)":"#00d0ec",
           color:closed.length<5?"#374151":"#000",
           cursor:closed.length<5?"default":status==="loading"||status==="streaming"?"default":"pointer",
           fontSize:13,fontWeight:800,boxShadow:closed.length>=5?"0 0 24px rgba(0,229,255,0.25)":"none",
@@ -269,7 +269,7 @@ export default function PatternPage() {
             ["Best Hour",       bestHour?`${bestHour[0]}:00 (${fmt$(+bestHour[1])})`:"—","#00e676"],
             ["Worst Hour",      worstHour?`${worstHour[0]}:00 (${fmt$(+worstHour[1])})`:"—","#ff1744"],
           ].map(([l,v,c])=>(
-            <div key={l as string} style={{background:"#0d1219",boxShadow:"0 16px 40px rgba(0,0,0,0.4), inset 0 1px 0 rgba(255,255,255,0.04)",border:"1px solid rgba(255,255,255,0.07)",borderRadius:12,padding:"12px 14px"}}>
+            <div key={l as string} style={{background:"#0d1219",boxShadow:"0 16px 40px rgba(0,0,0,0.4), inset 0 2px 0 rgba(0,229,255,0.45)",border:"1px solid rgba(255,255,255,0.07)",borderLeft:"3px solid #00e5ff",borderRadius:12,padding:"12px 14px"}}>
               <div style={{fontSize:9,color:"#4b5563",textTransform:"uppercase" as const,letterSpacing:"0.08em",marginBottom:4}}>{l}</div>
               <div style={{fontSize:15,fontWeight:800,fontFamily:"monospace",color:c as string,wordBreak:"break-all" as const}}>{v}</div>
             </div>
@@ -281,8 +281,9 @@ export default function PatternPage() {
       <div style={{
         background:"#0d1219",
         border:"1px solid rgba(0,229,255,0.12)",
+        borderLeft:"3px solid #00e5ff",
         borderRadius:16,flex:1,minHeight:300,overflow:"hidden",
-        boxShadow:"0 0 40px rgba(0,229,255,0.04), 0 16px 40px rgba(0,0,0,0.4), inset 0 1px 0 rgba(255,255,255,0.04)",
+        boxShadow:"0 0 40px rgba(0,229,255,0.04), 0 16px 40px rgba(0,0,0,0.4), inset 0 2px 0 rgba(0,229,255,0.35)",
         display:"flex",flexDirection:"column",
       }}>
         {/* Panel header */}
@@ -308,7 +309,7 @@ export default function PatternPage() {
 
           {status==="idle" && (
             <div style={{display:"flex",flexDirection:"column" as const,alignItems:"center",justifyContent:"center",height:"100%",gap:16,padding:"48px 0"}}>
-              <div style={{width:64,height:64,borderRadius:18,background:"rgba(0,229,255,0.06)",border:"1px solid rgba(0,229,255,0.15)",display:"flex",alignItems:"center",justifyContent:"center",fontSize:28}}>✦</div>
+              <div style={{width:64,height:64,borderRadius:18,background:"rgba(0,229,255,0.06)",border:"1px solid rgba(0,229,255,0.15)",boxShadow:"0 0 28px rgba(0,229,255,0.3)",display:"flex",alignItems:"center",justifyContent:"center",fontSize:28}}>✦</div>
               <div style={{textAlign:"center" as const,maxWidth:460}}>
                 <div style={{fontSize:16,fontWeight:800,color:"#f0f6fc",marginBottom:8}}>Ready to analyze your trading patterns</div>
                 <div style={{fontSize:13,color:"#4b5563",lineHeight:1.7}}>
