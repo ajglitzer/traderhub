@@ -171,7 +171,7 @@ export function AuthPage({ onAuth }: { onAuth: () => void }) {
 
             <button onClick={submit} disabled={loading} style={{
               height:46, borderRadius:11, border:"none",
-              background: loading ? "rgba(0,229,255,0.2)" : "linear-gradient(135deg,#00e5ff,#0088bb)",
+              background: loading ? "rgba(0,229,255,0.2)" : "#00d0ec",
               color: loading ? "#00e5ff" : "#000",
               fontSize:14, fontWeight:800, cursor: loading ? "default" : "pointer", marginTop:4,
               boxShadow: loading ? "none" : "0 0 24px rgba(0,229,255,0.25)",
