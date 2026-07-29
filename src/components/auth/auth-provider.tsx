@@ -4,6 +4,7 @@ import { User } from "@supabase/supabase-js";
 import { useAccountStore, loadUserData, clearUserData, saveUserData, mergeFromCloud } from "@/store/accounts";
 import { useStore, reloadUIStore } from "@/store";
 import { clearAllUserScoped } from "@/lib/user-storage";
+import { createClient } from "@/lib/supabase";
 
 interface AuthCtx {
   user: User | null;
@@ -36,65 +37,59 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     if (!hasSupabase) return;
     const mounted = { current: true };
+    const supabase = createClient();
 
-    import("@/lib/supabase").then(({ createClient }) => {
-      const supabase = createClient();
-
-      supabase.auth.getSession().then(({ data, error }) => {
-        if (!mounted.current) return;
-        if (error) console.error("[Auth] getSession error:", error.message);
-        const sessionUser = data?.session?.user ?? null;
-        if (sessionUser) {
-          localStorage.setItem("th_current_user_id", sessionUser.id);
-          loadUserData(sessionUser.id);
-          reloadUIStore(sessionUser.id);
-          mergeFromCloud(sessionUser.id);
-        }
-        setUser(sessionUser);
-        setLoading(false);
-      }).catch(err => {
-        if (!mounted.current) return;
-        console.error("[Auth] getSession failed:", err);
-        setLoading(false);
-      });
-
-      const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
-        if (!mounted.current) return;
-        const newUser = session?.user ?? null;
-        setLoading(false);
-
-        if (_event === "PASSWORD_RECOVERY") {
-          setPasswordRecovery(true);
-        }
-
-        if (newUser) {
-          localStorage.setItem("th_current_user_id", newUser.id);
-          if (_event === "SIGNED_IN") {
-            loadUserData(newUser.id);
-            reloadUIStore(newUser.id);
-            mergeFromCloud(newUser.id);
-          }
-        } else {
-          // Save before clearing so trades survive logout
-          const uid = localStorage.getItem("th_current_user_id");
-          if (uid) saveUserData(uid);
-          clearAllUserScoped();
-          localStorage.removeItem("th_current_user_id");
-          clearUserData();
-        }
-
-        setUser(newUser);
-      });
-
-      return () => { mounted.current = false; subscription.unsubscribe(); };
+    supabase.auth.getSession().then(({ data, error }) => {
+      if (!mounted.current) return;
+      if (error) console.error("[Auth] getSession error:", error.message);
+      const sessionUser = data?.session?.user ?? null;
+      if (sessionUser) {
+        localStorage.setItem("th_current_user_id", sessionUser.id);
+        loadUserData(sessionUser.id);
+        reloadUIStore(sessionUser.id);
+        mergeFromCloud(sessionUser.id);
+      }
+      setUser(sessionUser);
+      setLoading(false);
+    }).catch(err => {
+      if (!mounted.current) return;
+      console.error("[Auth] getSession failed:", err);
+      setLoading(false);
     });
 
-    return () => { mounted.current = false; };
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+      if (!mounted.current) return;
+      const newUser = session?.user ?? null;
+      setLoading(false);
+
+      if (_event === "PASSWORD_RECOVERY") {
+        setPasswordRecovery(true);
+      }
+
+      if (newUser) {
+        localStorage.setItem("th_current_user_id", newUser.id);
+        if (_event === "SIGNED_IN") {
+          loadUserData(newUser.id);
+          reloadUIStore(newUser.id);
+          mergeFromCloud(newUser.id);
+        }
+      } else {
+        // Save before clearing so trades survive logout
+        const uid = localStorage.getItem("th_current_user_id");
+        if (uid) saveUserData(uid);
+        clearAllUserScoped();
+        localStorage.removeItem("th_current_user_id");
+        clearUserData();
+      }
+
+      setUser(newUser);
+    });
+
+    return () => { mounted.current = false; subscription.unsubscribe(); };
   }, []);
 
   const signOut = async () => {
     if (!hasSupabase) return;
-    const { createClient } = await import("@/lib/supabase");
     const supabase = createClient();
     // Save trades BEFORE clearing so they survive the logout
     const uid = localStorage.getItem("th_current_user_id");
@@ -108,7 +103,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const completePasswordRecovery = async (newPassword: string) => {
     if (!hasSupabase) return { error: "Not available" };
-    const { createClient } = await import("@/lib/supabase");
     const supabase = createClient();
     const { error } = await supabase.auth.updateUser({ password: newPassword });
     if (error) return { error: error.message };

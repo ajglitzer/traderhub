@@ -12,6 +12,7 @@ import { TosModal } from "@/components/ui/terms-of-service";
 import { getStoredUsername } from "@/lib/user-storage";
 import { filterUsername } from "@/lib/profanity";
 import { AiUsageBadge } from "@/components/ui/ai-usage-badge";
+import { createClient } from "@/lib/supabase";
 
 function ProfileEditor({ userId }: { userId?: string }) {
   const [loading, setLoading] = useState(true);
@@ -27,7 +28,6 @@ function ProfileEditor({ userId }: { userId?: string }) {
     if (!userId) { setLoading(false); return; }
     (async () => {
       try {
-        const { createClient } = await import("@/lib/supabase");
         const sb = createClient();
         const { data } = await sb.from("profiles").select("username").eq("id", userId).maybeSingle();
         if (data?.username) { setUsername(data.username); setNewUsername(data.username); }
@@ -43,7 +43,6 @@ function ProfileEditor({ userId }: { userId?: string }) {
     setCheckingUsername(true);
     const t = setTimeout(async () => {
       try {
-        const { createClient } = await import("@/lib/supabase");
         const sb = createClient();
         const { data } = await sb.from("profiles").select("id").eq("username", newUsername.toLowerCase()).maybeSingle();
         setUsernameAvailable(!data);
@@ -65,7 +64,6 @@ function ProfileEditor({ userId }: { userId?: string }) {
 
     setSavingUsername(true);
     try {
-      const { createClient } = await import("@/lib/supabase");
       const sb = createClient();
       const { error: updErr } = await sb.from("profiles").update({ username: uname }).eq("id", userId);
       if (updErr) { setUsernameErr(updErr.message); setSavingUsername(false); return; }
@@ -237,7 +235,6 @@ export default function SettingsPage() {
       const res = await fetch("/api/user/delete", { method: "DELETE" });
       if (!res.ok) throw new Error("Failed to delete account");
       // 3. Sign out
-      const { createClient } = await import("@/lib/supabase");
       const sb = createClient();
       await sb.auth.signOut();
       window.location.href = "/";

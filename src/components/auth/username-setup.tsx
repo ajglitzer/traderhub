@@ -1,11 +1,11 @@
 "use client";
 import { useState, useEffect } from "react";
+import { createClient } from "@/lib/supabase";
 
 interface Props { userId: string; onDone?: () => void; }
 
 async function checkUsernameSupabase(username: string): Promise<boolean> {
   try {
-    const { createClient } = await import("@/lib/supabase");
     const sb = createClient();
     const { data } = await sb.from("profiles").select("id").eq("username", username.toLowerCase()).maybeSingle();
     return !data; // true = available
@@ -68,7 +68,6 @@ export function UsernameSetupLocal({ userId }: { userId: string }) {
 
     if (hasSupabase) {
       try {
-        const { createClient } = await import("@/lib/supabase");
         const sb = createClient();
         const colors = ["#00e5ff","#00e676","#d500f9","#ffab00","#ff6b35","#f9a8d4","#6ee7b7","#93c5fd"];
         const color = colors[Math.floor(Math.random() * colors.length)];

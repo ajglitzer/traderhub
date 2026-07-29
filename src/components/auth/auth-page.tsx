@@ -1,11 +1,16 @@
 "use client";
 import { useState, useEffect } from "react";
+import { createClient } from "@/lib/supabase";
 
 type Mode = "login" | "signup" | "forgot";
 
-// -- Supabase version -----------------------------------------------------------
-async function getSupabase() {
-  const { createClient } = await import("@/lib/supabase");
+// Static import rather than the dynamic import() this used to use — a
+// dynamic import fetches its chunk lazily at call time, so a tab left open
+// across a deploy (this app redeploys often) would fail with "Failed to
+// fetch dynamically imported module" the next time a button triggered it.
+// A static import is bundled into the page's initial load, so it can never
+// go stale mid-session the way a later, on-demand fetch can.
+function getSupabase() {
   return createClient();
 }
 
@@ -24,14 +29,11 @@ export function AuthPage({ onAuth }: { onAuth: () => void }) {
   // Listen for Supabase auth state change
   useEffect(() => {
     if (!hasSupabase) return;
-    let unsub: (() => void) | null = null;
-    getSupabase().then(sb => {
-      const { data: { subscription } } = sb.auth.onAuthStateChange((_e, session) => {
-        if (session?.user) onAuth();
-      });
-      unsub = () => subscription.unsubscribe();
+    const sb = getSupabase();
+    const { data: { subscription } } = sb.auth.onAuthStateChange((_e, session) => {
+      if (session?.user) onAuth();
     });
-    return () => { unsub?.(); };
+    return () => subscription.unsubscribe();
   }, [onAuth]);
 
   const submit = async () => {

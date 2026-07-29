@@ -8,6 +8,7 @@ import { RulesGate } from "@/components/ui/community-rules";
 import { MobileNoticeGate } from "@/components/ui/mobile-notice";
 import { TosModal } from "@/components/ui/terms-of-service";
 import { getStoredUsername } from "@/lib/user-storage";
+import { createClient } from "@/lib/supabase";
 import { useEffect, useMemo, useState } from "react";
 import { useStore } from "@/store";
 import { invalidateSubscription } from "@/hooks/useSubscription";
@@ -420,7 +421,6 @@ function TosGate({ userId, hasSupabase, children }: { userId: string; hasSupabas
     let cancelled = false;
     (async () => {
       try {
-        const { createClient } = await import("@/lib/supabase");
         const sb = createClient();
         const { data } = await sb.from("profiles").select("tos_accepted_at").eq("id", userId).maybeSingle();
         if (!cancelled) setState(data?.tos_accepted_at ? "accepted" : "needs-accept");
@@ -433,7 +433,6 @@ function TosGate({ userId, hasSupabase, children }: { userId: string; hasSupabas
 
   const agree = async () => {
     try {
-      const { createClient } = await import("@/lib/supabase");
       const sb = createClient();
       await sb.from("profiles").update({ tos_accepted_at: new Date().toISOString() }).eq("id", userId);
     } catch {}
@@ -460,7 +459,6 @@ function BanGate({ userId, hasSupabase, children }: { userId: string; hasSupabas
     let cancelled = false;
     (async () => {
       try {
-        const { createClient } = await import("@/lib/supabase");
         const sb = createClient();
         const { data } = await sb.from("profiles").select("banned").eq("id", userId).maybeSingle();
         if (!cancelled && data?.banned) setBanned(true);
@@ -504,7 +502,6 @@ function UsernameGate({ userId, hasSupabase, children }: { userId: string; hasSu
       // Supabase profile check
       if (hasSupabase) {
         try {
-          const { createClient } = await import("@/lib/supabase");
           const sb = createClient();
           const { data, error } = await sb.from("profiles").select("username,display_name").eq("id", userId).maybeSingle();
           if (error) console.error("[UsernameGate] profile query error:", error.message);
