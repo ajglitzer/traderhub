@@ -1,4 +1,5 @@
-import { NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
+import { ipRateLimit } from "@/lib/api-guard";
 
 function normalizeImpact(i: string): "High" | "Medium" | "Low" {
   const l = (i || "").toLowerCase();
@@ -7,8 +8,12 @@ function normalizeImpact(i: string): "High" | "Medium" | "Low" {
   return "Low";
 }
 
-export async function GET() {
+export async function GET(req: NextRequest) {
   try {
+    if (!ipRateLimit(req, 20, 60_000)) {
+      return NextResponse.json({ error: "Too many requests" }, { status: 429 });
+    }
+
     const urls = [
       "https://nfs.faireconomy.media/ff_calendar_thisweek.json",
       "https://nfs.faireconomy.media/ff_calendar_nextweek.json",

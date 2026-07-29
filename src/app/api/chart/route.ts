@@ -1,7 +1,12 @@
 import { NextRequest, NextResponse } from "next/server";
-import { requirePro, rateLimit } from "@/lib/api-guard";
+import { requirePro, rateLimit, ipRateLimit } from "@/lib/api-guard";
 
 export async function GET(req: NextRequest) {
+  // Cheap pre-auth backstop before we spend a Supabase round-trip on requirePro
+  if (!ipRateLimit(req, 60, 60_000)) {
+    return NextResponse.json({ error: "Too many requests" }, { status: 429 });
+  }
+
   // Chart Replay is a Pro feature — enforce it here, not just in the UI
   const guard = await requirePro();
   if (!guard.ok) {

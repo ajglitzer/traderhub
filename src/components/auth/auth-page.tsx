@@ -9,24 +9,6 @@ async function getSupabase() {
   return createClient();
 }
 
-// -- localStorage fallback version ---------------------------------------------
-interface LocalUser { id: string; email: string; password: string; }
-function localSignUp(email: string, password: string): { user: LocalUser | null; error: string | null } {
-  const users: LocalUser[] = JSON.parse(localStorage.getItem("th_users") || "[]");
-  if (users.find(u => u.email === email)) return { user: null, error: "Email already registered" };
-  const user = { id: Date.now().toString(), email, password };
-  localStorage.setItem("th_users", JSON.stringify([...users, user]));
-  localStorage.setItem("th_user", JSON.stringify({ id: user.id, email: user.email }));
-  return { user, error: null };
-}
-function localSignIn(email: string, password: string): { user: LocalUser | null; error: string | null } {
-  const users: LocalUser[] = JSON.parse(localStorage.getItem("th_users") || "[]");
-  const found = users.find(u => u.email === email && u.password === password);
-  if (!found) return { user: null, error: "Incorrect email or password" };
-  localStorage.setItem("th_user", JSON.stringify({ id: found.id, email: found.email }));
-  return { user: found, error: null };
-}
-
 const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL || "";
 const hasSupabase = SUPABASE_URL.length > 0 && !SUPABASE_URL.includes("placeholder");
 
@@ -89,22 +71,34 @@ export function AuthPage({ onAuth }: { onAuth: () => void }) {
         setError(e.message || "Something went wrong");
       }
     } else {
-      // -- localStorage fallback -----------------------------------------------
-      if (mode === "signup") {
-        if (pass !== confirm) { setError("Passwords don't match"); setLoading(false); return; }
-        if (pass.length < 6)  { setError("Password must be at least 6 characters"); setLoading(false); return; }
-        const { error: e } = localSignUp(email, pass);
-        if (e) { setError(e); setLoading(false); return; }
-        onAuth();
-      } else {
-        const { error: e } = localSignIn(email, pass);
-        if (e) { setError(e); setLoading(false); return; }
-        onAuth();
-      }
+      // Supabase isn't configured — there used to be a localStorage fallback
+      // here that stored raw passwords client-side with no real verification
+      // (anyone with devtools access could read every password or forge a
+      // session). That's not a tradeoff worth making even as a dev fallback,
+      // so this state is a dead end: the form below is replaced with a
+      // config-error screen and never actually renders the button that calls
+      // submit(). This branch only exists so submit() can't silently no-op.
+      setError("This app isn't configured yet — sign-in is unavailable.");
     }
 
     setLoading(false);
   };
+
+  if (!hasSupabase) {
+    return (
+      <div style={{ minHeight:"100vh", background:"#060a0f", display:"flex", alignItems:"center", justifyContent:"center", padding:20 }}>
+        <div style={{ width:"100%", maxWidth:420, background:"linear-gradient(160deg,#0f1520,#0b1017)", border:"1px solid rgba(255,23,68,0.25)", borderRadius:22, padding:"36px 32px", textAlign:"center" }}>
+          <div style={{ fontSize:28, marginBottom:14 }}>⚠️</div>
+          <div style={{ fontSize:16, fontWeight:800, color:"#f0f6fc", marginBottom:8 }}>App not configured</div>
+          <div style={{ fontSize:13, color:"#8b949e", lineHeight:1.7 }}>
+            <code style={{ color:"#00e5ff" }}>NEXT_PUBLIC_SUPABASE_URL</code> and{" "}
+            <code style={{ color:"#00e5ff" }}>NEXT_PUBLIC_SUPABASE_ANON_KEY</code> aren&apos;t set for this deployment, so sign-in can&apos;t work yet.
+            Add them in Vercel → Project → Settings → Environment Variables and redeploy.
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   const IS: React.CSSProperties = {
     width: "100%", height: 44,

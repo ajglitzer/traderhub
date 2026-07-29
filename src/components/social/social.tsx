@@ -9,7 +9,7 @@ import {
   getFriends, getFriendRequests, sendFriendRequest, respondToFriendRequest,
   unfriendUser, blockUser, unblockUser, getBlockedUsers, reportUser,
   getConversations, getMessages, sendMessage, markMessagesRead, getUnreadCount,
-  searchProfiles, getMyProfile,
+  searchProfiles, getMyProfile, PROFILE_COLS,
 } from "@/lib/social";
 import { useAccountStore } from "@/store/accounts";
 import { useStore } from "@/store";
@@ -111,7 +111,7 @@ export default function SocialPage({ myProfile }: { myProfile: Profile }) {
       if (!stillAllowed) { setMessages([]); return null; }
       return prev;
     });
-    if(user) { const bids = await getBlockedUsers(user.id); setBlockedIds(bids); const bprofs = await Promise.all(bids.map(async(bid:string)=>{ try{ const r=await supabase.from("profiles").select("*").eq("id",bid).single(); return r.data; }catch{ return null; } })); setBlockedProfiles(bprofs.filter(Boolean) as Profile[]); }
+    if(user) { const bids = await getBlockedUsers(user.id); setBlockedIds(bids); const bprofs = await Promise.all(bids.map(async(bid:string)=>{ try{ const r=await supabase.from("profiles").select(PROFILE_COLS).eq("id",bid).single(); return r.data; }catch{ return null; } })); setBlockedProfiles(bprofs.filter(Boolean) as Profile[]); }
     // Update sidebar badge when not on community tab
     const pendingR = r.filter((req:FriendRequest)=>req.to_id===user.id&&req.status==="pending");
     const total = u + pendingR.length;

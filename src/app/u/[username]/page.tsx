@@ -20,11 +20,19 @@ export default async function ProfilePage({ params }: { params: Promise<{ userna
   try {
     const cookieStore = await cookies();
     const sb = createServerClient(URL, KEY, { cookies:{ getAll:()=>cookieStore.getAll(), setAll:()=>{} } });
-    const { data: p } = await sb.from("profiles").select("*").eq("username", username.toLowerCase()).single();
+    // Explicit column list, not select("*") — RLS is row-level, not
+    // column-level, so this is what actually keeps any non-public profile
+    // column (were one ever added) from reaching this public, unauthenticated
+    // page.
+    const { data: p } = await sb.from("profiles")
+      .select("id,username,display_name,bio,avatar_color,twitter,created_at,show_real_stats")
+      .eq("username", username.toLowerCase()).single();
     if (!p) notFound();
     profile = p;
     if (p.show_real_stats) {
-      const { data: lb } = await sb.from("sim_leaderboard").select("*").eq("user_id", p.id).order("balance",{ascending:false}).limit(1);
+      const { data: lb } = await sb.from("sim_leaderboard")
+        .select("account_name,balance,start_balance,total_trades,wins")
+        .eq("user_id", p.id).order("balance",{ascending:false}).limit(1);
       if (lb?.length) simStats = lb[0];
     }
   } catch { notFound(); }

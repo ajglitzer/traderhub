@@ -1,13 +1,17 @@
-import { NextResponse } from "next/server";
-import { requirePro } from "@/lib/api-guard";
+import { NextRequest, NextResponse } from "next/server";
+import { requirePro, ipRateLimit } from "@/lib/api-guard";
 
 const LIMIT = 20;
 
 // GET — read-only lookup of today's AI usage. Does NOT increment the
 // counter (that only happens inside /api/analyze when a request actually
 // runs) — this just powers the "X/20 used today" display.
-export async function GET() {
+export async function GET(req: NextRequest) {
   try {
+    if (!ipRateLimit(req, 30, 60_000)) {
+      return NextResponse.json({ used: 0, limit: LIMIT, isPro: false }, { status: 429 });
+    }
+
     const guard = await requirePro();
     if (!guard.ok) return NextResponse.json({ used: 0, limit: LIMIT, isPro: false });
 

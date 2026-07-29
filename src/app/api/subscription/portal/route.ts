@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import Stripe from "stripe";
 import { createServerClient } from "@supabase/ssr";
 import { cookies } from "next/headers";
+import { ipRateLimit, rateLimit } from "@/lib/api-guard";
 
 function getStripe() {
   const key = process.env.STRIPE_SECRET_KEY;
@@ -17,6 +18,10 @@ function safeOrigin(req: NextRequest): string {
 
 export async function POST(req: NextRequest) {
   try {
+    if (!ipRateLimit(req, 15, 60_000)) {
+      return NextResponse.json({ error: "Too many requests" }, { status: 429 });
+    }
+
     const cookieStore = await cookies();
     const supabase = createServerClient(
       process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -25,6 +30,10 @@ export async function POST(req: NextRequest) {
     );
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+
+    if (!rateLimit(`portal:${user.id}`, 5, 60_000)) {
+      return NextResponse.json({ error: "Too many requests" }, { status: 429 });
+    }
 
     const { data: sub } = await supabase
       .from("subscriptions")

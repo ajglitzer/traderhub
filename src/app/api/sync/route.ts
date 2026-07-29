@@ -1,6 +1,13 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createServerClient } from "@supabase/ssr";
 import { cookies } from "next/headers";
+import { ipRateLimit, rateLimit, readJsonBody } from "@/lib/api-guard";
+
+// Mirrors the MAX_IMPORT guard in the CSV import UI — a single sync payload
+// shouldn't be able to write more rows than a full import ever could.
+const MAX_TRADES_PER_SYNC = 10_000;
+const MAX_ACCOUNTS_PER_SYNC = 50;
+const MAX_SYNC_BODY_BYTES = 8_000_000; // generous for 10k trade objects
 
 // Sentinel row ids stored alongside per-trade rows in the same table,
 // without a schema migration.
@@ -21,11 +28,19 @@ async function getSupabase() {
 }
 
 // GET — fetch all trades (tagged with accountId) + account metadata + last-clear marker
-export async function GET() {
+export async function GET(req: NextRequest) {
   try {
+    if (!ipRateLimit(req, 40, 60_000)) {
+      return NextResponse.json({ trades: [], accounts: null, clearedAt: null }, { status: 429 });
+    }
+
     const supabase = await getSupabase();
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) return NextResponse.json({ trades: [], accounts: null, clearedAt: null });
+
+    if (!rateLimit(`sync-get:${user.id}`, 40, 60_000)) {
+      return NextResponse.json({ trades: [], accounts: null, clearedAt: null }, { status: 429 });
+    }
 
     const { data, error } = await supabase
       .from("cloud_trades")
@@ -55,11 +70,23 @@ export async function GET() {
 // marker instead (used by "Clear ALL trades").
 export async function POST(req: NextRequest) {
   try {
+    if (!ipRateLimit(req, 40, 60_000)) {
+      return NextResponse.json({ ok: false, error: "Too many requests" }, { status: 429 });
+    }
+
     const supabase = await getSupabase();
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) return NextResponse.json({ ok: false });
 
-    const body = await req.json();
+    if (!rateLimit(`sync-post:${user.id}`, 40, 60_000)) {
+      return NextResponse.json({ ok: false, error: "Too many requests" }, { status: 429 });
+    }
+
+    const parsed = await readJsonBody<{
+      clearAll?: boolean; trades?: unknown; accounts?: unknown;
+    }>(req, MAX_SYNC_BODY_BYTES);
+    if (!parsed.ok) return parsed.response;
+    const body = parsed.data;
 
     if (body.clearAll) {
       const clearedAt = new Date().toISOString();
@@ -79,6 +106,17 @@ export async function POST(req: NextRequest) {
     }
 
     const { trades, accounts } = body;
+
+    if (accounts !== undefined && !Array.isArray(accounts))
+      return NextResponse.json({ ok: false, error: "accounts must be an array" }, { status: 400 });
+    if (Array.isArray(accounts) && accounts.length > MAX_ACCOUNTS_PER_SYNC)
+      return NextResponse.json({ ok: false, error: "Too many accounts" }, { status: 413 });
+    if (trades !== undefined && !Array.isArray(trades))
+      return NextResponse.json({ ok: false, error: "trades must be an array" }, { status: 400 });
+    if (Array.isArray(trades) && trades.length > MAX_TRADES_PER_SYNC)
+      return NextResponse.json({ ok: false, error: "Too many trades" }, { status: 413 });
+    if (Array.isArray(trades) && trades.some((t: any) => !t || typeof t !== "object" || typeof t.id !== "string"))
+      return NextResponse.json({ ok: false, error: "Malformed trade in payload" }, { status: 400 });
 
     if (Array.isArray(accounts)) {
       const { error } = await supabase.from("cloud_trades").upsert(
@@ -119,11 +157,25 @@ export async function POST(req: NextRequest) {
 // DELETE — remove a single trade by id, or every trade for an account by accountId
 export async function DELETE(req: NextRequest) {
   try {
+    if (!ipRateLimit(req, 40, 60_000)) {
+      return NextResponse.json({ ok: false, error: "Too many requests" }, { status: 429 });
+    }
+
     const supabase = await getSupabase();
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) return NextResponse.json({ ok: false });
 
-    const { id, accountId } = await req.json();
+    if (!rateLimit(`sync-del:${user.id}`, 40, 60_000)) {
+      return NextResponse.json({ ok: false, error: "Too many requests" }, { status: 429 });
+    }
+
+    const parsed = await readJsonBody<{ id?: unknown; accountId?: unknown }>(req, 1_000);
+    if (!parsed.ok) return parsed.response;
+    const { id, accountId } = parsed.data;
+    if (id !== undefined && typeof id !== "string")
+      return NextResponse.json({ ok: false, error: "Invalid id" }, { status: 400 });
+    if (accountId !== undefined && typeof accountId !== "string")
+      return NextResponse.json({ ok: false, error: "Invalid accountId" }, { status: 400 });
 
     if (accountId) {
       const { data } = await supabase.from("cloud_trades").select("id,data").eq("user_id", user.id);

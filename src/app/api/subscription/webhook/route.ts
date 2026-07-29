@@ -1,9 +1,22 @@
 import { NextRequest, NextResponse } from "next/server";
 import Stripe from "stripe";
 import { createClient } from "@supabase/supabase-js";
+import { ipRateLimit } from "@/lib/api-guard";
+
+const MAX_WEBHOOK_BYTES = 500_000; // generous — real Stripe events are a few KB
 
 export async function POST(req: NextRequest) {
+  // Generous DoS backstop only — signature verification below is the real
+  // authentication, so this must stay loose enough to never throttle
+  // legitimate Stripe delivery (including burst retries).
+  if (!ipRateLimit(req, 120, 60_000)) {
+    return NextResponse.json({ error: "Too many requests" }, { status: 429 });
+  }
+
   const body = await req.text();
+  if (new TextEncoder().encode(body).length > MAX_WEBHOOK_BYTES) {
+    return NextResponse.json({ error: "Payload too large" }, { status: 413 });
+  }
   const sig = req.headers.get("stripe-signature");
 
   if (!sig) return NextResponse.json({ error: "No signature" }, { status: 400 });

@@ -1,5 +1,5 @@
 import { NextRequest } from "next/server";
-import { requirePro, rateLimit, checkAiLimit, incrementAiUsage } from "@/lib/api-guard";
+import { requirePro, rateLimit, checkAiLimit, incrementAiUsage, ipRateLimit, readJsonBody } from "@/lib/api-guard";
 
 const SYSTEM = "You are a professional trading coach. Be direct, specific, and honest. Give real actionable feedback.";
 
@@ -13,6 +13,12 @@ const GROQ_MODELS = [
 
 export async function POST(req: NextRequest) {
   try {
+    if (!ipRateLimit(req, 30, 60_000)) {
+      return new Response(JSON.stringify({ error: "Too many requests" }), {
+        status: 429, headers: { "Content-Type": "application/json" },
+      });
+    }
+
     // Server-side Pro gate — the UI check alone can be bypassed with curl
     const guard = await requirePro();
     if (!guard.ok) {
@@ -39,7 +45,9 @@ export async function POST(req: NextRequest) {
       });
     }
 
-    const { prompt } = await req.json();
+    const body = await readJsonBody<{ prompt?: unknown }>(req, 25_000);
+    if (!body.ok) return body.response;
+    const { prompt } = body.data;
     if (!prompt) return new Response(JSON.stringify({ error: "No prompt" }), { status: 400 });
 
     // Cap prompt size — prevents token-bomb requests

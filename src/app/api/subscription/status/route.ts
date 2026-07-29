@@ -1,9 +1,14 @@
-import { NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 import { createServerClient } from "@supabase/ssr";
 import { cookies } from "next/headers";
+import { ipRateLimit } from "@/lib/api-guard";
 
-export async function GET() {
+export async function GET(req: NextRequest) {
   try {
+    if (!ipRateLimit(req, 30, 60_000)) {
+      return NextResponse.json({ status: "none" }, { status: 429 });
+    }
+
     const cookieStore = await cookies();
     const supabase = createServerClient(
       process.env.NEXT_PUBLIC_SUPABASE_URL!,

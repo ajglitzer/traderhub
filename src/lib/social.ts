@@ -35,9 +35,15 @@ export interface Message {
 
 const sb = () => createClient();
 
+// profiles.select("*") from client code would also pull admin-only columns
+// (banned, tos_accepted_at) into the browser response — RLS makes the row
+// public, not individual columns, so this explicit list is what actually
+// keeps those out of anyone's network tab.
+export const PROFILE_COLS = "id,username,display_name,avatar_color,created_at,bio,show_real_stats,twitter";
+
 // -- Profile -------------------------------------------------------------------
 export async function getMyProfile(userId: string): Promise<Profile | null> {
-  const { data } = await sb().from("profiles").select("*").eq("id", userId).single();
+  const { data } = await sb().from("profiles").select(PROFILE_COLS).eq("id", userId).single();
   return data;
 }
 
@@ -54,7 +60,7 @@ export async function createProfile(userId: string, username: string, displayNam
 
 export async function searchProfiles(query: string, myId?: string): Promise<Profile[]> {
   const { data } = await sb().from("profiles")
-    .select("*")
+    .select(PROFILE_COLS)
     .ilike("username", `%${query}%`)
     .limit(10);
   let results = (data || []) as Profile[];
@@ -200,7 +206,7 @@ export async function getConversations(userId: string): Promise<{profile: Profil
   if (ids.length === 0) return [];
 
   // ONE query for all profiles instead of one per conversation
-  const { data: profiles } = await sb().from("profiles").select("*").in("id", ids);
+  const { data: profiles } = await sb().from("profiles").select(PROFILE_COLS).in("id", ids);
   const profileMap = new Map((profiles || []).map((p: any) => [p.id, p]));
 
   return ids
@@ -235,7 +241,7 @@ export function searchLocalProfiles(query: string, currentUserId: string): Profi
 // -- Leaderboard via Supabase --------------------------------------------------
 export async function getProfileByUsername(username: string): Promise<Profile | null> {
   try {
-    const { data } = await sb().from("profiles").select("*").eq("username", username.toLowerCase()).single();
+    const { data } = await sb().from("profiles").select(PROFILE_COLS).eq("username", username.toLowerCase()).single();
     return data || null;
   } catch { return null; }
 }
